@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | JSM. Chambers</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #172A45; /* Slightly lighter navy for admin distinction */
+            color: var(--color-white);
+            padding: 2rem 1rem;
+        }
+        .sidebar h2 {
+            color: var(--color-secondary);
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        .sidebar ul {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .sidebar ul li a {
+            display: block;
+            padding: 1rem;
+            border-radius: var(--radius);
+            color: #E0E0E0;
+        }
+        .sidebar ul li a:hover, .sidebar ul li a.active {
+            background-color: var(--color-primary);
+            color: var(--color-white);
+            border-left: 3px solid var(--color-secondary);
+        }
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            background-color: #f4f6f9;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: var(--color-white);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border-top: 4px solid var(--color-primary);
+        }
+        .stat-card h4 {
+            color: var(--color-text-light);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        .stat-card .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--color-primary);
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--color-white);
+            box-shadow: var(--shadow);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        .data-table th, .data-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .data-table th {
+            background-color: #E0E0E0;
+            color: var(--color-primary);
+            font-weight: 600;
+        }
+        .badge {
+            padding: 0.3rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .badge.pending { background-color: #FFF3E0; color: #E65100; }
+        .badge.active { background-color: #E8F5E9; color: #2E7D32; }
+        .admin-section { display: none; }
+        .admin-section.active { display: block; }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <h2>JSM. Chambers</h2>
+            <div style="font-size: 0.8rem; text-align: center; margin-bottom: 2rem; color: #999;">Admin Portal</div>
+            <ul>
+                <li><a href="#" class="active" id="nav-dashboard">Dashboard Overview</a></li>
+                <li><a href="#" id="nav-cases">Manage Cases</a></li>
+                <li><a href="#" id="nav-clients">Clients Directory</a></li>
+                <li><a href="#" id="nav-consultations">Incoming Appointments</a></li>
+                <li><a href="#" id="nav-advocates">Advocates Info</a></li>
+                <li><a href="#" id="nav-hearings">Court Hearings</a></li>
+                <li><a href="#" id="nav-docs">Documents Portal</a></li>
+                <li><a href="#" id="nav-reports">Financial & Reports</a></li>
+                <li><a href="#" id="nav-settings">Site Settings</a></li>
+                <li style="margin-top: auto;"><a href="index.html">Logout</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <div>
+                    <h2>Admin Dashboard</h2>
+                    <p style="color: var(--color-text-light);">System Overview</p>
+                </div>
+                <div>
+                    <button class="btn btn-primary">Add New Case</button>
+                </div>
+            </header>
+
+            <div id="content-area">
+                <div id="section-dashboard" class="admin-section active">
+                    <!-- Dashboard View -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>Total Active Cases</h4>
+                        <div class="value">142</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Registered Clients</h4>
+                        <div class="value">89</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Hearings Today</h4>
+                        <div class="value">5</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Pending Approvals</h4>
+                        <div class="value">12</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>New Appointments</h4>
+                        <div class="value">3</div>
+                    </div>
+                </div>
+
+
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; margin-bottom: 1rem;">
+                    <h3>Recent Case Updates</h3>
+                    <input type="text" class="form-control" placeholder="Search cases..." style="width: 250px;">
+                </div>
+                
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Client Name</th>
+                            <th>Case Type</th>
+                            <th>Assigned To</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>#1001</td>
+                            <td>Rahul S.</td>
+                            <td>Criminal Defense</td>
+                            <td>Adv. V. Singh</td>
+                            <td><span class="badge active">In Progress</span></td>
+                            <td><button class="btn btn-outline" style="padding: 0.3rem 0.8rem; font-size: 0.8rem;">View</button></td>
+                        </tr>
+                        <tr>
+                            <td>#1002</td>
+                            <td>Tech Corp Ltd.</td>
+                            <td>Corporate Law</td>
+                            <td>Adv. P. Patel</td>
+                            <td><span class="badge pending">Pending Doc</span></td>
+                            <td><button class="btn btn-outline" style="padding: 0.3rem 0.8rem; font-size: 0.8rem;">View</button></td>
+                        </tr>
+                        <tr>
+                            <td>#1003</td>
+                            <td>A. Mehta</td>
+                            <td>Civil Litigation</td>
+                            <td>Adv. R. Sharma</td>
+                            <td><span class="badge active">Hearing Scheduled</span></td>
+                            <td><button class="btn btn-outline" style="padding: 0.3rem 0.8rem; font-size: 0.8rem;">View</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+                </div> <!-- End section-dashboard -->
+
+                <div id="section-cases" class="admin-section">
+                    <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
+                        <h3>Manage Cases</h3>
+                        <p style="color: var(--color-text-light); margin-top: 1rem;">Interface to add, edit, and update cases.</p>
+                    </div>
+                </div>
+                <div id="section-clients" class="admin-section">
+                    <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
+                        <h3>Clients Directory</h3>
+                        <p style="color: var(--color-text-light); margin-top: 1rem;">Interface to view and manage client records.</p>
+                    </div>
+                </div>
+                <div id="section-consultations" class="admin-section">
+                    <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
+                        <h3>Incoming Appointments</h3>
+                        <p style="color: var(--color-text-light); margin-top: 1rem;">Review new legal appointment requests.</p>
+                        
+                        <table class="data-table" style="margin-top: 2rem;">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Service Requested</th>
+                                    <th>Status</th>
+                                    <th>Set Date & Time</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="consultations-tbody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="section-advocates" class="admin-section">
+                    <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
+                        <h3>Manage Legal Professionals</h3>
+                        <p style="color: var(--color-text-light); margin-top: 1rem; margin-bottom: 2rem;">Add new advocates to display on the public website.</p>
+                        
+                        <form id="add-advocate-form" style="max-width: 500px; margin-bottom: 3rem;">
+                            <div class="form-group">
+                                <label class="form-label" for="adv-name">Advocate Name</label>
+                                <input type="text" id="adv-name" class="form-control" required placeholder="e.g. Adv. Rajesh Sharma">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="adv-specialty">Specialty / Title</label>
+                                <input type="text" id="adv-specialty" class="form-control" required placeholder="e.g. Senior Counsel - Civil Litigation">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="adv-image">Upload Image (Optional)</label>
+                                <input type="file" id="adv-image" class="form-control" accept="image/*">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Add Advocate</button>
+                        </form>
+
+                        <h4>Current Advocates</h4>
+                        <table class="data-table" style="margin-top: 1rem;">
+                            <thead>
+                                <tr>
+                                    <th>Image</th>
+                                    <th>Name</th>
+                                    <th>Specialty</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-advocates-list">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="section-hearings" class="admin-section">
+                    <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
+                        <h3>Court Hearings</h3>
+                        <p style="color: var(--color-text-light); margin-top: 1rem;">Calendar and scheduling for upcoming hearings.</p>
+                    </div>
+                </div>
+                <div id="section-docs" class="admin-section">
+                    <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
+                        <h3>Documents Portal</h3>
+                        <p style="color: var(--color-text-light); margin-top: 1rem;">Upload and manage legal documents securely.</p>
+                    </div>
+                </div>
+                <div id="section-reports" class="admin-section">
+                    <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
+                        <h3>Financial & Reports</h3>
+                        <p style="color: var(--color-text-light); margin-top: 1rem;">Generate financial and case reports.</p>
+                    </div>
+                </div>
+                <div id="section-settings" class="admin-section">
+                    <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
+                        <h3>Office Information Settings</h3>
+                        <p style="color: var(--color-text-light); margin-top: 1rem;">Update the public contact details displayed on the website footer.</p>
+                        
+                        <form id="office-info-form" style="margin-top: 2rem; max-width: 500px;">
+                            <div class="form-group">
+                                <label class="form-label" for="admin-address">Address</label>
+                                <textarea id="admin-address" class="form-control" rows="3" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="admin-phone">Phone Number</label>
+                                <input type="text" id="admin-phone" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="admin-email">Email Address</label>
+                                <input type="email" id="admin-email" class="form-control" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save Settings</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Socket.IO Client -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

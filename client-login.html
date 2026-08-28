@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Login | JSM. Chambers</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .login-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            background: linear-gradient(rgba(10, 25, 47, 0.9), rgba(10, 25, 47, 0.9)), url('assets/images/hero-bg.jpg') center/cover;
+        }
+        .login-card {
+            background: var(--color-white);
+            padding: 3rem;
+            border-radius: var(--radius);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 450px;
+            border-top: 5px solid var(--color-secondary);
+        }
+        .login-card h2 {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .form-check {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .login-links {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+        }
+        .login-links a {
+            color: var(--color-primary);
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo">
+                <h1>JSM. <span>Chambers</span></h1>
+            </a>
+            <a href="index.html" class="btn btn-outline" style="padding: 0.5rem 1rem;">Back to Home</a>
+        </div>
+    </nav>
+
+    <div class="login-wrapper">
+        <div class="login-card">
+            <h2>Client Portal Login</h2>
+            <form action="client-dashboard.html" method="GET">
+                <div class="form-group">
+                    <label class="form-label" for="email">Email / Mobile Number</label>
+                    <input type="text" id="email" class="form-control" required placeholder="Enter your email or mobile">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <input type="password" id="password" class="form-control" required placeholder="Enter your password">
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" id="remember">
+                    <label for="remember" style="font-size: 0.9rem;">Remember Me</label>
+                </div>
+                
+                <button type="submit" class="btn btn-primary w-100" style="width: 100%; margin-top: 1rem;">Login Securely</button>
+
+                <div class="login-links">
+                    <a href="#">Forgot Password?</a>
+                    <a href="#" style="color: var(--color-secondary);">Create an Account</a>
+                </div>
+            </form>
+            <div style="margin-top: 2rem; font-size: 0.8rem; color: #999; text-align: center;">
+                
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

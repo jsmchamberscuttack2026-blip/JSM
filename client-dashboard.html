@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Dashboard | JSM. Chambers</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: var(--color-primary);
+            color: var(--color-white);
+            padding: 2rem 1rem;
+        }
+        .sidebar h2 {
+            color: var(--color-secondary);
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        .sidebar ul {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .sidebar ul li a {
+            display: block;
+            padding: 1rem;
+            border-radius: var(--radius);
+            color: #E0E0E0;
+        }
+        .sidebar ul li a:hover, .sidebar ul li a.active {
+            background-color: var(--color-tertiary);
+            color: var(--color-white);
+        }
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            background-color: var(--color-background);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: var(--color-white);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--color-secondary);
+        }
+        .stat-card h4 {
+            color: var(--color-text-light);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        .stat-card .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--color-primary);
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--color-white);
+            box-shadow: var(--shadow);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        .data-table th, .data-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .data-table th {
+            background-color: var(--color-primary);
+            color: var(--color-white);
+            font-weight: 500;
+        }
+        .badge {
+            padding: 0.3rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .badge.pending { background-color: #FFF3E0; color: #E65100; }
+        .badge.active { background-color: #E8F5E9; color: #2E7D32; }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <h2>JSM. Chambers</h2>
+            <div style="font-size: 0.8rem; text-align: center; margin-bottom: 2rem; color: #999;">Client Portal</div>
+            <ul>
+                <li><a href="#" class="active" id="nav-dashboard">Dashboard</a></li>
+                <li><a href="#" id="nav-cases">My Cases</a></li>
+                <li><a href="#" id="nav-hearings">Upcoming Hearings</a></li>
+                <li><a href="#" id="nav-documents">Documents</a></li>
+                <li><a href="#" id="nav-payments">Payments</a></li>
+                <li style="margin-top: auto;"><a href="index.html">Logout</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <div>
+                    <h2>Welcome, Rahul S.</h2>
+                    <p style="color: var(--color-text-light);">Here is your case overview.</p>
+                </div>
+                <div>
+                    <span class="badge active">Account Active</span>
+                </div>
+            </header>
+
+            <div id="content-area">
+                <!-- Dashboard View -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>Active Cases</h4>
+                        <div class="value">2</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Upcoming Hearings</h4>
+                        <div class="value">1</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Pending Payments</h4>
+                        <div class="value">₹ 5,000</div>
+                    </div>
+                </div>
+
+                <h3>Recent Activity</h3>
+                <table class="data-table" style="margin-top: 1rem;">
+                    <thead>
+                        <tr>
+                            <th>Case / Reference</th>
+                            <th>Description</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1234/2026</td>
+                            <td>Document filing for Bail Application</td>
+                            <td>24 Aug 2026</td>
+                            <td><span class="badge active">Completed</span></td>
+                        </tr>
+                        <tr>
+                            <td>CNR-ABCD123...</td>
+                            <td>Hearing Scheduled</td>
+                            <td>25 Sep 2026</td>
+                            <td><span class="badge pending">Pending</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div style="margin-top: 2rem; background: var(--color-white); padding: 1.5rem; border-radius: var(--radius); box-shadow: var(--shadow);">
+                    <h3>Your Primary Advocate</h3>
+                    <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1rem;">
+                        <div style="width: 60px; height: 60px; border-radius: 50%; background-color: #E0E0E0;"></div>
+                        <div>
+                            <h4 style="margin:0;">Adv. Rajesh Sharma</h4>
+                            <p style="margin:0; font-size: 0.9rem; color: var(--color-text-light);">Senior Counsel</p>
+                            <p style="margin:0; font-size: 0.9rem; color: var(--color-primary);">Contact: rajesh.s@jsmchambers.demo</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/client.js"></script>
+</body>
+</html>

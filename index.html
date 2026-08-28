@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSM. Chambers | Private Legal Services Organization</title>
+    <meta name="description" content="JSM. Chambers is a premium private legal organization providing expert legal services and consultation.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Disclaimer Banner -->
+    <div class="disclaimer-banner">
+        ⚠️ DISCLAIMER: JSM. Chambers is a private legal organization and is not affiliated with or an official website of any High Court or government authority.
+    </div>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo">
+                <h1>JSM. <span>Chambers</span></h1>
+            </a>
+            
+            <ul class="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#services">Legal Services</a></li>
+                <li><a href="#advocates">Advocates</a></li>
+                <li><a href="#court-info">Court Info</a></li>
+                <li><a href="#resources">Resources</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+
+            <div class="nav-actions">
+                <a href="client-login.html" class="btn btn-outline">Client Login</a>
+            </div>
+
+            <button class="mobile-menu-btn">☰</button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="container">
+            <h1>Expert Legal Representation & Consultation</h1>
+            <p>Welcome to JSM. Chambers, your premier private legal organization dedicated to providing exceptional legal advocacy, comprehensive case management, and expert counsel for High Court matters.</p>
+            <div class="hero-actions">
+                <a href="#case-status" class="btn btn-primary">Check Case Status</a>
+                <a href="client-login.html" class="btn btn-secondary">Client Login</a>
+                <a href="#appointment" class="btn btn-outline" style="color: white; border-color: white;">Book Appointment</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Search UI Section -->
+    <section id="case-status" class="section">
+        <div class="container">
+            <h2 class="section-title">Track Your Case</h2>
+            <div class="grid">
+                <!-- Case Search -->
+                <div class="search-container">
+                    <h3>Case Status Search</h3>
+                    <p style="margin-bottom: 1rem; color: #666; font-size: 0.9rem;">Search using your case details below.</p>
+                    <form id="case-search-form">
+                        <div class="form-group">
+                            <label class="form-label" for="case-number">Case Number</label>
+                            <input type="text" id="case-number" class="form-control" placeholder="e.g. 1234" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="case-year">Year</label>
+                            <input type="number" id="case-year" class="form-control" placeholder="e.g. 2026" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" style="width: 100%;">Check Status</button>
+                    </form>
+                    <div id="case-search-result" class="search-result"></div>
+                </div>
+
+                <!-- CNR Search -->
+                <div class="search-container">
+                    <h3>CNR Number Search</h3>
+                    <p style="margin-bottom: 1rem; color: #666; font-size: 0.9rem;">Enter your 16-digit CNR Number.</p>
+                    <form id="cnr-search-form">
+                        <div class="form-group">
+                            <label class="form-label" for="cnr-number">CNR Number</label>
+                            <input type="text" id="cnr-number" class="form-control" placeholder="e.g. ABCD012345678901" required minlength="10">
+                        </div>
+                        <button type="submit" class="btn btn-secondary w-100" style="width: 100%;">Search CNR</button>
+                    </form>
+                    <div id="cnr-search-result" class="search-result"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Legal Services Section -->
+    <section id="services" class="section" style="background-color: var(--color-white);">
+        <div class="container">
+            <h2 class="section-title">Our Legal Services</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>Civil Litigation</h3>
+                    <p>Expert representation in complex civil disputes, property matters, and contractual agreements.</p>
+                </div>
+                <div class="card">
+                    <h3>Criminal Defense</h3>
+                    <p>Robust defense strategies and bail applications in High Court criminal proceedings.</p>
+                </div>
+                <div class="card">
+                    <h3>Corporate Law</h3>
+                    <p>Advisory and litigation services for corporate disputes, compliance, and mergers.</p>
+                </div>
+                <div class="card">
+                    <h3>Family Law</h3>
+                    <p>Sensitive and professional handling of divorce, custody, and matrimonial disputes.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="section">
+        <div class="container text-center">
+            <h2 class="section-title">About JSM. Chambers</h2>
+            <p style="max-width: 800px; margin: 0 auto; font-size: 1.1rem; color: var(--color-text-light);">
+                JSM. Chambers is an independent, private consortium of highly experienced legal professionals. We bridge the gap between complex legal frameworks and our clients' need for clear, actionable, and successful legal strategies. Our team is committed to upholding the highest standards of legal ethics and excellence.
+            </p>
+        </div>
+    </section>
+
+    <!-- Advocates / Legal Professionals -->
+    <section id="advocates" class="section" style="background-color: var(--color-white);">
+        <div class="container">
+            <h2 class="section-title">Our Legal Professionals</h2>
+            <div class="grid" id="advocates-grid">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Important Information Layout -->
+    <section id="court-info" class="section">
+        <div class="container">
+            <div class="grid">
+                <div class="card">
+                    <h3>Court Information & Guidelines</h3>
+                    <ul style="list-style: disc; margin-left: 20px; color: var(--color-text-light);">
+                        <li>High Court Working Hours: 10:30 AM to 4:30 PM</li>
+                        <li>Filing Timings: 10:30 AM to 1:30 PM</li>
+                        <li>E-Filing Portal Guidelines (External)</li>
+                        <li>Dress Code for Litigants</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Latest Notices (Internal)</h3>
+                    <ul style="list-style: circle; margin-left: 20px; color: var(--color-text-light);">
+                        <li>JSM. Chambers Office closed on National Holidays.</li>
+                        <li>Update: New filing procedures adopted for Q3.</li>
+                        <li>Seminar on Corporate Law Amendments.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Important Announcements</h3>
+                    <p>For urgent bail applications, please use the emergency consultation booking line. All client meetings require prior appointment.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Appointment & Contact -->
+    <section id="appointment" class="section" style="background-color: var(--color-primary); color: white;">
+        <div class="container">
+            <h2 class="section-title" style="color: var(--color-secondary);">Book an Appointment</h2>
+            <div class="search-container" style="color: var(--color-text);">
+                <form id="appointment-form">
+                    <div class="form-group">
+                        <label class="form-label" for="app-name">Full Name</label>
+                        <input type="text" id="app-name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="app-email">Email Address</label>
+                        <input type="email" id="app-email" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="app-service">Legal Service Required</label>
+                        <select id="app-service" class="form-control">
+                            <option>Civil Litigation</option>
+                            <option>Criminal Defense</option>
+                            <option>Corporate Law</option>
+                            <option>Family Law</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-secondary w-100" style="width: 100%;">Request Appointment</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="contact" class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div>
+                    <h4>JSM. Chambers</h4>
+                    <p style="margin-top: 1rem; font-size: 0.9rem; color: #E0E0E0;">Premium Private Legal Organization providing expert consultation and case management.</p>
+                </div>
+                <div>
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#home">Home</a></li>
+                        <li><a href="#services">Legal Services</a></li>
+                        <li><a href="client-login.html">Client Portal</a></li>
+                        <li><a href="#advocates">Our Advocates</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Legal & Resources</h4>
+                    <ul>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms & Conditions</a></li>
+                        <li><a href="#">Accessibility</a></li>
+                        <li><a href="#">FAQs</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Office Information</h4>
+                    <p style="font-size: 0.9rem; color: #E0E0E0;" id="public-office-info">
+                        123 Legal Avenue, Law District<br>
+    <footer class="footer">
+        <div class="container text-center">
+            <p>&copy; <script>document.write(new Date().getFullYear())</script> JSM. Chambers. All rights reserved.</p>
+            <p class="disclaimer">Disclaimer: JSM. Chambers is a private legal organization and is not affiliated with or an official website of any High Court or government authority.</p>
+        </div>
+    </footer>
+
+    <!-- Socket.IO Client -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
