@@ -411,19 +411,60 @@ def get_my_case(id):
 def index():
     return send_from_directory('.', 'index.html')
 
+
+def send_appointment_received_email(recipient_email, name, service):
+    if not recipient_email or "@" not in recipient_email: return False
+    if not SMTP_USER or not SMTP_PASSWORD: return False
+    try:
+        msg = MIMEMultipart()
+        msg['Date'] = formatdate(localtime=True)
+        msg['Message-ID'] = make_msgid()
+        msg['From'] = f"JSM Chambers <{SMTP_USER}>"
+        msg['To'] = recipient_email
+        msg['Subject'] = "JSM. Chambers - Appointment Request Received"
+        body = f"""JSM Chambers ⚖️
+
+Dear {name},
+
+We have successfully received your appointment request for: {service}.
+
+Our administrative team will review your request and set a Date and Time for your consultation. You will receive another email once your appointment is confirmed.
+
+Thank you,
+JSM Chambers"""
+        msg.attach(MIMEText(body, 'plain'))
+        with IPv4SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(SMTP_USER, recipient_email, msg.as_string())
+        return True
+    except Exception as e:
+        logging.error(f"Failed to send appointment received email: {e}")
+        return False
+
 @app.route('/api/appointments', methods=['POST'])
 def create_appointment():
     data = request.json
+    name = data.get('name')
+    email = data.get('email')
+    service = data.get('service')
+    
     appointment = {
-        "name": data.get('name'),
-        "email": data.get('email'),
-        "service": data.get('service'),
+        "name": name,
+        "email": email,
+        "service": service,
         "request_date": datetime.now().strftime("%d %b %Y"),
         "status": "Pending",
         "appointment_date": "",
         "appointment_time": ""
     }
     result = appointments_col.insert_one(appointment)
+    
+    # Send auto-reply
+    send_appointment_received_email(email, name, service)
+    
     return jsonify({"message": "Appointment created successfully", "id": str(result.inserted_id)}), 201
 
 @app.route('/api/appointments', methods=['GET'])
