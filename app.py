@@ -218,27 +218,33 @@ def delete_case(id):
 
 
 
+
 @app.route('/api/forgot-password', methods=['POST'])
 def forgot_password():
     data = request.json
     email = data.get('email')
     
-    # We only want to allow forgot password for active cases
-    case = cases_col.find_one({"email": email})
-    if not case:
-        return jsonify({"error": "Email not found"}), 404
+    # Check for active cases first
+    active_case = cases_col.find_one({"email": email, "status": {"$ne": "Finished & Archived"}})
+    if active_case:
+        code = ''.join(random.choices(string.digits, k=6))
+        # Set code on ALL active cases for this email
+        cases_col.update_many({"email": email, "status": {"$ne": "Finished & Archived"}}, {"$set": {"verification_code": code}})
         
-    if case.get('status') == 'Finished & Archived':
+        email_sent = send_verification_email(email, code)
+        if email_sent:
+            return jsonify({"message": "Code sent successfully"}), 200
+        else:
+            return jsonify({"error": "Failed to send email. Please contact support."}), 500
+            
+    # If no active case, check if they only have archived cases
+    archived_case = cases_col.find_one({"email": email, "status": "Finished & Archived"})
+    if archived_case:
         return jsonify({"error": "Your case file has been closed. Portal access is disabled."}), 403
         
-    code = ''.join(random.choices(string.digits, k=6))
-    cases_col.update_one({"email": email}, {"$set": {"verification_code": code}})
-    
-    email_sent = send_verification_email(email, code)
-    if email_sent:
-        return jsonify({"message": "Code sent successfully"}), 200
-    else:
-        return jsonify({"error": "Failed to send email. Please contact support."}), 500
+    return jsonify({"error": "Email not found"}), 404
+
+
 
 
 @app.route('/api/verify-code', methods=['POST'])
@@ -247,14 +253,16 @@ def verify_code():
     email = data.get('email')
     code = data.get('code')
     
-    case = cases_col.find_one({"email": email, "verification_code": code})
+    # Only verify against active cases
+    case = cases_col.find_one({"email": email, "verification_code": code, "status": {"$ne": "Finished & Archived"}})
     if case:
-        # Clear the code after successful use
-        cases_col.update_one({"email": email}, {"$unset": {"verification_code": ""}})
+        # Clear the code from all cases for this email
+        cases_col.update_many({"email": email}, {"$unset": {"verification_code": ""}})
         case['_id'] = str(case['_id'])
         return jsonify({"message": "Login successful", "case": case}), 200
         
     return jsonify({"error": "Invalid or expired verification code"}), 401
+
 
 
 @app.route('/api/cases/<case_id>/email', methods=['POST'])
@@ -353,21 +361,25 @@ JSM. Chambers"""
 
 
 
+
 @app.route('/api/client-login', methods=['POST'])
 def client_login():
     data = request.json
     email = data.get('email')
     password = data.get('password')
     
-    case = cases_col.find_one({"email": email, "password": password})
+    # Check for active case first
+    case = cases_col.find_one({"email": email, "password": password, "status": {"$ne": "Finished & Archived"}})
     if case:
-        if case.get('status') == 'Finished & Archived':
-            return jsonify({"error": "Your case file has been closed. Portal access is disabled."}), 403
-            
         case['_id'] = str(case['_id'])
         return jsonify({"message": "Login successful", "case": case}), 200
         
+    archived_case = cases_col.find_one({"email": email, "password": password, "status": "Finished & Archived"})
+    if archived_case:
+        return jsonify({"error": "Your case file has been closed. Portal access is disabled."}), 403
+        
     return jsonify({"error": "Invalid email or password"}), 401
+
 
 
 @app.route('/api/my-case/<id>', methods=['GET'])
