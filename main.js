@@ -139,10 +139,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load and Render Advocates from API
   const advocatesGrid = document.getElementById('advocates-grid');
   if (advocatesGrid) {
-      async function loadAdvocates() {
+      let advocatesCache = "";
+    async function loadAdvocates() {
           try {
               const response = await fetch('/api/advocates');
               const advocates = await response.json();
+              const newDataString = JSON.stringify(advocates);
+              if (newDataString === advocatesCache) return;
+              advocatesCache = newDataString;
               if (advocates.length > 0) {
                   advocatesGrid.innerHTML = '';
                   advocates.forEach(adv => {
@@ -167,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
       loadAdvocates();
       
       // Short Polling for Real-time Sync (Serverless Compatible)
-      setInterval(loadAdvocates, 2000);
+      setInterval(loadAdvocates, 1000);
   }
 
 });

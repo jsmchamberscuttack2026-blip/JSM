@@ -75,12 +75,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    let appointmentsCache = "";
     async function loadAppointments() {
         if (!consultationsTbody) return;
         try {
             const response = await fetch('/api/appointments');
             const appointments = await response.json();
-            
+            const newDataString = JSON.stringify(appointments);
+            if (newDataString === appointmentsCache) return; // Skip re-rendering if data hasn't changed
+            appointmentsCache = newDataString;
             if (appointments.length > 0) {
                 consultationsTbody.innerHTML = '';
                 appointments.forEach(c => {
@@ -123,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (consultationsTbody) {
         loadAppointments();
-        setInterval(loadAppointments, 2000);
+        setInterval(loadAppointments, 1000);
     }
 
     // Load and Handle Office Info Settings
@@ -153,12 +156,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const addAdvocateForm = document.getElementById('add-advocate-form');
     const adminAdvocatesList = document.getElementById('admin-advocates-list');
 
+    let adminAdvocatesCache = "";
     async function renderAdminAdvocates() {
         if (!adminAdvocatesList) return;
         try {
             const response = await fetch('/api/advocates');
             const advocates = await response.json();
-            
+            const newDataString = JSON.stringify(advocates);
+            if (newDataString === adminAdvocatesCache) return; // Skip re-rendering if data hasn't changed
+            adminAdvocatesCache = newDataString;
             if (!advocates || advocates.length === 0) {
                 adminAdvocatesList.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999; padding: 2rem;">No advocates found.</td></tr>';
                 return;
@@ -193,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (addAdvocateForm) {
         renderAdminAdvocates();
-        setInterval(renderAdminAdvocates, 2000);
+        setInterval(renderAdminAdvocates, 1000);
 
         addAdvocateForm.addEventListener('submit', async (e) => {
             e.preventDefault();
