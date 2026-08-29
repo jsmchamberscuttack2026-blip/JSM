@@ -37,6 +37,16 @@ try:
 except Exception as e:
     logging.error(f"Error connecting to MongoDB: {e}")
 
+import socket
+
+class IPv4SMTP(smtplib.SMTP):
+    def _get_socket(self, host, port, timeout):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if timeout is not None and timeout is not socket._GLOBAL_DEFAULT_TIMEOUT:
+            sock.settimeout(timeout)
+        sock.connect((host, port))
+        return sock
+
 # Helper Function: Send Email
 def send_approval_email(recipient_email, name, service, date, time):
     if not recipient_email or "@" not in recipient_email:
@@ -73,7 +83,8 @@ JSM Chambers
 Advocates"""
         msg.attach(MIMEText(body, 'plain'))
 
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+        # Using IPv4SMTP to prevent Render from crashing on IPv6
+        with IPv4SMTP(SMTP_HOST, SMTP_PORT) as server:
             server.ehlo()
             server.starttls()
             server.ehlo()
