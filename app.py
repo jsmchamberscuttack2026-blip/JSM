@@ -7,6 +7,7 @@ from bson import ObjectId
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.utils import formatdate, make_msgid
 from datetime import datetime
 
 app = Flask(__name__, static_folder='.', static_url_path='')
@@ -54,7 +55,9 @@ def send_credentials_email(recipient_email, name, password):
     if not SMTP_USER or not SMTP_PASSWORD: return False
     try:
         msg = MIMEMultipart()
-        msg['From'] = SMTP_USER
+        msg['Date'] = formatdate(localtime=True)
+        msg['Message-ID'] = make_msgid()
+        msg['From'] = f"JSM Chambers <{SMTP_USER}>"
         msg['To'] = recipient_email
         msg['Subject'] = "JSM. Chambers - Your Client Portal Login Details"
         body = f"""JSM Chambers — Client Portal ⚖️\n\nDear {name},\n\nA case file has been successfully opened for you.\nYou can now track your case status, hearing dates, and fees via our Client Portal.\n\nLogin Link: https://my-project-89coqi0xj-arnnav.vercel.app/client-login.html\nEmail: {recipient_email}\nPassword: {password}\n\nThank you,\nJSM Chambers"""
@@ -76,7 +79,9 @@ def send_verification_email(recipient_email, code):
     if not SMTP_USER or not SMTP_PASSWORD: return False
     try:
         msg = MIMEMultipart()
-        msg['From'] = SMTP_USER
+        msg['Date'] = formatdate(localtime=True)
+        msg['Message-ID'] = make_msgid()
+        msg['From'] = f"JSM Chambers <{SMTP_USER}>"
         msg['To'] = recipient_email
         msg['Subject'] = "JSM. Chambers - Login Verification Code"
         body = f"""JSM Chambers — Client Portal ⚖️\n\nYou requested a verification code to access your case file.\n\nYour Verification Code is: {code}\n\nIf you did not request this, please ignore this email."""
@@ -104,7 +109,9 @@ def send_approval_email(recipient_email, name, service, date, time):
 
     try:
         msg = MIMEMultipart()
-        msg['From'] = SMTP_USER
+        msg['Date'] = formatdate(localtime=True)
+        msg['Message-ID'] = make_msgid()
+        msg['From'] = f"JSM Chambers <{SMTP_USER}>"
         msg['To'] = recipient_email
         msg['Subject'] = "JSM. Chambers Appointment Approved"
 
@@ -267,7 +274,9 @@ def send_case_email(case_id):
         
     try:
         msg = MIMEMultipart()
-        msg['From'] = SMTP_USER
+        msg['Date'] = formatdate(localtime=True)
+        msg['Message-ID'] = make_msgid()
+        msg['From'] = f"JSM Chambers <{SMTP_USER}>"
         msg['To'] = email
         msg['Subject'] = subject
         msg.attach(MIMEText(message, 'plain'))
@@ -300,7 +309,9 @@ def finish_case(case_id):
         try:
             if email and SMTP_USER and SMTP_PASSWORD:
                 msg = MIMEMultipart()
-                msg['From'] = SMTP_USER
+        msg['Date'] = formatdate(localtime=True)
+        msg['Message-ID'] = make_msgid()
+        msg['From'] = f"JSM Chambers <{SMTP_USER}>"
                 msg['To'] = email
                 msg['Subject'] = "Congratulations - Your Case is Successfully Concluded"
                 body = f"""Dear {client_name},
