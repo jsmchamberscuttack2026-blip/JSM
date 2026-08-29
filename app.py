@@ -13,30 +13,43 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Configuration loaded from Environment Variables
-MONGO_URI = os.environ.get("MONGO_URI", "mongodb+srv://arnnavpanda2006_db_user:w52rYxHisbslJ4hp@cluster0.fxakspf.mongodb.net/?appName=Cluster0")
+MONGO_URI = os.environ.get("MONGO_URI")
 DB_NAME = os.environ.get("DB_NAME", "jsmchambers_db")
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
-SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "jsmchamberscuttack2026@gmail.com")
-SENDER_PASSWORD = os.environ.get("SENDER_PASSWORD", "tqqm pcze xens hygo")
+SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
+SMTP_USER = os.environ.get("SMTP_USER")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
 
 import certifi
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # MongoDB Setup
 try:
+    if not MONGO_URI:
+        logging.error("MONGO_URI environment variable is missing.")
     client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
     db = client[DB_NAME]
     appointments_col = db['appointments']
     advocates_col = db['advocates']
-    print("Successfully connected to MongoDB")
+    logging.info("Successfully connected to MongoDB")
 except Exception as e:
-    print(f"Error connecting to MongoDB: {e}")
+    logging.error(f"Error connecting to MongoDB: {e}")
 
 # Helper Function: Send Email
 def send_approval_email(recipient_email, name, service, date, time):
+    if not recipient_email or "@" not in recipient_email:
+        logging.error(f"Invalid or missing recipient email address: {recipient_email}")
+        return False
+        
+    if not SMTP_USER or not SMTP_PASSWORD:
+        logging.error("SMTP_USER or SMTP_PASSWORD environment variables are missing.")
+        return False
+
     try:
         msg = MIMEMultipart()
-        msg['From'] = SENDER_EMAIL
+        msg['From'] = SMTP_USER
         msg['To'] = recipient_email
         msg['Subject'] = "JSM. Chambers Appointment Approved"
 
@@ -60,15 +73,24 @@ JSM Chambers
 Advocates"""
         msg.attach(MIMEText(body, 'plain'))
 
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        server.starttls()
-        server.login(SENDER_EMAIL, SENDER_PASSWORD)
-        text = msg.as_string()
-        server.sendmail(SENDER_EMAIL, recipient_email, text)
-        server.quit()
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            text = msg.as_string()
+            server.sendmail(SMTP_USER, recipient_email, text)
+            
+        logging.info(f"Email sent successfully to {recipient_email}")
         return True
+    except smtplib.SMTPAuthenticationError as e:
+        logging.error("SMTP Authentication Error: Please check SMTP_USER and SMTP_PASSWORD.")
+        return False
+    except smtplib.SMTPConnectError as e:
+        logging.error(f"SMTP Connection Error: Failed to connect to {SMTP_HOST}:{SMTP_PORT}.")
+        return False
     except Exception as e:
-        print(f"Failed to send email: {e}")
+        logging.error(f"Failed to send email to {recipient_email}. Error: {e}")
         return False
 
 # ========================
@@ -118,19 +140,31 @@ def approve_appointment():
         return jsonify({"error": "Appointment not found"}), 404
 
     # Update DB
-    appointments_col.update_one(
-        {"_id": ObjectId(appt_id)},
-        {"$set": {
-            "status": "Approved",
-            "appointment_date": date,
-            "appointment_time": time
-        }}
-    )
+    try:
+        result = appointments_col.update_one(
+            {"_id": ObjectId(appt_id)},
+            {"$set": {
+                "status": "Approved",
+                "appointment_date": date,
+                "appointment_time": time
+            }}
+        )
+        if result.modified_count == 0 and result.matched_count == 0:
+             logging.warning(f"No appointment found to update for ID {appt_id}")
+             return jsonify({"error": "Failed to update database"}), 500
+    except Exception as e:
+        logging.error(f"Database update failed during approval for {appt_id}: {e}")
+        return jsonify({"error": "Database update failed"}), 500
 
-    # Send Email
-    email_sent = send_approval_email(appt['email'], appt['name'], appt['service'], date, time)
+    # Send Email only if DB update succeeded
+    email_sent = send_approval_email(appt.get('email'), appt.get('name'), appt.get('service'), date, time)
 
     socketio.emit('appointments_updated')
+
+    if email_sent:
+        logging.info(f"Approval successful and email sent for appointment {appt_id}")
+    else:
+        logging.warning(f"Approval successful but email failed for appointment {appt_id}")
 
     return jsonify({
         "message": "Appointment approved successfully",
