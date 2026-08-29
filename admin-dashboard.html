@@ -407,7 +407,29 @@
                     </div>
                 </div>
             </div>
-        </main>
+        
+        <!-- Email Logs Section -->
+        <section id="email-logs-section" class="admin-section" style="display: none;">
+            <h2>Email Delivery Logs</h2>
+            <div class="card">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Recipient</th>
+                            <th>Subject</th>
+                            <th>Status</th>
+                            <th>SMTP Response</th>
+                        </tr>
+                    </thead>
+                    <tbody id="email-logs-table-body">
+                        <!-- Loaded dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
     </div>
 
     <script src="js/admin.js?v=9"></script>

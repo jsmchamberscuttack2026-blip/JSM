@@ -408,3 +408,39 @@ document.addEventListener('DOMContentLoaded', () => {
         setInterval(loadArchivedCases, 1000);
     }
 });
+
+
+async function loadEmailLogs() {
+    try {
+        const response = await fetch('/api/email-logs');
+        if (!response.ok) return;
+        const logs = await response.json();
+        
+        const tbody = document.getElementById('email-logs-table-body');
+        if (!tbody) return;
+        
+        tbody.innerHTML = '';
+        logs.forEach(log => {
+            let statusBadge = '';
+            if (log.status === 'SMTP Accepted') {
+                statusBadge = '<span class="status-badge status-approved">SMTP Accepted</span>';
+            } else if (log.status === 'Failed' || log.status === 'Rejected') {
+                statusBadge = `<span class="status-badge status-pending">${log.status}</span>`;
+            } else {
+                statusBadge = `<span class="status-badge">${log.status}</span>`;
+            }
+            
+            tbody.innerHTML += `
+                <tr>
+                    <td>${log.timestamp || 'N/A'}</td>
+                    <td>${log.recipient}</td>
+                    <td>${log.subject}</td>
+                    <td>${statusBadge}</td>
+                    <td><small style="color: #666;">${log.smtp_response}</small></td>
+                </tr>
+            `;
+        });
+    } catch (error) {
+        console.error("Failed to load email logs", error);
+    }
+}
