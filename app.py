@@ -309,9 +309,9 @@ def finish_case(case_id):
         try:
             if email and SMTP_USER and SMTP_PASSWORD:
                 msg = MIMEMultipart()
-        msg['Date'] = formatdate(localtime=True)
-        msg['Message-ID'] = make_msgid()
-        msg['From'] = f"JSM Chambers <{SMTP_USER}>"
+                msg['Date'] = formatdate(localtime=True)
+                msg['Message-ID'] = make_msgid()
+                msg['From'] = f"JSM Chambers <{SMTP_USER}>"
                 msg['To'] = email
                 msg['Subject'] = "Congratulations - Your Case is Successfully Concluded"
                 body = f"""Dear {client_name},
