@@ -417,7 +417,7 @@ def client_login():
         "status": {"$ne": "Finished & Archived"}
     })
     if case:
-        return jsonify({"success": True}), 200
+        return jsonify({"success": True, "case": {"_id": str(case['_id'])}}), 200
     return jsonify({"error": "Invalid credentials or case closed"}), 401
 
 @app.route('/api/forgot-password', methods=['POST'])
@@ -444,7 +444,7 @@ def verify_code():
         "status": {"$ne": "Finished & Archived"}
     })
     if case:
-        return jsonify({"success": True, "password": case.get('password')}), 200
+        return jsonify({"success": True, "password": case.get('password'), "case": {"_id": str(case['_id'])}}), 200
     return jsonify({"error": "Invalid code"}), 400
 
 if __name__ == '__main__':
