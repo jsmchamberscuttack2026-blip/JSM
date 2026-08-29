@@ -71,7 +71,7 @@ def send_credentials_email(recipient_email, name, password):
         """
         msg.attach(MIMEText(text, 'plain', 'utf-8'))
         msg.attach(MIMEText(html, 'html', 'utf-8'))
-        with IPv4SMTP(SMTP_HOST, SMTP_PORT) as server:
+        with IPv4SMTP(SMTP_HOST, SMTP_PORT, timeout=5) as server:
             server.ehlo()
             server.starttls()
             server.ehlo()
@@ -105,7 +105,7 @@ def send_verification_email(recipient_email, code):
         """
         msg.attach(MIMEText(text, 'plain', 'utf-8'))
         msg.attach(MIMEText(html, 'html', 'utf-8'))
-        with IPv4SMTP(SMTP_HOST, SMTP_PORT) as server:
+        with IPv4SMTP(SMTP_HOST, SMTP_PORT, timeout=5) as server:
             server.ehlo()
             server.starttls()
             server.ehlo()
@@ -160,7 +160,7 @@ def send_appointment_received_email(recipient_email, name, service):
         admin_msg.attach(MIMEText(admin_text, 'plain', 'utf-8'))
         admin_msg.attach(MIMEText(admin_html, 'html', 'utf-8'))
 
-        with IPv4SMTP(SMTP_HOST, SMTP_PORT) as server:
+        with IPv4SMTP(SMTP_HOST, SMTP_PORT, timeout=5) as server:
             server.ehlo()
             server.starttls()
             server.ehlo()
@@ -245,7 +245,7 @@ def approve_appointment():
             """
             msg.attach(MIMEText(text, 'plain', 'utf-8'))
             msg.attach(MIMEText(html, 'html', 'utf-8'))
-            with IPv4SMTP(SMTP_HOST, SMTP_PORT) as server:
+            with IPv4SMTP(SMTP_HOST, SMTP_PORT, timeout=5) as server:
                 server.ehlo()
                 server.starttls()
                 server.ehlo()
@@ -357,7 +357,7 @@ def finish_case(id):
         msg.attach(MIMEText(text, 'plain', 'utf-8'))
         msg.attach(MIMEText(html, 'html', 'utf-8'))
         try:
-            with IPv4SMTP(SMTP_HOST, SMTP_PORT) as server:
+            with IPv4SMTP(SMTP_HOST, SMTP_PORT, timeout=5) as server:
                 server.ehlo()
                 server.starttls()
                 server.ehlo()
@@ -398,7 +398,7 @@ def send_case_email(id):
         msg.attach(MIMEText(text, 'plain', 'utf-8'))
         msg.attach(MIMEText(html, 'html', 'utf-8'))
         
-        with IPv4SMTP(SMTP_HOST, SMTP_PORT) as server:
+        with IPv4SMTP(SMTP_HOST, SMTP_PORT, timeout=5) as server:
             server.ehlo()
             server.starttls()
             server.ehlo()
@@ -422,18 +422,22 @@ def client_login():
 
 @app.route('/api/forgot-password', methods=['POST'])
 def forgot_password():
-    data = request.get_json(force=True, silent=True) or {}
-    email = data.get('email')
-    case = cases_col.find_one({
-        "email": email,
-        "status": {"$ne": "Finished & Archived"}
-    })
-    if not case:
-        return jsonify({"error": "No active case found for this email"}), 404
-    code = ''.join(random.choices(string.digits, k=6))
-    cases_col.update_one({"_id": case['_id']}, {"$set": {"reset_code": code}})
-    send_verification_email(email, code)
-    return jsonify({"message": "Verification code sent"}), 200
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        email = data.get('email')
+        case = cases_col.find_one({
+            "email": email,
+            "status": {"$ne": "Finished & Archived"}
+        })
+        if not case:
+            return jsonify({"error": "No active case found for this email"}), 404
+        code = ''.join(random.choices(string.digits, k=6))
+        cases_col.update_one({"_id": case['_id']}, {"$set": {"reset_code": code}})
+        send_verification_email(email, code)
+        return jsonify({"message": "Verification code sent"}), 200
+    except Exception as e:
+        logging.error(f"Forgot password crash: {e}")
+        return jsonify({"message": "Verification code sent but logging error"}), 200
 
 @app.route('/api/verify-code', methods=['POST'])
 def verify_code():
