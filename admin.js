@@ -40,25 +40,76 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.length > 0) {
                 consultationsTbody.innerHTML = '';
                 data.forEach(appt => {
+                    const status = appt.status || 'Pending';
+                    const isApproved = status === 'Approved';
+                    const dateVal = appt.appointment_date || '';
+                    const timeVal = appt.appointment_time || '';
+
+                    const statusBadge = isApproved 
+                        ? `<span style="background: #388E3C; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">Approved</span>`
+                        : `<span style="background: #F57C00; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">Pending</span>`;
+
+                    const dateInput = isApproved ? dateVal : `<input type="date" id="date-${appt._id}" class="form-control" style="width:130px; display:inline-block; margin-bottom:5px;">`;
+                    const timeInput = isApproved ? timeVal : `<input type="time" id="time-${appt._id}" class="form-control" style="width:110px; display:inline-block;">`;
+                    
+                    const approveBtn = isApproved 
+                        ? '' 
+                        : `<button class="btn btn-primary" style="margin-right: 5px; padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="approveAppt('${appt._id}')">Approve</button>`;
+
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td>${appt.name}</td>
                         <td>${appt.email}</td>
                         <td>${appt.service}</td>
-                        <td>${appt.date} - ${appt.time}</td>
+                        <td>${statusBadge}</td>
                         <td>
+                            ${dateInput}
+                            <br>
+                            ${timeInput}
+                        </td>
+                        <td>
+                            ${approveBtn}
                             <button class="btn btn-error" style="background-color: #D32F2F; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;" onclick="deleteAppointment('${appt._id}')">Delete</button>
                         </td>
                     `;
                     consultationsTbody.appendChild(tr);
                 });
             } else {
-                consultationsTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999; padding: 2rem;">No pending appointments found.</td></tr>';
+                consultationsTbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999; padding: 2rem;">No pending appointments found.</td></tr>';
             }
         } catch (error) {
             console.error('Error loading appointments:', error);
         }
     }
+
+    // Add approveAppt to window scope so onclick can reach it
+    window.approveAppt = async function(id) {
+        const date = document.getElementById(`date-${id}`).value;
+        const time = document.getElementById(`time-${id}`).value;
+        if (!date || !time) {
+            alert('Please select both Date and Time before approving.');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/appointments/approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, date, time })
+            });
+
+            if (response.ok) {
+                alert('Appointment approved! Confirmation email sent.');
+                apptCache = ''; // force reload
+                loadAppointments();
+            } else {
+                alert('Failed to approve appointment.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Server error.');
+        }
+    };
 
     if (consultationsTbody) {
         loadAppointments();
