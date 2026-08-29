@@ -178,7 +178,7 @@ def serve_index():
 
 @app.route('/api/appointments', methods=['POST'])
 def create_appointment():
-    data = request.json
+    data = request.get_json(force=True, silent=True) or {}
     name = data.get('name')
     email = data.get('email')
     service = data.get('service')
@@ -206,7 +206,7 @@ def get_appointments():
 
 @app.route('/api/appointments/approve', methods=['POST'])
 def approve_appointment():
-    data = request.json
+    data = request.get_json(force=True, silent=True) or {}
     appt_id = data.get('id')
     date = data.get('date')
     time = data.get('time')
@@ -267,7 +267,7 @@ def delete_all_appointments():
 
 @app.route('/api/admin-login', methods=['POST'])
 def admin_login():
-    data = request.json
+    data = request.get_json(force=True, silent=True) or {}
     password = data.get('password')
     if password == 'admin123':
         return jsonify({"success": True}), 200
@@ -275,7 +275,7 @@ def admin_login():
 
 @app.route('/api/cases', methods=['POST'])
 def create_case():
-    data = request.json
+    data = request.get_json(force=True, silent=True) or {}
     password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
     case = {
         "client_name": data.get('client_name'),
@@ -307,7 +307,7 @@ def get_archived_cases():
 
 @app.route('/api/cases/<id>', methods=['PUT'])
 def update_case(id):
-    data = request.json
+    data = request.get_json(force=True, silent=True) or {}
     cases_col.update_one(
         {"_id": ObjectId(id)},
         {"$set": {
@@ -369,7 +369,7 @@ def finish_case(id):
 
 @app.route('/api/cases/<id>/email', methods=['POST'])
 def send_case_email(id):
-    data = request.json
+    data = request.get_json(force=True, silent=True) or {}
     subject = data.get('subject')
     message_body = data.get('message')
     if not subject or not message_body:
@@ -410,7 +410,7 @@ def send_case_email(id):
 
 @app.route('/api/client-login', methods=['POST'])
 def client_login():
-    data = request.json
+    data = request.get_json(force=True, silent=True) or {}
     case = cases_col.find_one({
         "email": data.get('email'), 
         "password": data.get('password'),
@@ -422,7 +422,7 @@ def client_login():
 
 @app.route('/api/forgot-password', methods=['POST'])
 def forgot_password():
-    data = request.json
+    data = request.get_json(force=True, silent=True) or {}
     email = data.get('email')
     case = cases_col.find_one({
         "email": email,
@@ -437,7 +437,7 @@ def forgot_password():
 
 @app.route('/api/verify-code', methods=['POST'])
 def verify_code():
-    data = request.json
+    data = request.get_json(force=True, silent=True) or {}
     case = cases_col.find_one({
         "email": data.get('email'), 
         "reset_code": data.get('code'),
