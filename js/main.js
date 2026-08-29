@@ -169,13 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       loadAdvocates();
       
-      // Listen for real-time updates
-      if (typeof io !== 'undefined') {
-          const socket = io();
-          socket.on('advocates_updated', () => {
-              loadAdvocates();
-          });
-      }
+      
   }
 
 });

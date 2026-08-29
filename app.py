@@ -2,7 +2,6 @@
 
 import os
 from flask import Flask, request, jsonify, send_from_directory
-from flask_socketio import SocketIO
 from pymongo import MongoClient
 from bson import ObjectId
 import smtplib
@@ -12,7 +11,6 @@ from datetime import datetime
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Configuration loaded from Environment Variables
 MONGO_URI = os.environ.get("MONGO_URI")
@@ -127,7 +125,6 @@ def create_appointment():
         "appointment_time": ""
     }
     result = appointments_col.insert_one(appointment)
-    socketio.emit('appointments_updated')
     return jsonify({"message": "Appointment created successfully", "id": str(result.inserted_id)}), 201
 
 @app.route('/api/appointments', methods=['GET'])
@@ -172,8 +169,6 @@ def approve_appointment():
     # Send Email only if DB update succeeded
     email_sent = send_approval_email(appt.get('email'), appt.get('name'), appt.get('service'), date, time)
 
-    socketio.emit('appointments_updated')
-
     if email_sent:
         logging.info(f"Approval successful and email sent for appointment {appt_id}")
     else:
@@ -201,17 +196,15 @@ def add_advocate():
         "imageUrl": data.get('imageUrl', '')
     }
     result = advocates_col.insert_one(adv)
-    socketio.emit('advocates_updated')
     return jsonify({"message": "Advocate added", "id": str(result.inserted_id)}), 201
 
 @app.route('/api/advocates/<id>', methods=['DELETE'])
 def delete_advocate(id):
     result = advocates_col.delete_one({"_id": ObjectId(id)})
     if result.deleted_count > 0:
-        socketio.emit('advocates_updated')
         return jsonify({"message": "Deleted successfully"}), 200
     return jsonify({"error": "Not found"}), 404
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8081))
-    socketio.run(app, host='0.0.0.0', port=port, debug=False, allow_unsafe_werkzeug=True)
+    app.run(host='0.0.0.0', port=port, debug=False)

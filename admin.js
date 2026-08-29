@@ -227,15 +227,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // WebSockets Listeners for Real-time Admin sync
-    if (typeof io !== 'undefined') {
-        const socket = io();
-        socket.on('appointments_updated', () => {
-            if (consultationsTbody) loadAppointments();
-        });
-        socket.on('advocates_updated', () => {
-            if (adminAdvocatesList) renderAdminAdvocates();
-        });
-    }
+    
 
 });
