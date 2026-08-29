@@ -57,7 +57,6 @@ def send_credentials_email(recipient_email, name, password):
         msg['Subject'] = "JSM. Chambers - Your Client Portal Login Details"
         
         text = f"""Dear {name},\n\nA case file has been successfully opened for you.\nYou can now track your case status, hearing dates, and fees via our Client Portal.\n\nLogin Link: https://jsmchambers.vercel.app/client-login.html\nEmail: {recipient_email}\nPassword: {password}\n\nThank you,\nJSM Chambers"""
-        
         html = f"""
         <html><body style="font-family: Arial, sans-serif; color: #333;">
         <h2 style="color: #0A192F;">JSM. Chambers Client Portal</h2>
@@ -95,7 +94,6 @@ def send_verification_email(recipient_email, code):
         msg['Subject'] = "JSM. Chambers - Login Verification Code"
         
         text = f"""You requested a verification code to access your case file.\n\nYour Verification Code is: {code}\n\nIf you did not request this, please ignore this email."""
-        
         html = f"""
         <html><body style="font-family: Arial, sans-serif; color: #333;">
         <h2 style="color: #0A192F;">Login Verification</h2>
@@ -122,15 +120,14 @@ def send_appointment_received_email(recipient_email, name, service):
     if not recipient_email or "@" not in recipient_email: return False
     if not SMTP_USER or not SMTP_PASSWORD: return False
     try:
+        # 1. Send confirmation to the client
         msg = MIMEMultipart('alternative')
         msg['Date'] = formatdate(localtime=True)
         msg['Message-ID'] = make_msgid()
         msg['From'] = f"JSM Chambers <{SMTP_USER}>"
         msg['To'] = recipient_email
         msg['Subject'] = "JSM. Chambers - Appointment Request Received"
-        
         text = f"""Dear {name},\n\nWe have successfully received your appointment request for: {service}.\n\nOur administrative team will review your request and set a Date and Time for your consultation. You will receive another email once your appointment is confirmed.\n\nThank you,\nJSM Chambers"""
-        
         html = f"""
         <html><body style="font-family: Arial, sans-serif; color: #333;">
         <h2 style="color: #0A192F;">JSM. Chambers - Legal Services</h2>
@@ -142,12 +139,34 @@ def send_appointment_received_email(recipient_email, name, service):
         """
         msg.attach(MIMEText(text, 'plain', 'utf-8'))
         msg.attach(MIMEText(html, 'html', 'utf-8'))
+
+        # 2. Send notification to the ADMIN
+        admin_msg = MIMEMultipart('alternative')
+        admin_msg['Date'] = formatdate(localtime=True)
+        admin_msg['Message-ID'] = make_msgid()
+        admin_msg['From'] = f"JSM Chambers <{SMTP_USER}>"
+        admin_msg['To'] = SMTP_USER
+        admin_msg['Subject'] = f"New Appointment Request: {name}"
+        admin_text = f"""You have a new appointment request.\n\nClient Name: {name}\nEmail: {recipient_email}\nService: {service}\n\nPlease log into the Admin Dashboard to approve and set a date/time."""
+        admin_html = f"""
+        <html><body style="font-family: Arial, sans-serif; color: #333;">
+        <h2 style="color: #0A192F;">New Appointment Request</h2>
+        <p><strong>Client Name:</strong> {name}</p>
+        <p><strong>Email:</strong> {recipient_email}</p>
+        <p><strong>Service:</strong> {service}</p>
+        <p>Please log into the Admin Dashboard to approve and schedule this appointment.</p>
+        </body></html>
+        """
+        admin_msg.attach(MIMEText(admin_text, 'plain', 'utf-8'))
+        admin_msg.attach(MIMEText(admin_html, 'html', 'utf-8'))
+
         with IPv4SMTP(SMTP_HOST, SMTP_PORT) as server:
             server.ehlo()
             server.starttls()
             server.ehlo()
             server.login(SMTP_USER, SMTP_PASSWORD)
             server.sendmail(SMTP_USER, recipient_email, msg.as_string())
+            server.sendmail(SMTP_USER, SMTP_USER, admin_msg.as_string())
         return True
     except Exception as e:
         logging.error(f"Failed to send appointment received email: {e}")
@@ -369,7 +388,7 @@ def send_case_email(id):
         msg['To'] = email
         msg['Subject'] = subject
         
-        text = f"Message from JSM Chambers:\\n\\n{message_body}"
+        text = f"Message from JSM Chambers:\n\n{message_body}"
         html = f"""
         <html><body style="font-family: Arial, sans-serif; color: #333;">
         <h2 style="color: #0A192F;">Message from JSM Chambers</h2>
