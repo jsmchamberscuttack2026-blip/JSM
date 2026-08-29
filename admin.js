@@ -123,6 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (consultationsTbody) {
         loadAppointments();
+        setInterval(loadAppointments, 2000);
     }
 
     // Load and Handle Office Info Settings
@@ -192,6 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (addAdvocateForm) {
         renderAdminAdvocates();
+        setInterval(renderAdminAdvocates, 2000);
 
         addAdvocateForm.addEventListener('submit', async (e) => {
             e.preventDefault();

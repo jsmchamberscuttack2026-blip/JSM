@@ -142,24 +142,21 @@ document.addEventListener('DOMContentLoaded', () => {
       async function loadAdvocates() {
           try {
               const response = await fetch('/api/advocates');
-              const parsedAdvocates = await response.json();
-              
-              if (parsedAdvocates.length === 0) {
-                  advocatesGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #999;">No advocates listed at the moment.</p>';
-              } else {
+              const advocates = await response.json();
+              if (advocates.length > 0) {
                   advocatesGrid.innerHTML = '';
-                  parsedAdvocates.forEach(adv => {
-                      const imgHtml = adv.imageUrl 
-                        ? `<img src="${adv.imageUrl}" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin: 0 auto 1rem; display: block; border: 2px solid var(--color-secondary);">` 
-                        : `<div style="width: 100px; height: 100px; border-radius: 50%; background-color: #E0E0E0; margin: 0 auto 1rem;"></div>`;
-                      
-                      advocatesGrid.innerHTML += `
-                        <div class="card text-center">
-                            ${imgHtml}
-                            <h3>${adv.name}</h3>
-                            <p>${adv.specialty}</p>
-                        </div>
+                  advocates.forEach(adv => {
+                      const div = document.createElement('div');
+                      div.className = 'advocate-card';
+                      const imgHtml = adv.imageUrl ? `<img src="${adv.imageUrl}" alt="${adv.name}">` : `<div style="width: 100%; height: 250px; background-color: #E0E0E0; display: flex; align-items: center; justify-content: center; color: #757575;">No Image</div>`;
+                      div.innerHTML = `
+                          ${imgHtml}
+                          <div class="card-content">
+                              <h3>${adv.name}</h3>
+                              <p>${adv.specialty}</p>
+                          </div>
                       `;
+                      advocatesGrid.appendChild(div);
                   });
               }
           } catch (err) {
@@ -169,7 +166,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       loadAdvocates();
       
-      
+      // Short Polling for Real-time Sync (Serverless Compatible)
+      setInterval(loadAdvocates, 2000);
   }
 
 });
