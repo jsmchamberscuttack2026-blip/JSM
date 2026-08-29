@@ -114,10 +114,10 @@
             <div style="font-size: 0.8rem; text-align: center; margin-bottom: 2rem; color: #999;">Admin Portal</div>
             <ul>
                 <li><a href="#" class="active" id="nav-dashboard">Dashboard Overview</a></li>
-                <li><a href="#" id="nav-cases">Manage Cases</a></li>
                 <li><a href="#" id="nav-clients">Clients Directory</a></li>
                 <li><a href="#" id="nav-consultations">Incoming Appointments</a></li>
                 <li><a href="#" id="nav-advocates">Advocates Info</a></li>
+                <li><a href="#" id="nav-cases">Client Case Files</a></li>
                 <li><a href="#" id="nav-hearings">Court Hearings</a></li>
                 <li><a href="#" id="nav-docs">Documents Portal</a></li>
                 <li><a href="#" id="nav-reports">Financial & Reports</a></li>
@@ -182,52 +182,41 @@
                             <th>Action</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr>
-                            <td>#1001</td>
-                            <td>Rahul S.</td>
-                            <td>Criminal Defense</td>
-                            <td>Adv. V. Singh</td>
-                            <td><span class="badge active">In Progress</span></td>
-                            <td><button class="btn btn-outline" style="padding: 0.3rem 0.8rem; font-size: 0.8rem;">View</button></td>
-                        </tr>
-                        <tr>
-                            <td>#1002</td>
-                            <td>Tech Corp Ltd.</td>
-                            <td>Corporate Law</td>
-                            <td>Adv. P. Patel</td>
-                            <td><span class="badge pending">Pending Doc</span></td>
-                            <td><button class="btn btn-outline" style="padding: 0.3rem 0.8rem; font-size: 0.8rem;">View</button></td>
-                        </tr>
-                        <tr>
-                            <td>#1003</td>
-                            <td>A. Mehta</td>
-                            <td>Civil Litigation</td>
-                            <td>Adv. R. Sharma</td>
-                            <td><span class="badge active">Hearing Scheduled</span></td>
-                            <td><button class="btn btn-outline" style="padding: 0.3rem 0.8rem; font-size: 0.8rem;">View</button></td>
-                        </tr>
+                    <tbody id="recent-cases-tbody">
+                        <!-- Recent cases will be loaded here -->
                     </tbody>
                 </table>
                 </div> <!-- End section-dashboard -->
 
-                <div id="section-cases" class="admin-section">
+                                <div id="section-clients" class="admin-section">
                     <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
-                        <h3>Manage Cases</h3>
-                        <p style="color: var(--color-text-light); margin-top: 1rem;">Interface to add, edit, and update cases.</p>
-                    </div>
-                </div>
-                <div id="section-clients" class="admin-section">
-                    <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
-                        <h3>Clients Directory</h3>
-                        <p style="color: var(--color-text-light); margin-top: 1rem;">Interface to view and manage client records.</p>
+                        <h3>Clients Directory / History</h3>
+                        <p style="color: var(--color-text-light); margin-top: 1rem;">Historical archive of finished and closed cases.</p>
+                        
+                        <table class="data-table" style="margin-top: 2rem;">
+                            <thead>
+                                <tr>
+                                    <th>Client Name</th>
+                                    <th>Email</th>
+                                    <th>Case Type</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="archived-cases-tbody">
+                                <!-- Archived cases will be loaded here -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
                 <div id="section-consultations" class="admin-section">
                     <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
-                        <h3>Incoming Appointments</h3>
-                        <p style="color: var(--color-text-light); margin-top: 1rem;">Review new legal appointment requests.</p>
-                        
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h3>Incoming Appointments</h3>
+                                <p style="color: var(--color-text-light); margin-top: 1rem;">Review new legal appointment requests.</p>
+                            </div>
+                            <button id="delete-all-appointments-btn" class="btn btn-error" style="background-color: #D32F2F; color: white; border: none; padding: 0.5rem 1rem; cursor: pointer; border-radius: 4px;" onclick="deleteAllAppointments()">Delete All</button>
+                        </div>
                         <table class="data-table" style="margin-top: 2rem;">
                             <thead>
                                 <tr>
@@ -277,11 +266,106 @@
                                 </tr>
                             </thead>
                             <tbody id="admin-advocates-list">
-                                <!-- Populated by JS -->
+                                <!-- Advocates will be loaded here -->
                             </tbody>
                         </table>
                     </div>
+
                 </div>
+                <div id="section-cases" class="admin-section">
+                    <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 2rem;">
+                        <h3>Add New Case File</h3>
+                        <p style="color: var(--color-text-light); margin-top: 1rem; margin-bottom: 1rem;">Create a case file for a client. They will be emailed a secure auto-generated password.</p>
+                        <form id="add-case-form" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label" for="case-client-name">Client Name</label>
+                                <input type="text" id="case-client-name" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="case-client-email">Client Email</label>
+                                <input type="email" id="case-client-email" class="form-control" required>
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label class="form-label" for="case-type">Case Type / Subject</label>
+                                <input type="text" id="case-type" class="form-control" required>
+                            </div>
+                            <button type="submit" class="btn btn-secondary" style="grid-column: 1 / -1; width: 100%;">Create Case & Send Credentials</button>
+                        </form>
+                    </div>
+
+                    <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
+                        <h3>Manage Active Cases</h3>
+                        
+                        <div id="cases-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                            <!-- Cases will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Case Edit Modal -->
+                    <div id="case-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+                        
+                        <div style="background: white; padding: 2rem; border-radius: 12px; width: 600px; max-width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                                <div>
+                                    <h3 id="modal-client-name" style="margin: 0; font-size: 1.5rem;">Client Name</h3>
+                                    <div id="modal-unpaid-warning" style="color: #D32F2F; font-weight: bold; margin-top: 0.5rem; display: none;">Case finished but not paying ₹<span id="unpaid-amt"></span> amount.</div>
+                                </div>
+                                <button onclick="closeCaseModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                            </div>
+                            
+                            <p style="color: #666; margin-bottom: 1.5rem;"><strong>Case Type:</strong> <span id="modal-case-type"></span><br><strong>Email:</strong> <span id="modal-email"></span><br><strong>Password:</strong> <span id="modal-password"></span></p>
+
+                            <input type="hidden" id="modal-case-id">
+
+                            <div class="form-group">
+                                <label class="form-label">Case Status</label>
+                                <input type="text" id="modal-status" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Next Hearing Date</label>
+                                <input type="text" id="modal-hearing" class="form-control">
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label">Total Fee</label>
+                                    <input type="number" id="modal-total" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Fee Paid</label>
+                                    <input type="number" id="modal-paid" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Admin Notes (Visible to Client)</label>
+                                <textarea id="modal-notes" class="form-control" rows="3" placeholder="Add notes here..."></textarea>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; margin-top: 1.5rem; border-bottom: 1px solid #eee; padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
+                                <button class="btn btn-error" style="background-color: #D32F2F; color: white; border: none;" onclick="deleteCaseFromModal()">Delete Case</button>
+                                <div>
+                                    <button class="btn btn-outline" style="border-color: #b7791f; color: #b7791f; margin-right: 0.5rem;" onclick="finishCaseModal()">Mark Case Finished</button>
+                                    <button class="btn btn-primary" onclick="saveCaseModal()">Save Changes</button>
+                                </div>
+                            </div>
+
+                            <h4 style="margin-bottom: 1rem;">Send Email to Client</h4>
+                            <div class="form-group">
+                                <label class="form-label">Subject</label>
+                                <input type="text" id="modal-email-subject" class="form-control" placeholder="e.g., Clear remaining amount">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Message</label>
+                                <textarea id="modal-email-msg" class="form-control" rows="3" placeholder="Write your message here..."></textarea>
+                            </div>
+                            <button class="btn btn-secondary" style="width: 100%;" onclick="sendCaseEmail()" id="btn-send-email">Send Email</button>
+                        </div>
+
+
+                    </div>
+                </div>
+
                 <div id="section-hearings" class="admin-section">
                     <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
                         <h3>Court Hearings</h3>
@@ -326,6 +410,6 @@
         </main>
     </div>
 
-    <script src="js/admin.js"></script>
+    <script src="js/admin.js?v=7"></script>
 </body>
 </html>

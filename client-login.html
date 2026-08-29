@@ -1,97 +1,369 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Client Login | JSM. Chambers</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
-    <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-        .login-wrapper {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-            background: linear-gradient(rgba(10, 25, 47, 0.9), rgba(10, 25, 47, 0.9)), url('assets/images/hero-bg.jpg') center/cover;
-        }
-        .login-card {
-            background: var(--color-white);
-            padding: 3rem;
-            border-radius: var(--radius);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-            width: 100%;
-            max-width: 450px;
-            border-top: 5px solid var(--color-secondary);
-        }
-        .login-card h2 {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        .form-check {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        .login-links {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 1.5rem;
-            font-size: 0.9rem;
-        }
-        .login-links a {
-            color: var(--color-primary);
-            font-weight: 500;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JSM Chambers | Client Portal</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+    margin:0;
+    min-height:100vh;
+    font-family:Inter,Arial,sans-serif;
+    background:
+      radial-gradient(circle at 20% 20%,#263f5b 0,transparent 35%),
+      linear-gradient(135deg,#071522,#102b45);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    color:#182536;
+}
+
+.wrapper{
+    width:460px;
+    max-width:92%;
+}
+
+.brand{
+    text-align:center;
+    color:#d2ae67;
+    font-weight:800;
+    letter-spacing:4px;
+    font-size:14px;
+    margin-bottom:18px;
+}
+
+.card{
+    background:rgba(255,255,255,.98);
+    padding:42px;
+    border-radius:24px;
+    box-shadow:0 30px 90px rgba(0,0,0,.35);
+}
+
+.security{
+    width:58px;
+    height:58px;
+    border-radius:16px;
+    background:#edf4f8;
+    display:grid;
+    place-items:center;
+    font-size:27px;
+    margin:0 auto 22px;
+}
+
+h1{
+    text-align:center;
+    margin:0;
+    font-family:Georgia,serif;
+    font-size:31px;
+}
+
+.subtitle{
+    text-align:center;
+    color:#718096;
+    margin:10px 0 30px;
+    font-size:14px;
+    line-height: 1.5;
+}
+
+label{
+    display:block;
+    font-size:13px;
+    font-weight:700;
+    margin:18px 0 7px;
+}
+
+.field{
+    position:relative;
+}
+
+input{
+    width:100%;
+    padding:15px 16px;
+    border:1px solid #d8dee7;
+    border-radius:11px;
+    outline:none;
+    font-size:15px;
+    transition:.2s;
+}
+
+input:focus{
+    border-color:#173b5c;
+    box-shadow:0 0 0 4px #173b5c12;
+}
+
+.toggle{
+    position:absolute;
+    right:12px;
+    top:50%;
+    transform:translateY(-50%);
+    border:0;
+    background:none;
+    cursor:pointer;
+    font-size:17px;
+}
+
+.login{
+    width:100%;
+    padding:16px;
+    margin-top:25px;
+    border:0;
+    border-radius:11px;
+    background:#0c2942;
+    color:white;
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.login:hover{
+    transform:translateY(-1px);
+    background:#123b5d;
+}
+
+.links{
+    text-align:center;
+    margin-top:22px;
+    font-size:13px;
+}
+
+.links a{
+    color:#9a7538;
+    text-decoration:none;
+    font-weight:600;
+}
+
+.divider{
+    margin:20px 0;
+    border-top:1px solid #edf0f3;
+}
+
+.footer{
+    text-align:center;
+    font-size:11px;
+    color:#98a2b3;
+    margin-top:20px;
+}
+
+.error{
+    display:none;
+    margin-top:15px;
+    padding:12px;
+    background:#fff1f1;
+    color:#b42318;
+    border-radius:9px;
+    font-size:13px;
+    text-align:center;
+}
+</style>
 </head>
+
 <body>
 
-    <!-- Navbar -->
-    <nav class="navbar">
-        <div class="container">
-            <a href="index.html" class="logo">
-                <h1>JSM. <span>Chambers</span></h1>
-            </a>
-            <a href="index.html" class="btn btn-outline" style="padding: 0.5rem 1rem;">Back to Home</a>
-        </div>
-    </nav>
+<div class="wrapper">
 
-    <div class="login-wrapper">
-        <div class="login-card">
-            <h2>Client Portal Login</h2>
-            <form action="client-dashboard.html" method="GET">
-                <div class="form-group">
-                    <label class="form-label" for="email">Email / Mobile Number</label>
-                    <input type="text" id="email" class="form-control" required placeholder="Enter your email or mobile">
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="password">Password</label>
-                    <input type="password" id="password" class="form-control" required placeholder="Enter your password">
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" id="remember">
-                    <label for="remember" style="font-size: 0.9rem;">Remember Me</label>
-                </div>
-                
-                <button type="submit" class="btn btn-primary w-100" style="width: 100%; margin-top: 1rem;">Login Securely</button>
+<div class="brand">JSM. CHAMBERS</div>
 
-                <div class="login-links">
-                    <a href="#">Forgot Password?</a>
-                    <a href="#" style="color: var(--color-secondary);">Create an Account</a>
-                </div>
-            </form>
-            <div style="margin-top: 2rem; font-size: 0.8rem; color: #999; text-align: center;">
-                
-            </div>
-        </div>
+<div class="card">
+
+<div class="security">🔐</div>
+
+<h1>Client Portal</h1>
+
+<!-- STANDARD LOGIN FORM -->
+<form id="login-form">
+    <div class="subtitle">Access your case files securely.</div>
+    
+    <label>Registered Email ID</label>
+    <input type="email" id="email" placeholder="client@example.com" autocomplete="email" required>
+    
+    <label>Password</label>
+    <div class="field">
+        <input type="password" id="password" placeholder="Enter your password" required>
+        <button type="button" class="toggle" onclick="togglePassword()">👁</button>
     </div>
+    
+    <button type="submit" class="login" id="login-btn">Login to Portal</button>
+    
+    <div class="divider"></div>
+    <div class="links">
+        <a href="#" id="show-forgot-btn">Forgot Password? Log in with code</a>
+    </div>
+</form>
+
+<!-- FORGOT PASSWORD FORM -->
+<form id="forgot-form" style="display: none;">
+    <div class="subtitle">Enter your registered email and we will send you a 6-digit verification code to log in.</div>
+    
+    <label>Registered Email ID</label>
+    <input type="email" id="forgot-email" placeholder="client@example.com" required>
+    
+    <button type="submit" class="login" id="request-code-btn">Request Verification Code</button>
+    
+    <div class="divider"></div>
+    <div class="links">
+        <a href="#" id="back-to-login-btn">&larr; Back to Password Login</a>
+    </div>
+</form>
+
+<!-- VERIFY CODE FORM -->
+<form id="verify-form" style="display: none;">
+    <div class="subtitle">We sent a 6-digit code to your email. Enter it below to access your portal.</div>
+    
+    <label>Verification Code</label>
+    <input type="text" id="verify-code" placeholder="123456" required style="text-align: center; font-size: 1.5rem; letter-spacing: 5px;">
+    
+    <button type="submit" class="login" id="verify-code-btn">Verify & Login</button>
+    
+    <div class="divider"></div>
+    <div class="links">
+        <a href="#" id="cancel-verify-btn">Cancel</a>
+    </div>
+</form>
+
+<div id="error-msg" class="error"></div>
+
+<div class="footer">
+🔒 Secure & Confidential · Authorized Clients Only
+</div>
+
+</div>
+</div>
+
+<script>
+    function togglePassword(){
+        const password = document.getElementById("password");
+        password.type = password.type === "password" ? "text" : "password";
+    }
+
+    const loginForm = document.getElementById('login-form');
+    const forgotForm = document.getElementById('forgot-form');
+    const verifyForm = document.getElementById('verify-form');
+    const errorMsg = document.getElementById('error-msg');
+    let tempEmail = "";
+
+    // Toggles
+    document.getElementById('show-forgot-btn').addEventListener('click', (e) => {
+        e.preventDefault();
+        errorMsg.style.display = 'none';
+        loginForm.style.display = 'none';
+        forgotForm.style.display = 'block';
+    });
+
+    document.getElementById('back-to-login-btn').addEventListener('click', (e) => {
+        e.preventDefault();
+        errorMsg.style.display = 'none';
+        forgotForm.style.display = 'none';
+        loginForm.style.display = 'block';
+    });
+
+    document.getElementById('cancel-verify-btn').addEventListener('click', (e) => {
+        e.preventDefault();
+        errorMsg.style.display = 'none';
+        verifyForm.style.display = 'none';
+        loginForm.style.display = 'block';
+    });
+
+    // 1. Standard Login
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const btn = document.getElementById('login-btn');
+        btn.innerText = 'Logging in...';
+        btn.disabled = true;
+        errorMsg.style.display = 'none';
+        
+        try {
+            const response = await fetch('/api/client-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await response.json();
+            
+            if (response.ok) {
+                localStorage.setItem('clientCaseId', data.case._id);
+                window.location.href = 'client-dashboard.html';
+            } else {
+                errorMsg.style.display = 'block';
+                errorMsg.innerText = data.error || 'Invalid credentials';
+            }
+        } catch (err) {
+            errorMsg.style.display = 'block';
+            errorMsg.innerText = 'Server error. Please try again.';
+        }
+        btn.innerText = 'Login to Portal';
+        btn.disabled = false;
+    });
+
+    // 2. Request Verification Code
+    forgotForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        tempEmail = document.getElementById('forgot-email').value;
+        const btn = document.getElementById('request-code-btn');
+        btn.innerText = 'Sending Code...';
+        btn.disabled = true;
+        errorMsg.style.display = 'none';
+
+        try {
+            const response = await fetch('/api/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: tempEmail })
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                forgotForm.style.display = 'none';
+                verifyForm.style.display = 'block';
+            } else {
+                errorMsg.style.display = 'block';
+                errorMsg.innerText = data.error || 'Failed to send code';
+            }
+        } catch (err) {
+            errorMsg.style.display = 'block';
+            errorMsg.innerText = 'Server error. Please try again.';
+        }
+        btn.innerText = 'Request Verification Code';
+        btn.disabled = false;
+    });
+
+    // 3. Verify Code and Login
+    verifyForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const code = document.getElementById('verify-code').value;
+        const btn = document.getElementById('verify-code-btn');
+        btn.innerText = 'Verifying...';
+        btn.disabled = true;
+        errorMsg.style.display = 'none';
+
+        try {
+            const response = await fetch('/api/verify-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: tempEmail, code: code })
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                localStorage.setItem('clientCaseId', data.case._id);
+                window.location.href = 'client-dashboard.html';
+            } else {
+                errorMsg.style.display = 'block';
+                errorMsg.innerText = data.error || 'Invalid verification code';
+            }
+        } catch (err) {
+            errorMsg.style.display = 'block';
+            errorMsg.innerText = 'Server error. Please try again.';
+        }
+        btn.innerText = 'Verify & Login';
+        btn.disabled = false;
+    });
+</script>
 
 </body>
 </html>

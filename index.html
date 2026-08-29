@@ -46,52 +46,12 @@
             <h1>Expert Legal Representation & Consultation</h1>
             <p>Welcome to JSM. Chambers, your premier private legal organization dedicated to providing exceptional legal advocacy, comprehensive case management, and expert counsel for High Court matters.</p>
             <div class="hero-actions">
-                <a href="#case-status" class="btn btn-primary">Check Case Status</a>
                 <a href="client-login.html" class="btn btn-secondary">Client Login</a>
                 <a href="#appointment" class="btn btn-outline" style="color: white; border-color: white;">Book Appointment</a>
             </div>
         </div>
     </section>
 
-    <!-- Interactive Search UI Section -->
-    <section id="case-status" class="section">
-        <div class="container">
-            <h2 class="section-title">Track Your Case</h2>
-            <div class="grid">
-                <!-- Case Search -->
-                <div class="search-container">
-                    <h3>Case Status Search</h3>
-                    <p style="margin-bottom: 1rem; color: #666; font-size: 0.9rem;">Search using your case details below.</p>
-                    <form id="case-search-form">
-                        <div class="form-group">
-                            <label class="form-label" for="case-number">Case Number</label>
-                            <input type="text" id="case-number" class="form-control" placeholder="e.g. 1234" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="case-year">Year</label>
-                            <input type="number" id="case-year" class="form-control" placeholder="e.g. 2026" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100" style="width: 100%;">Check Status</button>
-                    </form>
-                    <div id="case-search-result" class="search-result"></div>
-                </div>
-
-                <!-- CNR Search -->
-                <div class="search-container">
-                    <h3>CNR Number Search</h3>
-                    <p style="margin-bottom: 1rem; color: #666; font-size: 0.9rem;">Enter your 16-digit CNR Number.</p>
-                    <form id="cnr-search-form">
-                        <div class="form-group">
-                            <label class="form-label" for="cnr-number">CNR Number</label>
-                            <input type="text" id="cnr-number" class="form-control" placeholder="e.g. ABCD012345678901" required minlength="10">
-                        </div>
-                        <button type="submit" class="btn btn-secondary w-100" style="width: 100%;">Search CNR</button>
-                    </form>
-                    <div id="cnr-search-result" class="search-result"></div>
-                </div>
-            </div>
-        </div>
-    </section>
 
     <!-- Legal Services Section -->
     <section id="services" class="section" style="background-color: var(--color-white);">
@@ -233,6 +193,6 @@
         </div>
     </footer>
 
-    <script src="js/main.js"></script>
+    <script src="js/main.js?v=2"></script>
 </body>
 </html>

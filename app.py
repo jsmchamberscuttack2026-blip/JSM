@@ -33,6 +33,7 @@ try:
     db = client[DB_NAME]
     appointments_col = db['appointments']
     advocates_col = db['advocates']
+    cases_col = db['cases']
     logging.info("Successfully connected to MongoDB")
 except Exception as e:
     logging.error(f"Error connecting to MongoDB: {e}")
@@ -46,6 +47,50 @@ class IPv4SMTP(smtplib.SMTP):
             sock.settimeout(timeout)
         sock.connect((host, port))
         return sock
+
+
+def send_credentials_email(recipient_email, name, password):
+    if not recipient_email or "@" not in recipient_email: return False
+    if not SMTP_USER or not SMTP_PASSWORD: return False
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_USER
+        msg['To'] = recipient_email
+        msg['Subject'] = "JSM. Chambers - Your Client Portal Login Details"
+        body = f"""JSM Chambers — Client Portal ⚖️\n\nDear {name},\n\nA case file has been successfully opened for you.\nYou can now track your case status, hearing dates, and fees via our Client Portal.\n\nLogin Link: https://my-project-89coqi0xj-arnnav.vercel.app/client-login.html\nEmail: {recipient_email}\nPassword: {password}\n\nThank you,\nJSM Chambers"""
+        msg.attach(MIMEText(body, 'plain'))
+        with IPv4SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(SMTP_USER, recipient_email, msg.as_string())
+        return True
+    except Exception as e:
+        logging.error(f"Failed to send credentials: {e}")
+        return False
+
+
+def send_verification_email(recipient_email, code):
+    if not recipient_email or "@" not in recipient_email: return False
+    if not SMTP_USER or not SMTP_PASSWORD: return False
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_USER
+        msg['To'] = recipient_email
+        msg['Subject'] = "JSM. Chambers - Login Verification Code"
+        body = f"""JSM Chambers — Client Portal ⚖️\n\nYou requested a verification code to access your case file.\n\nYour Verification Code is: {code}\n\nIf you did not request this, please ignore this email."""
+        msg.attach(MIMEText(body, 'plain'))
+        with IPv4SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(SMTP_USER, recipient_email, msg.as_string())
+        return True
+    except Exception as e:
+        logging.error(f"Failed to send verification code: {e}")
+        return False
 
 # Helper Function: Send Email
 def send_approval_email(recipient_email, name, service, date, time):
@@ -106,6 +151,223 @@ Advocates"""
 
 # ========================
 # API Routes
+
+import random
+import string
+
+@app.route('/api/cases', methods=['POST'])
+def create_case():
+    data = request.json
+    password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+    case = {
+        "client_name": data.get('client_name'),
+        "email": data.get('email'),
+        "case_type": data.get('case_type'),
+        "password": password,
+        "status": "Under Review",
+        "total_fee": "0",
+        "fee_paid": "0",
+        "next_hearing": "To Be Decided",
+        "notes": "",
+        "created_at": datetime.now().strftime("%d %b %Y")
+    }
+    result = cases_col.insert_one(case)
+    email_sent = send_credentials_email(case['email'], case['client_name'], password)
+    return jsonify({"message": "Case created", "id": str(result.inserted_id), "password": password, "email_sent": email_sent}), 201
+
+
+@app.route('/api/cases', methods=['GET'])
+def get_cases():
+    cases = list(cases_col.find({"status": {"$ne": "Finished & Archived"}}).sort('_id', -1))
+    for c in cases: c['_id'] = str(c['_id'])
+    return jsonify(cases), 200
+
+@app.route('/api/archived-cases', methods=['GET'])
+def get_archived_cases():
+    cases = list(cases_col.find({"status": "Finished & Archived"}).sort('_id', -1))
+    for c in cases: c['_id'] = str(c['_id'])
+    return jsonify(cases), 200
+
+
+@app.route('/api/cases/<id>', methods=['PUT'])
+def update_case(id):
+    data = request.json
+    cases_col.update_one(
+        {"_id": ObjectId(id)},
+        {"$set": {
+            "status": data.get('status', 'Under Review'),
+            "total_fee": data.get('total_fee', '0'),
+            "fee_paid": data.get('fee_paid', '0'),
+            "next_hearing": data.get('next_hearing', 'To Be Decided'),
+            "notes": data.get('notes', '')
+        }}
+    )
+    return jsonify({"message": "Case updated successfully"}), 200
+
+@app.route('/api/cases/<id>', methods=['DELETE'])
+def delete_case(id):
+    cases_col.delete_one({"_id": ObjectId(id)})
+    return jsonify({"message": "Deleted successfully"}), 200
+
+
+
+@app.route('/api/forgot-password', methods=['POST'])
+def forgot_password():
+    data = request.json
+    email = data.get('email')
+    
+    # We only want to allow forgot password for active cases
+    case = cases_col.find_one({"email": email})
+    if not case:
+        return jsonify({"error": "Email not found"}), 404
+        
+    if case.get('status') == 'Finished & Archived':
+        return jsonify({"error": "Your case file has been closed. Portal access is disabled."}), 403
+        
+    code = ''.join(random.choices(string.digits, k=6))
+    cases_col.update_one({"email": email}, {"$set": {"verification_code": code}})
+    
+    email_sent = send_verification_email(email, code)
+    if email_sent:
+        return jsonify({"message": "Code sent successfully"}), 200
+    else:
+        return jsonify({"error": "Failed to send email. Please contact support."}), 500
+
+
+@app.route('/api/verify-code', methods=['POST'])
+def verify_code():
+    data = request.json
+    email = data.get('email')
+    code = data.get('code')
+    
+    case = cases_col.find_one({"email": email, "verification_code": code})
+    if case:
+        # Clear the code after successful use
+        cases_col.update_one({"email": email}, {"$unset": {"verification_code": ""}})
+        case['_id'] = str(case['_id'])
+        return jsonify({"message": "Login successful", "case": case}), 200
+        
+    return jsonify({"error": "Invalid or expired verification code"}), 401
+
+
+@app.route('/api/cases/<case_id>/email', methods=['POST'])
+def send_case_email(case_id):
+    data = request.json
+    subject = data.get('subject', 'Update on your Case')
+    message = data.get('message', '')
+    
+    case = cases_col.find_one({"_id": ObjectId(case_id)})
+    if not case: return jsonify({"error": "Case not found"}), 404
+    
+    email = case.get('email')
+    if not email: return jsonify({"error": "No email for this client"}), 400
+    
+    if not SMTP_USER or not SMTP_PASSWORD:
+        return jsonify({"error": "Email server not configured"}), 500
+        
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_USER
+        msg['To'] = email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(message, 'plain'))
+        
+        with IPv4SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(SMTP_USER, email, msg.as_string())
+            
+        return jsonify({"message": "Email sent successfully"}), 200
+    except Exception as e:
+        logging.error(f"Failed to send email to {email}: {e}")
+        return jsonify({"error": "Failed to send email"}), 500
+
+
+@app.route('/api/cases/<case_id>/finish', methods=['POST'])
+def finish_case(case_id):
+    case = cases_col.find_one({"_id": ObjectId(case_id)})
+    if not case: return jsonify({"error": "Case not found"}), 404
+    
+    total = int(case.get('total_fee', 0) or 0)
+    paid = int(case.get('fee_paid', 0) or 0)
+    email = case.get('email')
+    client_name = case.get('client_name', 'Client')
+    
+    if paid >= total:
+        # Fully paid! Send Congratulations email.
+        try:
+            if email and SMTP_USER and SMTP_PASSWORD:
+                msg = MIMEMultipart()
+                msg['From'] = SMTP_USER
+                msg['To'] = email
+                msg['Subject'] = "Congratulations - Your Case is Successfully Concluded"
+                body = f"""Dear {client_name},
+
+Congratulations! Your case has been successfully concluded and all fees are settled.
+
+Your Client Portal access has now been securely deactivated as the case file is closed and archived.
+
+If you need our legal services again in the future, please do not hesitate to contact us.
+
+Warm regards,
+JSM. Chambers"""
+                msg.attach(MIMEText(body, 'plain'))
+                with IPv4SMTP(SMTP_HOST, SMTP_PORT) as server:
+                    server.ehlo()
+                    server.starttls()
+                    server.ehlo()
+                    server.login(SMTP_USER, SMTP_PASSWORD)
+                    server.sendmail(SMTP_USER, email, msg.as_string())
+        except Exception as e:
+            logging.error(f"Failed to send congratulations email: {e}")
+
+        # Archive it. Remove password.
+        cases_col.update_one(
+            {"_id": ObjectId(case_id)}, 
+            {"$set": {"status": "Finished & Archived"}, "$unset": {"password": ""}}
+        )
+        return jsonify({"message": "Case finished and archived. Customer portal access revoked and Congratulations email sent."}), 200
+    else:
+        # Not paid. Mark as finished but keep portal access active.
+        cases_col.update_one(
+            {"_id": ObjectId(case_id)},
+            {"$set": {"status": "Finished - Unpaid Balance"}}
+        )
+        return jsonify({
+            "message": f"Case finished but not paying ₹{total - paid} amount.",
+            "unpaid": total - paid
+        }), 200
+
+
+
+@app.route('/api/client-login', methods=['POST'])
+def client_login():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    
+    case = cases_col.find_one({"email": email, "password": password})
+    if case:
+        if case.get('status') == 'Finished & Archived':
+            return jsonify({"error": "Your case file has been closed. Portal access is disabled."}), 403
+            
+        case['_id'] = str(case['_id'])
+        return jsonify({"message": "Login successful", "case": case}), 200
+        
+    return jsonify({"error": "Invalid email or password"}), 401
+
+
+@app.route('/api/my-case/<id>', methods=['GET'])
+def get_my_case(id):
+    case = cases_col.find_one({"_id": ObjectId(id)})
+    if case:
+        case['_id'] = str(case['_id'])
+        return jsonify(case), 200
+    return jsonify({"error": "Not found"}), 404
+
+
 # ========================
 
 @app.route('/')
@@ -178,6 +440,18 @@ def approve_appointment():
         "message": "Appointment approved successfully",
         "email_sent": email_sent
     }), 200
+
+@app.route('/api/appointments/<id>', methods=['DELETE'])
+def delete_appointment(id):
+    result = appointments_col.delete_one({"_id": ObjectId(id)})
+    if result.deleted_count > 0:
+        return jsonify({"message": "Deleted successfully"}), 200
+    return jsonify({"error": "Not found"}), 404
+
+@app.route('/api/appointments', methods=['DELETE'])
+def delete_all_appointments():
+    result = appointments_col.delete_many({})
+    return jsonify({"message": f"Deleted {result.deleted_count} appointments"}), 200
 
 @app.route('/api/advocates', methods=['GET'])
 def get_advocates():

@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let advocatesCache = "";
     async function loadAdvocates() {
           try {
-              const response = await fetch('/api/advocates');
+              const response = await fetch('/api/advocates', { cache: 'no-store' });
               const advocates = await response.json();
               const newDataString = JSON.stringify(advocates);
               if (newDataString === advocatesCache) return;
