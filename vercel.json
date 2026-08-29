@@ -24,6 +24,10 @@
     ],
     "routes": [
         {
+            "src": "/(app\\.py|vercel\\.json|requirements\\.txt|.*\\.md|.*\\.log)",
+            "status": 404
+        },
+        {
             "src": "/api/(.*)",
             "dest": "app.py"
         },

@@ -93,14 +93,33 @@
     </div>
 
     <script>
-        document.getElementById('admin-login-form').addEventListener('submit', function(e) {
+        document.getElementById('admin-login-form').addEventListener('submit', async function(e) {
             e.preventDefault();
+            const email = document.getElementById('admin-id').value;
             const password = document.getElementById('password').value;
-            if (password === 'admin123') {
-                window.location.href = 'admin-dashboard.html';
-            } else {
-                alert('Invalid password. Please use: admin123');
+            
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.innerText = 'Authenticating...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/admin-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                if (response.ok) {
+                    window.location.href = 'admin-dashboard.html';
+                } else {
+                    alert('Invalid Admin credentials.');
+                }
+            } catch(error) {
+                alert('Server connection error.');
             }
+            
+            btn.innerText = 'Admin Login';
+            btn.disabled = false;
         });
     </script>
 </body>
