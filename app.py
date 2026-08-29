@@ -408,6 +408,16 @@ def send_case_email(id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/my-case/<id>', methods=['GET'])
+def get_my_case(id):
+    case = cases_col.find_one({"_id": ObjectId(id)})
+    if not case:
+        return jsonify({"error": "Not found"}), 404
+    if case.get("status") == "Finished & Archived":
+        return jsonify({"error": "Portal Closed"}), 403
+    case['_id'] = str(case['_id'])
+    return jsonify(case), 200
+
 @app.route('/api/client-login', methods=['POST'])
 def client_login():
     data = request.get_json(force=True, silent=True) or {}
