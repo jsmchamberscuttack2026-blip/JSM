@@ -103,6 +103,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const email = document.getElementById('app-email').value;
       const service = document.getElementById('app-service').value;
       
+      const button = document.getElementById("appointmentBtn");
+      const processing = document.getElementById("processing");
+      const success = document.getElementById("success");
+      
+      if (button) button.style.display = "none";
+      if (processing) processing.style.display = "block";
+      
       try {
           const response = await fetch('/api/appointments', {
               method: 'POST',
@@ -111,14 +118,26 @@ document.addEventListener('DOMContentLoaded', () => {
           });
           
           if (response.ok) {
-              alert('Appointment request submitted successfully!');
-              appForm.reset();
+              if (processing) processing.style.display = "none";
+              if (success) success.style.display = "block";
+              
+              const nameParent = document.getElementById('app-name').parentElement;
+              const emailParent = document.getElementById('app-email').parentElement;
+              const serviceParent = document.getElementById('app-service').parentElement;
+              
+              if(nameParent) nameParent.style.display = 'none';
+              if(emailParent) emailParent.style.display = 'none';
+              if(serviceParent) serviceParent.style.display = 'none';
           } else {
               alert('Failed to submit request.');
+              if (button) button.style.display = "block";
+              if (processing) processing.style.display = "none";
           }
       } catch (err) {
           console.error(err);
-          alert('Error connecting to server.');
+          alert('Server error. Please try again.');
+          if (button) button.style.display = "block";
+          if (processing) processing.style.display = "none";
       }
     });
   }

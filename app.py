@@ -1,3 +1,4 @@
+import concurrent.futures
 import os
 from flask import Flask, request, jsonify, send_from_directory
 from pymongo import MongoClient
@@ -165,7 +166,7 @@ If you did not request this, please ignore this email."""
     
     return send_email_core(recipient_email, msg, subject)
 
-def send_appointment_received_email(recipient_email, name, service):
+def send_appointment_received_email(recipient_email, name):
     msg = MIMEMultipart('alternative')
     msg['Date'] = formatdate(localtime=True)
     msg['Message-ID'] = make_msgid()
@@ -176,7 +177,7 @@ def send_appointment_received_email(recipient_email, name, service):
     
     text = f"""Dear {name},
 
-We have successfully received your appointment request for: {service}.
+We have successfully received your appointment request.
 
 Our administrative team will review your request and set a Date and Time for your consultation. You will receive another email once your appointment is confirmed.
 
@@ -186,7 +187,7 @@ JSM Chambers"""
     <html><body style="font-family: Arial, sans-serif; color: #333;">
     <h2 style="color: #0A192F;">JSM. Chambers - Legal Services</h2>
     <p>Dear {name},</p>
-    <p>We have successfully received your appointment request for: <strong>{service}</strong>.</p>
+    <p>We have successfully received your appointment request.</p>
     <p>Our administrative team will review your request and set a Date and Time for your consultation. You will receive another email once your appointment is confirmed.</p>
     <p>Thank you,<br><strong>JSM Chambers</strong></p>
     </body></html>
@@ -195,7 +196,7 @@ JSM Chambers"""
     msg.attach(MIMEText(html, 'html', 'utf-8'))
     
     # Send client confirmation
-    client_result = send_email_core(recipient_email, msg, subject)
+    # client_result = send_email_core(recipient_email, msg, subject)
     
     # Send admin notification separately
     admin_msg = MIMEMultipart('alternative')
@@ -210,7 +211,6 @@ JSM Chambers"""
 
 Client Name: {name}
 Email: {recipient_email}
-Service: {service}
 
 Please log into the Admin Dashboard to approve and set a date/time."""
     admin_html = f"""
@@ -218,15 +218,19 @@ Please log into the Admin Dashboard to approve and set a date/time."""
     <h2 style="color: #0A192F;">New Appointment Request</h2>
     <p><strong>Client Name:</strong> {name}</p>
     <p><strong>Email:</strong> {recipient_email}</p>
-    <p><strong>Service:</strong> {service}</p>
     <p>Please log into the Admin Dashboard to approve and schedule this appointment.</p>
     </body></html>
     """
     admin_msg.attach(MIMEText(admin_text, 'plain', 'utf-8'))
     admin_msg.attach(MIMEText(admin_html, 'html', 'utf-8'))
     
-    send_email_core(SMTP_USER, admin_msg, admin_subject)
-    
+    # Send both emails in parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        f1 = executor.submit(send_email_core, recipient_email, msg, subject)
+        f2 = executor.submit(send_email_core, SMTP_USER, admin_msg, admin_subject)
+        client_result = f1.result()
+        admin_result = f2.result()
+        
     return client_result
 
 @app.route('/')
@@ -251,7 +255,7 @@ def create_appointment():
         "appointment_time": ""
     }
     result = appointments_col.insert_one(appointment)
-    send_appointment_received_email(email, name, service)
+    send_appointment_received_email(email, name)
     return jsonify({"message": "Appointment created successfully", "id": str(result.inserted_id)}), 201
 
 @app.route('/api/appointments', methods=['GET'])
@@ -293,7 +297,7 @@ def approve_appointment():
             
             text = f"""Dear {appt['name']},
 
-Your appointment for {appt['service']} has been APPROVED.
+Your appointment has been APPROVED.
 Date: {date}
 Time: {time}
 
@@ -303,7 +307,8 @@ JSM Chambers"""
             <html><body style="font-family: Arial, sans-serif; color: #333;">
             <h2 style="color: #0A192F;">Appointment Confirmed</h2>
             <p>Dear {appt['name']},</p>
-            <p>Your appointment for <strong>{appt['service']}</strong> has been successfully approved.</p>
+            <p>Your appointment has been successfully approved.</p>
+            <p><strong>Date:</strong> {date}<br><strong>Time:</strong> {time}</p>
             <p><strong>Date:</strong> {date}<br>
             <strong>Time:</strong> {time}</p>
             <p>Thank you,<br><strong>JSM Chambers</strong></p>
