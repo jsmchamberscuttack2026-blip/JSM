@@ -395,7 +395,7 @@ body{
 <main class="main" style="display: none;" id="portal-main">
     <!-- TOPBAR -->
     <header class="topbar">
-        <div class="notification">🔔</div>
+        <div class="notification" style="cursor: pointer; position: relative;" onclick="const m = document.getElementById('notifications-modal'); m.style.display = m.style.display === 'flex' ? 'none' : 'flex'">🔔</div>
         <div class="profile">
             <div class="avatar" id="nav-avatar">A</div>
             <div class="profile-text">
@@ -429,13 +429,7 @@ body{
                 <div class="stat-value hearing" id="stat-hearing">Loading...</div>
             </div>
 
-            <!-- FEES -->
-            <div class="stat-card">
-                <div class="stat-icon">₹</div>
-                <div class="stat-title">Total Fees Due</div>
-                <div class="stat-value money" id="stat-total-fee">₹0</div>
-                <div class="paid" id="stat-fee-paid">Paid: ₹0</div>
-            </div>
+
         </div>
 
         <!-- ================= LOWER GRID ================= -->
@@ -464,37 +458,7 @@ body{
                 </div>
             </div>
 
-            <!-- PAYMENT SUMMARY -->
-            <div class="card">
-                <div class="card-header">
-                    <h2>Payment Summary</h2>
-                    <span>Current Balance</span>
-                </div>
-                <div class="payment-box">
-                    <div class="payment-row">
-                        <span>Total Fees</span>
-                        <strong id="pay-total">₹0</strong>
-                    </div>
-                    <div class="payment-row">
-                        <span>Paid</span>
-                        <strong id="pay-paid">₹0</strong>
-                    </div>
-                    <div class="payment-row">
-                        <span>Remaining</span>
-                        <strong class="remaining" id="pay-rem">₹0</strong>
-                    </div>
-                </div>
-                <div class="progress-title">
-                    <span>Payment Progress</span>
-                    <span id="pay-percent">0%</span>
-                </div>
-                <div class="progress">
-                    <div class="progress-bar" id="pay-bar"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ================= ADMIN NOTES ================= -->
+            <!-- ================= ADMIN NOTES ================= -->
         <div class="card" style="margin-top:22px">
             <div class="card-header">
                 <h2>Notes from Admin</h2>
@@ -563,23 +527,37 @@ body{
             // Stats
             document.getElementById('stat-status').innerText = data.status;
             document.getElementById('stat-hearing').innerText = data.next_hearing;
-            document.getElementById('stat-total-fee').innerText = formatCurrency(totalFeeNum);
-            document.getElementById('stat-fee-paid').innerText = `Paid: ${formatCurrency(feePaidNum)}`;
+
 
             // Info Box
             document.getElementById('info-type').innerText = data.case_type;
             document.getElementById('info-email').innerText = data.email;
             document.getElementById('info-date').innerText = data.created_at;
             document.getElementById('info-status').innerText = data.status;
+            
+            // Notifications
+            const notifBox = document.getElementById('client-notifications');
+                        if (data.notifications && data.notifications.length > 0) {
+                notifBox.innerHTML = '';
+                [...data.notifications].reverse().forEach(n => {
+                    const div = document.createElement('div');
+                    div.style.cssText = "padding: 1.2rem; border-bottom: 1px solid var(--border); background: white; margin-bottom: 2px;";
+                    div.innerHTML = `
+                        <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">${n.date}</div>
+                        <div style="font-size: 0.95rem; color: #333; margin-bottom: 0.5rem;">${n.message}</div>
+                        <div style="font-size: 0.8rem; color: var(--color-primary); font-weight: 500;">Please open your registered email inbox to view further details and any attachments.</div>
+                    `;
+                    notifBox.appendChild(div);
+                });
+            } else {
+                notifBox.innerHTML = '<div style="padding: 1.5rem; color: #999; text-align: center;">No notifications yet.</div>';
+            }
 
             // Payments
-            document.getElementById('pay-total').innerText = formatCurrency(totalFeeNum);
-            document.getElementById('pay-paid').innerText = formatCurrency(feePaidNum);
-            document.getElementById('pay-rem').innerText = formatCurrency(remainingNum);
             
             // Progress Bar
-            document.getElementById('pay-percent').innerText = `${percent}%`;
-            document.getElementById('pay-bar').style.width = `${percent}%`;
+            
+            
 
             // Notes
             if (data.notes && data.notes.trim() !== "") {
@@ -599,5 +577,19 @@ body{
         setInterval(loadCaseData, 1000);
     });
 </script>
+
+    <!-- NOTIFICATIONS MODAL -->
+    <div id="notifications-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;">
+        <div style="background: white; width: 90%; max-width: 500px; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; max-height: 80vh;">
+            <div style="padding: 1.5rem; background: var(--color-primary); color: white; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">🔔 Staff Messages</h3>
+                <button onclick="document.getElementById('notifications-modal').style.display='none'" style="background: #e74c3c; border: none; color: white; font-size: 1.2rem; font-weight: bold; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; line-height: 1; transition: background 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" onmouseover="this.style.background='#c0392b'" onmouseout="this.style.background='#e74c3c'">✕</button>
+            </div>
+            <div id="client-notifications" style="padding: 0; overflow-y: auto; flex: 1; background: #f8fafc;">
+                <div style="padding: 1.5rem; color: #999; text-align: center;">No notifications yet.</div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

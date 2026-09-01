@@ -1,3 +1,4 @@
+from datetime import timedelta
 import concurrent.futures
 import os
 from flask import Flask, request, jsonify, send_from_directory
@@ -6,6 +7,8 @@ from bson import ObjectId
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 from email.utils import formatdate, make_msgid
 from datetime import datetime
 import certifi
@@ -33,6 +36,7 @@ try:
     db = client[DB_NAME]
     appointments_col = db['appointments']
     advocates_col = db['advocates']
+    settings_col = db['settings']
     cases_col = db['cases']
     email_logs_col = db['email_logs']
     logging.info("Successfully connected to MongoDB")
@@ -356,10 +360,10 @@ def create_case():
         "case_type": data.get('case_type'),
         "password": password,
         "status": "Under Review",
-        "total_fee": "0",
-        "fee_paid": "0",
         "next_hearing": "To Be Decided",
         "notes": "",
+        "case_number": "",
+        "assigned_staff_email": "",
         "created_at": datetime.now().strftime("%d %b %Y")
     }
     result = cases_col.insert_one(case)
@@ -381,17 +385,53 @@ def get_archived_cases():
 @app.route('/api/cases/<id>', methods=['PUT'])
 def update_case(id):
     data = request.get_json(force=True, silent=True) or {}
-    cases_col.update_one(
-        {"_id": ObjectId(id)},
-        {"$set": {
-            "status": data.get('status', 'Under Review'),
-            "total_fee": data.get('total_fee', '0'),
-            "fee_paid": data.get('fee_paid', '0'),
-            "next_hearing": data.get('next_hearing', 'To Be Decided'),
-            "notes": data.get('notes', '')
-        }}
-    )
+    
+    # Check if staff assignment changed
+    old_case = cases_col.find_one({"_id": ObjectId(id)})
+    new_staff_email = data.get('assigned_staff_email')
+    old_staff_email = old_case.get('assigned_staff_email', '') if old_case else ''
+    
+    update_fields = {}
+    if 'status' in data: update_fields['status'] = data['status']
+    if 'next_hearing' in data: update_fields['next_hearing'] = data['next_hearing']
+    if 'notes' in data: update_fields['notes'] = data['notes']
+    if 'case_number' in data: update_fields['case_number'] = data['case_number']
+    if 'assigned_staff_email' in data: update_fields['assigned_staff_email'] = data['assigned_staff_email']
+    
+    if update_fields:
+        cases_col.update_one(
+            {"_id": ObjectId(id)},
+            {"$set": update_fields}
+        )
+    
+    # Send email if newly assigned to a valid email
+    if new_staff_email is not None and new_staff_email != '' and new_staff_email != old_staff_email:
+        case_type = old_case.get('case_type', '') if old_case else ''
+        client_name = old_case.get('client_name', '') if old_case else ''
+        case_number = data.get('case_number', 'Not Assigned')
+        
+        try:
+            msg = MIMEMultipart()
+            msg['Message-ID'] = make_msgid()
+            msg['From'] = f"JSM Chambers <{SMTP_USER}>"
+            msg['To'] = new_staff_email
+            msg['Subject'] = f"New Case Assigned: {client_name}"
+            
+            text = f"Dear Advocate,\n\nYou have been assigned a new case.\n\nClient: {client_name}\nCase Type: {case_type}\nCase Number: {case_number}\n\nPlease log in to the Staff Portal to manage this case.\n\nRegards,\nAdmin, JSM Chambers"
+            msg.attach(MIMEText(text, 'plain', 'utf-8'))
+            
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                executor.submit(send_email_core, new_staff_email, msg, msg['Subject'])
+        except Exception as e:
+            logging.error(f"Failed to send staff assignment email: {e}")
+            
     return jsonify({"message": "Case updated"}), 200
+
+@app.route('/api/staff-cases/<email>', methods=['GET'])
+def get_staff_cases(email):
+    cases = list(cases_col.find({"assigned_staff_email": email, "status": {"$ne": "Finished & Archived"}}).sort('_id', -1))
+    for c in cases: c['_id'] = str(c['_id'])
+    return jsonify(cases), 200
 
 @app.route('/api/cases/<id>', methods=['DELETE'])
 def delete_case(id):
@@ -442,9 +482,17 @@ JSM Chambers"""
 
 @app.route('/api/cases/<id>/email', methods=['POST'])
 def send_case_email(id):
-    data = request.get_json(force=True, silent=True) or {}
-    subject = data.get('subject')
-    message_body = data.get('message')
+    # Support both JSON and multipart/form-data
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        subject = request.form.get('subject')
+        message_body = request.form.get('message')
+        attachment = request.files.get('file')
+    else:
+        data = request.get_json(force=True, silent=True) or {}
+        subject = data.get('subject')
+        message_body = data.get('message')
+        attachment = None
+
     if not subject or not message_body:
         return jsonify({"error": "Missing subject or message"}), 400
     case = cases_col.find_one({"_id": ObjectId(id)})
@@ -454,28 +502,41 @@ def send_case_email(id):
     if not email:
         return jsonify({"error": "Client has no email on file"}), 400
     
-    msg = MIMEMultipart('alternative')
+    msg = MIMEMultipart()
     msg['Date'] = formatdate(localtime=True)
     msg['Message-ID'] = make_msgid()
     msg['From'] = f"JSM Chambers <{SMTP_USER}>"
     msg['To'] = email
     msg['Subject'] = subject
     
-    text = f"""Message from JSM Chambers:
+    text = f"Message from JSM Chambers:\n\n{message_body}\n\nRegards,\nJSM Chambers"
+    html = f"<html><body><h3>Message regarding your case</h3><p>{message_body}</p><p>Regards,<br><strong>JSM Chambers</strong></p></body></html>"
+    
+    # Attach body
+    body_part = MIMEMultipart('alternative')
+    body_part.attach(MIMEText(text, 'plain', 'utf-8'))
+    body_part.attach(MIMEText(html, 'html', 'utf-8'))
+    msg.attach(body_part)
 
-{message_body}"""
-    html = f"""
-    <html><body style="font-family: Arial, sans-serif; color: #333;">
-    <h2 style="color: #0A192F;">Message from JSM Chambers</h2>
-    <p style="white-space: pre-wrap;">{message_body}</p>
-    </body></html>
-    """
-    msg.attach(MIMEText(text, 'plain', 'utf-8'))
-    msg.attach(MIMEText(html, 'html', 'utf-8'))
+    # Attach file if present
+    if attachment and attachment.filename:
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(attachment.read())
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', f'attachment; filename="{attachment.filename}"')
+        msg.attach(part)
     
     result = send_email_core(email, msg, subject)
     if result["success"]:
-        return jsonify({"message": "Email submitted successfully. The recipient may receive it shortly. Please check Inbox/Spam."}), 200
+        # Save notification to case
+        cases_col.update_one(
+            {"_id": ObjectId(id)},
+            {"$push": {"notifications": {
+                "message": message_body,
+                "date": datetime.now().strftime("%d %b %Y %H:%M")
+            }}}
+        )
+        return jsonify({"message": "Email submitted successfully."}), 200
     else:
         return jsonify({"error": f"Failed to send: {result['smtp_response']}"}), 500
 
@@ -531,6 +592,158 @@ def verify_code():
     if case:
         return jsonify({"success": True, "password": case.get('password'), "case": {"_id": str(case['_id'])}}), 200
     return jsonify({"error": "Invalid code"}), 400
+
+
+@app.route('/api/advocates', methods=['GET'])
+def get_advocates():
+    advocates = []
+    for adv in advocates_col.find():
+        adv['_id'] = str(adv['_id'])
+        advocates.append(adv)
+    return jsonify(advocates), 200
+
+@app.route('/api/advocates', methods=['POST'])
+def add_advocate():
+    data = request.json
+    name = data.get('name')
+    email = data.get('email')
+    specialty = data.get('specialty')
+    role = data.get('role', 'Legal Professional')
+    image_url = data.get('imageUrl', '')
+    
+    if not name or not specialty or not email:
+        return jsonify({"error": "Missing required fields"}), 400
+        
+    # Check if email already exists
+    if advocates_col.find_one({"email": email}):
+        return jsonify({"error": "An advocate with this email already exists"}), 400
+        
+    password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+        
+    result = advocates_col.insert_one({
+        "name": name,
+        "email": email,
+        "password": password,
+        "specialty": specialty,
+        "role": role,
+        "imageUrl": image_url
+    })
+    
+    # Send credentials email to advocate
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Date'] = formatdate(localtime=True)
+        msg['Message-ID'] = make_msgid()
+        msg['From'] = f"JSM Chambers <{SMTP_USER}>"
+        msg['To'] = email
+        msg['Subject'] = "Welcome to JSM Chambers - Staff Portal Credentials"
+        
+        text = f"Dear {name},\nWelcome to JSM. Chambers! \nWe warmly welcome you to our legal team. Wishing you great success and a rewarding journey ahead.\nAn advocate profile has been created for you.\n\nLogin ID: \n{email}\n Password: {password}\n\nPlease keep this secure."
+        msg.attach(MIMEText(text, 'plain', 'utf-8'))
+        
+        send_email_core(email, msg, msg['Subject'])
+    except Exception as e:
+        logging.error(f"Failed to send advocate email: {e}")
+        
+    return jsonify({"message": "Advocate added", "id": str(result.inserted_id), "password": password}), 201
+
+@app.route('/api/staff-login', methods=['POST'])
+def staff_login():
+    data = request.get_json(force=True, silent=True) or {}
+    email = data.get('email')
+    password = data.get('password')
+    
+    advocate = advocates_col.find_one({"email": email, "password": password})
+    if advocate:
+        return jsonify({
+            "success": True, 
+            "advocate": {
+                "id": str(advocate['_id']),
+                "name": advocate.get('name'),
+                "email": advocate.get('email')
+            }
+        }), 200
+        
+    return jsonify({"error": "Invalid staff credentials"}), 401
+
+@app.route('/api/advocates/<id>', methods=['DELETE'])
+def delete_advocate(id):
+    result = advocates_col.delete_one({"_id": ObjectId(id)})
+    if result.deleted_count:
+        return jsonify({"message": "Advocate deleted"}), 200
+    return jsonify({"error": "Advocate not found"}), 404
+
+@app.route('/api/settings', methods=['GET'])
+def get_settings():
+    settings = settings_col.find_one({"_id": "office_info"}) or {}
+    return jsonify(settings), 200
+
+@app.route('/api/settings', methods=['POST'])
+def save_settings():
+    data = request.json
+    settings_col.update_one({"_id": "office_info"}, {"$set": data}, upsert=True)
+    return jsonify({"success": True}), 200
+
+
+
+@app.route('/api/staff-forgot-password', methods=['POST'])
+def staff_forgot_password():
+    data = request.json
+    email = data.get('email')
+    
+    advocate = advocates_col.find_one({"email": email})
+    if not advocate:
+        return jsonify({"error": "No staff member found with this email"}), 404
+        
+    code = ''.join(random.choices(string.digits, k=6))
+    expiration = datetime.now() + timedelta(seconds=30)
+    
+    advocates_col.update_one(
+        {"_id": advocate["_id"]}, 
+        {"$set": {"reset_code": code, "code_expires": expiration}}
+    )
+    
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Date'] = formatdate(localtime=True)
+        msg['Message-ID'] = make_msgid()
+        msg['From'] = f"JSM Chambers <{SMTP_USER}>"
+        msg['To'] = email
+        msg['Subject'] = "Staff Portal - Verification Code"
+        
+        text = f"Your verification code is: {code}\n\nThis code is valid for 30 seconds."
+        msg.attach(MIMEText(text, 'plain', 'utf-8'))
+        
+        send_email_core(email, msg, msg['Subject'])
+    except Exception as e:
+        logging.error(f"Failed to send staff verification email: {e}")
+        
+    return jsonify({"message": "Verification code sent"}), 200
+
+@app.route('/api/staff-verify-code', methods=['POST'])
+def staff_verify_code():
+    data = request.json
+    email = data.get('email')
+    code = data.get('code')
+    
+    advocate = advocates_col.find_one({"email": email, "reset_code": code})
+    if not advocate:
+        return jsonify({"error": "Invalid verification code"}), 400
+        
+    if datetime.now() > advocate.get("code_expires", datetime.now()):
+        return jsonify({"error": "Verification code has expired. Please request a new one."}), 400
+        
+    # Clear the code and log them in
+    advocates_col.update_one({"_id": advocate["_id"]}, {"$unset": {"reset_code": "", "code_expires": ""}})
+    
+    return jsonify({
+        "success": True, 
+        "advocate": {
+            "id": str(advocate['_id']),
+            "name": advocate.get('name'),
+            "email": advocate.get('email')
+        }
+    }), 200
 
 if __name__ == '__main__':
     app.run(debug=False, port=8081, host='0.0.0.0')

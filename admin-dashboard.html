@@ -122,7 +122,7 @@
                 <li><a href="#" id="nav-docs">Documents Portal</a></li>
                 <li><a href="#" id="nav-reports">Financial & Reports</a></li>
                 <li><a href="#" id="nav-settings">Site Settings</a></li>
-                <li style="margin-top: auto;"><a href="index.html">Logout</a></li>
+                <li style="margin-top: auto;"><a href="#" onclick="sessionStorage.removeItem('adminLoggedIn'); window.location.href='admin-login.html'; return false;">Logout</a></li>
             </ul>
         </aside>
 
@@ -245,6 +245,10 @@
                                 <input type="text" id="adv-name" class="form-control" required placeholder="e.g. Adv. Rajesh Sharma">
                             </div>
                             <div class="form-group">
+                                <label class="form-label" for="adv-email">Email Address</label>
+                                <input type="email" id="adv-email" class="form-control" required placeholder="e.g. rajesh@jsmchambers.com">
+                            </div>
+                            <div class="form-group">
                                 <label class="form-label" for="adv-specialty">Specialty / Title</label>
                                 <input type="text" id="adv-specialty" class="form-control" required placeholder="e.g. Senior Counsel - Civil Litigation">
                             </div>
@@ -326,16 +330,27 @@
                                 <input type="text" id="modal-hearing" class="form-control">
                             </div>
                             
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                                <div class="form-group">
-                                    <label class="form-label">Total Fee</label>
-                                    <input type="number" id="modal-total" class="form-control">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Fee Paid</label>
-                                    <input type="number" id="modal-paid" class="form-control">
-                                </div>
+                            <div class="form-group">
+                                <label class="form-label">Case Number</label>
+                                <input type="text" id="modal-case-number" class="form-control" placeholder="e.g. CC-2026-01">
                             </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Assign to Staff</label>
+                                <select id="modal-assigned-staff" class="form-control">
+                                    <option value="">Unassigned</option>
+                                    <!-- Populated via JS -->
+                                </select>
+                            </div>
+                            
+                            <hr style="border:0; border-top: 1px solid var(--border); margin: 1.5rem 0;">
+                            <label class="form-label" style="color: var(--color-primary);">Staff-to-Client Message History</label>
+                            <div id="modal-admin-msg-history" style="max-height: 150px; overflow-y: auto; background: var(--color-bg); border-radius: 4px; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.85rem; border: 1px solid var(--border);">
+                                <!-- History loaded here -->
+                            </div>
+
+                            
+
 
                             <div class="form-group">
                                 <label class="form-label">Admin Notes (Visible to Client)</label>

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Login | JSM. Chambers</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body { display: flex; flex-direction: column; min-height: 100vh; }
+        .login-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; background: linear-gradient(rgba(10, 25, 47, 0.95), rgba(10, 25, 47, 0.95)), url('assets/images/hero-bg.jpg') center/cover; }
+        .login-card { background: var(--color-white); padding: 3rem; border-radius: var(--radius); box-shadow: 0 20px 40px rgba(0,0,0,0.2); width: 100%; max-width: 400px; border-top: 5px solid #4CAF50; }
+        .login-card h2 { text-align: center; margin-bottom: 2rem; }
+        .form-check { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
+        .login-links { display: flex; justify-content: space-between; margin-top: 1.5rem; font-size: 0.9rem; }
+        .login-links a { color: var(--color-primary); font-weight: 500; }
+        .subtitle { font-size: 0.9rem; color: #555; margin-bottom: 1rem; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo">
+                <h1>JSM. <span>Chambers</span></h1>
+            </a>
+            <a href="index.html" class="btn btn-outline" style="padding: 0.5rem 1rem;">Back to Home</a>
+        </div>
+    </nav>
+
+    <div class="login-wrapper">
+        <div class="login-card">
+            <h2>Staff Portal</h2>
+            <div id="error-msg" style="display: none; background: #fee2e2; color: #b91c1c; padding: 10px; border-radius: 4px; margin-bottom: 15px; text-align: center; font-size: 14px;"></div>
+            
+            <form id="staff-login-form">
+                <div class="form-group">
+                    <label class="form-label" for="staff-id">Staff Email</label>
+                    <input type="email" id="staff-id" class="form-control" required placeholder="e.g. staff@jsmchambers.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <input type="password" id="password" class="form-control" required placeholder="Enter password">
+                </div>
+                
+                <button type="submit" class="btn btn-primary w-100" style="width: 100%; margin-top: 1rem; background-color: #172A45;">Staff Login</button>
+
+                <div class="login-links">
+                    <a href="index.html">&larr; Back to Home</a>
+                    <a href="#" id="show-forgot-btn">Forgot Password?</a>
+                </div>
+            </form>
+
+            <form id="forgot-form" style="display: none;">
+                <div class="subtitle">Enter your registered email and we will send you a 6-digit verification code to log in.</div>
+                <div class="form-group">
+                    <label class="form-label" for="forgot-email">Registered Email</label>
+                    <input type="email" id="forgot-email" class="form-control" placeholder="staff@example.com" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100" id="request-code-btn" style="width: 100%; background-color: #172A45;">Request Verification Code</button>
+                <div class="login-links" style="justify-content: center;">
+                    <a href="#" id="back-to-login-btn">&larr; Back to Password Login</a>
+                </div>
+            </form>
+
+            <form id="verify-form" style="display: none;">
+                <div class="subtitle">We sent a 6-digit code to your email. Enter it below.</div>
+                
+                <div style="text-align: center; margin-bottom: 15px; font-weight: bold; color: #e74c3c;">
+                    Code expires in: <span id="timer-display">30</span>s
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="verify-code">Verification Code</label>
+                    <input type="text" id="verify-code" class="form-control" placeholder="123456" required style="text-align: center; font-size: 1.5rem; letter-spacing: 5px;">
+                </div>
+                <button type="submit" class="btn btn-primary w-100" id="verify-code-btn" style="width: 100%; background-color: #172A45;">Verify & Login</button>
+                <div class="login-links" style="justify-content: center;">
+                    <a href="#" id="cancel-verify-btn">&larr; Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('staff-login-form');
+        const forgotForm = document.getElementById('forgot-form');
+        const verifyForm = document.getElementById('verify-form');
+        const errorMsg = document.getElementById('error-msg');
+        let tempEmail = "";
+        let timerInterval = null;
+
+        document.getElementById('show-forgot-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            errorMsg.style.display = 'none';
+            loginForm.style.display = 'none';
+            forgotForm.style.display = 'block';
+        });
+
+        document.getElementById('back-to-login-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            errorMsg.style.display = 'none';
+            forgotForm.style.display = 'none';
+            loginForm.style.display = 'block';
+        });
+
+        document.getElementById('cancel-verify-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            clearInterval(timerInterval);
+            errorMsg.style.display = 'none';
+            verifyForm.style.display = 'none';
+            loginForm.style.display = 'block';
+        });
+
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('staff-id').value;
+            const password = document.getElementById('password').value;
+            
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.innerText = 'Authenticating...';
+            btn.disabled = true;
+            errorMsg.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/staff-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    sessionStorage.setItem('staffLoggedIn', 'true');
+                    sessionStorage.setItem('staffData', JSON.stringify(data.advocate));
+                    window.location.href = 'staff-dashboard.html';
+                } else {
+                    errorMsg.style.display = 'block';
+                    errorMsg.innerText = data.error || 'Invalid Staff credentials.';
+                }
+            } catch(error) {
+                errorMsg.style.display = 'block';
+                errorMsg.innerText = 'Server connection error.';
+            }
+            
+            btn.innerText = 'Staff Login';
+            btn.disabled = false;
+        });
+
+        forgotForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            tempEmail = document.getElementById('forgot-email').value;
+            const btn = document.getElementById('request-code-btn');
+            btn.innerText = 'Sending Code...';
+            btn.disabled = true;
+            errorMsg.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/staff-forgot-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: tempEmail })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    forgotForm.style.display = 'none';
+                    verifyForm.style.display = 'block';
+                    
+                    let timeLeft = 30;
+                    const timerDisplay = document.getElementById('timer-display');
+                    const verifyBtn = document.getElementById('verify-code-btn');
+                    verifyBtn.disabled = false;
+                    verifyBtn.innerText = 'Verify & Login';
+                    timerDisplay.innerText = timeLeft;
+                    
+                    clearInterval(timerInterval);
+                    timerInterval = setInterval(() => {
+                        timeLeft--;
+                        timerDisplay.innerText = timeLeft;
+                        if (timeLeft <= 0) {
+                            clearInterval(timerInterval);
+                            verifyBtn.disabled = true;
+                            verifyBtn.innerText = 'Code Expired';
+                            errorMsg.style.display = 'block';
+                            errorMsg.innerText = 'Verification code has expired. Please go back and request a new one.';
+                        }
+                    }, 1000);
+                } else {
+                    errorMsg.style.display = 'block';
+                    errorMsg.innerText = data.error || 'Failed to send code';
+                }
+            } catch (err) {
+                errorMsg.style.display = 'block';
+                errorMsg.innerText = 'Server error. Please try again.';
+            }
+            btn.innerText = 'Request Verification Code';
+            btn.disabled = false;
+        });
+
+        verifyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const code = document.getElementById('verify-code').value;
+            const btn = document.getElementById('verify-code-btn');
+            btn.innerText = 'Verifying...';
+            btn.disabled = true;
+            errorMsg.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/staff-verify-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: tempEmail, code })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    clearInterval(timerInterval);
+                    sessionStorage.setItem('staffLoggedIn', 'true');
+                    sessionStorage.setItem('staffData', JSON.stringify(data.advocate));
+                    window.location.href = 'staff-dashboard.html';
+                } else {
+                    errorMsg.style.display = 'block';
+                    errorMsg.innerText = data.error || 'Invalid or expired code';
+                    btn.innerText = 'Verify & Login';
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                errorMsg.style.display = 'block';
+                errorMsg.innerText = 'Server error.';
+                btn.innerText = 'Verify & Login';
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

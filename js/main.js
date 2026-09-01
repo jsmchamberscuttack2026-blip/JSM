@@ -145,14 +145,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load Dynamic Office Information
   const publicOfficeInfo = document.getElementById('public-office-info');
   if(publicOfficeInfo) {
-      const info = JSON.parse(localStorage.getItem('officeInfo'));
-      if(info) {
-          publicOfficeInfo.innerHTML = `
-            ${info.address.replace(/\n/g, '<br>')}<br>
-            Phone: ${info.phone}<br>
-            Email: ${info.email}
-          `;
-      }
+      fetch('/api/settings').then(res => res.json()).then(info => {
+          if(info.address || info.phone || info.email) {
+              publicOfficeInfo.innerHTML = `
+                ${(info.address || '').replace(/\n/g, '<br>')}<br>
+                Phone: ${info.phone || ''}<br>
+                Email: ${info.email || ''}
+              `;
+          }
+      }).catch(err => console.error("Error loading settings:", err));
   }
 
   // Load and Render Advocates from API
@@ -166,15 +167,17 @@ document.addEventListener('DOMContentLoaded', () => {
               const newDataString = JSON.stringify(advocates);
               if (newDataString === advocatesCache) return;
               advocatesCache = newDataString;
+              advocatesGrid.innerHTML = '';
               if (advocates.length > 0) {
-                  advocatesGrid.innerHTML = '';
                   advocates.forEach(adv => {
                       const div = document.createElement('div');
-                      div.className = 'advocate-card';
-                      const imgHtml = adv.imageUrl ? `<img src="${adv.imageUrl}" alt="${adv.name}">` : `<div style="width: 100%; height: 250px; background-color: #E0E0E0; display: flex; align-items: center; justify-content: center; color: #757575;">No Image</div>`;
+                      div.className = 'advocate';
+                      const bgStyle = adv.imageUrl ? `background-image: url('${adv.imageUrl}');` : `background-color: #0c1b2a;`;
+                      const role = adv.role || 'Legal Professional';
                       div.innerHTML = `
-                          ${imgHtml}
-                          <div class="card-content">
+                          <div class="advocate-image" style="${bgStyle} background-size: cover; background-position: center;"></div>
+                          <div class="advocate-info">
+                              <div class="advocate-role">${role}</div>
                               <h3>${adv.name}</h3>
                               <p>${adv.specialty}</p>
                           </div>

@@ -1,3 +1,8 @@
+// Admin Auth Check
+if (sessionStorage.getItem('adminLoggedIn') !== 'true') {
+    window.location.href = 'admin-login.html';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Navigation Logic
     const navLinks = document.querySelectorAll('.sidebar ul li a');
@@ -75,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     consultationsTbody.appendChild(tr);
                 });
             } else {
-                consultationsTbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999; padding: 2rem;">No pending appointments found.</td></tr>';
+                consultationsTbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999; padding: 2rem;">No pending appointments found.</td></tr>';
             }
         } catch (error) {
             console.error('Error loading appointments:', error);
@@ -179,9 +184,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <h4 style="margin: 0; font-size: 1.1rem; color: #0b1f33;">${c.client_name}</h4>
                                 <span style="background: ${statusColor}22; color: ${statusColor}; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: bold;">${c.status}</span>
                             </div>
+                            <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #667085;">🏷️ ${c.case_number || 'Unassigned No.'}</p>
                             <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #667085;">💼 ${c.case_type}</p>
-                            <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #667085;">📅 ${c.next_hearing}</p>
-                            <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: #667085;">💰 ₹${c.fee_paid} / ₹${c.total_fee}</p>
+                            <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #667085;">👤 ${c.assigned_staff_email || 'Unassigned Staff'}</p>
+                            <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: #667085;">📅 ${c.next_hearing}</p>
                         </div>
                         <button class="btn btn-outline" style="width: 100%; border-color: #0b1f33; color: #0b1f33;" onclick="openCaseModal('${c._id}')">Open File</button>
                     `;
@@ -195,10 +201,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         const tr = document.createElement('tr');
                         const statusClass = c.status === "Under Review" ? "pending" : "active";
                         tr.innerHTML = `
-                            <td>#${cases.length - index}</td>
+                            <td>${c.case_number || '#' + (cases.length - index)}</td>
                             <td>${c.client_name}</td>
                             <td>${c.case_type}</td>
-                            <td>Admin</td>
+                            <td>${c.assigned_staff_email || 'Unassigned'}</td>
+                            <td>${c.next_hearing || 'To Be Decided'}</td>
                             <td><span class="badge ${statusClass}">${c.status}</span></td>
                             <td><button class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="document.getElementById('nav-cases').click()">View</button></td>
                         `;
@@ -208,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 casesGrid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #999; padding: 2rem; background: #f8fafc; border-radius: 12px;">No active case files found.</div>';
                 if (recentCasesTbody) {
-                    recentCasesTbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999; padding: 2rem;">No recent case updates found.</td></tr>';
+                    recentCasesTbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999; padding: 2rem;">No recent case updates found.</td></tr>';
                 }
             }
         } catch (err) {
@@ -263,9 +270,27 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('modal-password').innerText = c.password || "N/A (Archived)";
         document.getElementById('modal-status').value = c.status;
         document.getElementById('modal-hearing').value = c.next_hearing;
-        document.getElementById('modal-total').value = c.total_fee;
-        document.getElementById('modal-paid').value = c.fee_paid;
         document.getElementById('modal-notes').value = c.notes || "";
+        document.getElementById('modal-case-number').value = c.case_number || "";
+        populateStaffDropdown(c.assigned_staff_email || "");
+        
+        // Load Message History
+        const histBox = document.getElementById('modal-admin-msg-history');
+        if (histBox) {
+            if (c.notifications && c.notifications.length > 0) {
+                histBox.innerHTML = '';
+                c.notifications.forEach(n => {
+                    histBox.innerHTML += `
+                        <div style="margin-bottom: 0.8rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem;">
+                            <strong style="color: var(--color-primary);">${n.date}</strong><br>
+                            <span style="color: var(--color-text-light);">${n.message}</span>
+                        </div>
+                    `;
+                });
+            } else {
+                histBox.innerHTML = '<span style="color: #999;">No messages sent yet.</span>';
+            }
+        }
         
         document.getElementById('modal-unpaid-warning').style.display = 'none';
         document.getElementById('case-modal').style.display = 'flex';
@@ -279,14 +304,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = document.getElementById('modal-case-id').value;
         const status = document.getElementById('modal-status').value;
         const next_hearing = document.getElementById('modal-hearing').value;
-        const total_fee = document.getElementById('modal-total').value;
-        const fee_paid = document.getElementById('modal-paid').value;
         const notes = document.getElementById('modal-notes').value;
+        const case_number = document.getElementById('modal-case-number').value;
+        const assigned_staff_email = document.getElementById('modal-assigned-staff').value;
         try {
             await fetch(`/api/cases/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status, next_hearing, total_fee, fee_paid, notes })
+                body: JSON.stringify({ status, next_hearing, notes, case_number, assigned_staff_email })
             });
             alert('Case details saved successfully!');
             closeCaseModal();
@@ -444,3 +469,149 @@ async function loadEmailLogs() {
         console.error("Failed to load email logs", error);
     }
 }
+
+// ==========================================
+// ADVOCATES MANAGEMENT
+// ==========================================
+async function loadAdvocates() {
+    try {
+        const response = await fetch('/api/advocates');
+        const advocates = await response.json();
+        const tbody = document.getElementById('admin-advocates-list');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        advocates.forEach(adv => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${adv.imageUrl ? '<img src="'+adv.imageUrl+'" width="50" style="border-radius:4px">' : 'No Image'}</td>
+                <td>${adv.name}</td>
+                <td>${adv.email || 'N/A'}</td>
+                <td>${adv.specialty}</td>
+                <td>
+                    <button class="btn" style="background:#e74c3c; color:white; padding: 4px 8px;" onclick="deleteAdvocate('${adv._id}')">Delete</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch(err) {
+        console.error(err);
+    }
+}
+
+async function deleteAdvocate(id) {
+    if(!confirm("Are you sure you want to delete this advocate?")) return;
+    try {
+        await fetch(`/api/advocates/${id}`, { method: 'DELETE' });
+        loadAdvocates();
+    } catch(err) {
+        alert("Error deleting advocate");
+    }
+}
+
+const addAdvocateForm = document.getElementById('add-advocate-form');
+if (addAdvocateForm) {
+    addAdvocateForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('adv-name').value;
+        const email = document.getElementById('adv-email').value;
+        const specialty = document.getElementById('adv-specialty').value;
+        const fileInput = document.getElementById('adv-image');
+        
+        const submitBtn = addAdvocateForm.querySelector('button');
+        submitBtn.textContent = 'Adding...';
+        
+        let imageUrl = '';
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            await new Promise(resolve => reader.onload = resolve);
+            imageUrl = reader.result;
+        }
+        
+        try {
+            const response = await fetch('/api/advocates', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, specialty, role: 'Legal Professional', imageUrl })
+            });
+            const data = await response.json();
+            
+            if (response.ok) {
+                alert(`Advocate Added!\n\nEmail (Login ID): ${email}\nPassword: ${data.password}\n\nAn email has been sent to them with these credentials.`);
+                addAdvocateForm.reset();
+                loadAdvocates();
+            } else {
+                alert(data.error || 'Failed to add advocate');
+            }
+        } catch(err) {
+            alert('Failed to add advocate');
+        } finally {
+            submitBtn.textContent = 'Add Advocate';
+        }
+    });
+}
+
+// Load advocates on start
+setTimeout(loadAdvocates, 500);
+
+// ==========================================
+// SETTINGS MANAGEMENT
+// ==========================================
+const officeInfoForm = document.getElementById('office-info-form');
+if (officeInfoForm) {
+    async function loadSettings() {
+        try {
+            const response = await fetch('/api/settings');
+            const data = await response.json();
+            if (data.address) document.getElementById('admin-address').value = data.address;
+            if (data.phone) document.getElementById('admin-phone').value = data.phone;
+            if (data.email) document.getElementById('admin-email').value = data.email;
+        } catch(err) {
+            console.error(err);
+        }
+    }
+    
+    officeInfoForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const address = document.getElementById('admin-address').value;
+        const phone = document.getElementById('admin-phone').value;
+        const email = document.getElementById('admin-email').value;
+        const btn = officeInfoForm.querySelector('button');
+        btn.innerText = 'Saving...';
+        
+        try {
+            await fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ address, phone, email })
+            });
+            alert('Settings Saved Successfully');
+        } catch(err) {
+            alert('Error saving settings');
+        } finally {
+            btn.innerText = 'Save Settings';
+        }
+    });
+    
+    setTimeout(loadSettings, 500);
+}
+
+    // Add logic to populate the staff dropdown
+    async function populateStaffDropdown(selectedEmail) {
+        const select = document.getElementById('modal-assigned-staff');
+        select.innerHTML = '<option value="">Unassigned</option>';
+        try {
+            const res = await fetch('/api/advocates');
+            const data = await res.json();
+            data.forEach(adv => {
+                const opt = document.createElement('option');
+                opt.value = adv.email;
+                opt.innerText = `${adv.name} (${adv.specialty})`;
+                if (adv.email === selectedEmail) opt.selected = true;
+                select.appendChild(opt);
+            });
+        } catch(e) {
+            console.error(e);
+        }
+    }

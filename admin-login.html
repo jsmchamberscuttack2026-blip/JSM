@@ -110,6 +110,7 @@
                 });
                 
                 if (response.ok) {
+                    sessionStorage.setItem('adminLoggedIn', 'true');
                     window.location.href = 'admin-dashboard.html';
                 } else {
                     alert('Invalid Admin credentials.');
