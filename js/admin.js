@@ -41,6 +41,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const newDataString = JSON.stringify(data);
             if (newDataString === apptCache) return;
             apptCache = newDataString;
+            
+            // Update Stats
+            const statAppts = document.getElementById('stat-appointments');
+            if (statAppts) statAppts.innerText = data.length;
 
             if (data.length > 0) {
                 consultationsTbody.innerHTML = '';
@@ -65,7 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     tr.innerHTML = `
                         <td>${appt.name}</td>
                         <td>${appt.email}</td>
-                        <td>${appt.service}</td>
                         <td>${statusBadge}</td>
                         <td>
                             ${dateInput}
@@ -172,6 +175,16 @@ document.addEventListener('DOMContentLoaded', () => {
             casesCache = newDataString;
             globalCasesData = cases;
 
+            
+            // Update Stats
+            const statActive = document.getElementById('stat-active-cases');
+            const statClients = document.getElementById('stat-clients');
+            if (statActive) statActive.innerText = cases.length;
+            if (statClients) {
+                const uniqueEmails = new Set(cases.map(c => c.email));
+                statClients.innerText = uniqueEmails.size;
+            }
+            
             if (cases.length > 0) {
                 casesGrid.innerHTML = '';
                 cases.forEach(c => {
@@ -417,11 +430,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${c.email}</td>
                         <td>${c.case_type}</td>
                         <td><span class="badge" style="background: #e0e0e0; color: #555;">${c.status}</span></td>
+                        <td><button class="btn" style="background:#e74c3c; color:white; padding: 4px 8px;" onclick="deleteArchivedCase('${c._id}')">Delete</button></td>
                     `;
                     archivedCasesTbody.appendChild(tr);
                 });
             } else {
-                archivedCasesTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999; padding: 2rem;">No finished cases found.</td></tr>';
+                archivedCasesTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999; padding: 2rem;">No finished cases found.</td></tr>';
             }
         } catch (err) {
             console.error(err);
@@ -487,6 +501,18 @@ async function loadAdvocates() {
                 <td>${adv.name}</td>
                 <td>${adv.email || 'N/A'}</td>
                 <td>${adv.specialty}</td>
+                <td>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" ${adv.access_appointments ? 'checked' : ''} onchange="updateAccess('${adv._id}', this.checked, ${adv.access_clients ? 'true' : 'false'})">
+                            Appointments Access
+                        </label>
+                        <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" ${adv.access_clients ? 'checked' : ''} onchange="updateAccess('${adv._id}', ${adv.access_appointments ? 'true' : 'false'}, this.checked)">
+                            Clients Directory Access
+                        </label>
+                    </div>
+                </td>
                 <td>
                     <button class="btn" style="background:#e74c3c; color:white; padding: 4px 8px;" onclick="deleteAdvocate('${adv._id}')">Delete</button>
                 </td>
@@ -612,6 +638,50 @@ if (officeInfoForm) {
                 select.appendChild(opt);
             });
         } catch(e) {
+            console.error(e);
+        }
+    }
+
+    window.deleteArchivedCase = async function(id) {
+        if (!confirm('Are you sure you want to permanently delete this archived case?')) return;
+        try {
+            const response = await fetch(`/api/cases/${id}`, { method: 'DELETE' });
+            if (response.ok) {
+                alert('Case deleted successfully.');
+                loadArchivedCases();
+            } else {
+                alert('Failed to delete case.');
+            }
+        } catch(e) {
+            console.error(e);
+            alert('Error deleting case.');
+        }
+    }
+
+    async function loadSystemConfig() {
+        try {
+            const res = await fetch('/api/system-config');
+            if (res.ok) {
+                const config = await res.json();
+                document.getElementById('pwd-appts').innerText = config.appointments_password;
+                document.getElementById('pwd-clients').innerText = config.clients_password;
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    loadSystemConfig();
+
+    window.updateAccess = async function(id, access_appointments, access_clients) {
+        try {
+            await fetch(`/api/advocates/${id}/access`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({access_appointments, access_clients})
+            });
+            advocatesCache = "";
+            loadAdvocates();
+        } catch (e) {
             console.error(e);
         }
     }

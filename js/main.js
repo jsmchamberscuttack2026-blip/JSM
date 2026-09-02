@@ -172,10 +172,10 @@ document.addEventListener('DOMContentLoaded', () => {
                   advocates.forEach(adv => {
                       const div = document.createElement('div');
                       div.className = 'advocate';
-                      const bgStyle = adv.imageUrl ? `background-image: url('${adv.imageUrl}');` : `background-color: #0c1b2a;`;
                       const role = adv.role || 'Legal Professional';
+                      const imageHtml = adv.imageUrl ? `<div class="advocate-image" style="background-image: url('${adv.imageUrl}'); background-size: cover; background-position: center;"></div>` : '';
                       div.innerHTML = `
-                          <div class="advocate-image" style="${bgStyle} background-size: cover; background-position: center;"></div>
+                          ${imageHtml}
                           <div class="advocate-info">
                               <div class="advocate-role">${role}</div>
                               <h3>${adv.name}</h3>

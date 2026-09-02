@@ -11,6 +11,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 from email.utils import formatdate, make_msgid
 from datetime import datetime
+import random
 import certifi
 import logging
 import socket
@@ -36,6 +37,7 @@ try:
     db = client[DB_NAME]
     appointments_col = db['appointments']
     advocates_col = db['advocates']
+    config_col = db['system_config']
     settings_col = db['settings']
     cases_col = db['cases']
     email_logs_col = db['email_logs']
@@ -370,6 +372,29 @@ def create_case():
     email_sent = send_credentials_email(case['email'], case['client_name'], password)
     return jsonify({"message": "Case created", "id": str(result.inserted_id), "password": password, "email_sent": email_sent}), 201
 
+
+def ensure_daily_passwords():
+    today = datetime.now().strftime("%Y-%m-%d")
+    config = config_col.find_one({"_id": "daily_passwords"})
+    
+    if not config or config.get("date_generated") != today:
+        # Generate new passwords
+        new_appts = str(random.randint(100000, 999999))
+        new_clients = str(random.randint(100000, 999999))
+        
+        config_col.update_one(
+            {"_id": "daily_passwords"},
+            {"$set": {
+                "date_generated": today,
+                "appointments_password": new_appts,
+                "clients_password": new_clients
+            }},
+            upsert=True
+        )
+        return {"appointments_password": new_appts, "clients_password": new_clients, "date_generated": today}
+    
+    return config
+
 @app.route('/api/cases', methods=['GET'])
 def get_cases():
     cases = list(cases_col.find({"status": {"$ne": "Finished & Archived"}}).sort('_id', -1))
@@ -381,6 +406,8 @@ def get_archived_cases():
     cases = list(cases_col.find({"status": "Finished & Archived"}).sort('_id', -1))
     for c in cases: c['_id'] = str(c['_id'])
     return jsonify(cases), 200
+
+
 
 @app.route('/api/cases/<id>', methods=['PUT'])
 def update_case(id):
@@ -660,7 +687,9 @@ def staff_login():
             "advocate": {
                 "id": str(advocate['_id']),
                 "name": advocate.get('name'),
-                "email": advocate.get('email')
+                "email": advocate.get('email'),
+                "access_appointments": advocate.get('access_appointments', False),
+                "access_clients": advocate.get('access_clients', False)
             }
         }), 200
         
@@ -741,9 +770,99 @@ def staff_verify_code():
         "advocate": {
             "id": str(advocate['_id']),
             "name": advocate.get('name'),
-            "email": advocate.get('email')
+            "email": advocate.get('email'),
+            "access_appointments": advocate.get('access_appointments', False),
+            "access_clients": advocate.get('access_clients', False)
         }
     }), 200
+
+
+
+@app.route('/api/system-config', methods=['GET'])
+def get_system_config():
+    config = ensure_daily_passwords()
+    config['_id'] = str(config['_id']) if '_id' in config else None
+    return jsonify(config), 200
+
+@app.route('/api/advocates/<id>/access', methods=['POST'])
+def update_advocate_access(id):
+    data = request.json
+    try:
+        advocates_col.update_one(
+            {"_id": ObjectId(id)},
+            {"$set": {
+                "access_appointments": data.get('access_appointments', False),
+                "access_clients": data.get('access_clients', False)
+            }}
+        )
+        return jsonify({"message": "Access updated"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/staff/verify-section', methods=['POST'])
+def verify_section_password():
+    data = request.json
+    section = data.get('section')
+    password = data.get('password')
+    
+    config = ensure_daily_passwords()
+    if section == 'appointments' and password == config.get('appointments_password'):
+        return jsonify({"valid": True}), 200
+    if section == 'clients' and password == config.get('clients_password'):
+        return jsonify({"valid": True}), 200
+        
+    return jsonify({"valid": False, "error": "Incorrect password"}), 401
+
+@app.route('/api/staff/send-section-code', methods=['POST'])
+def send_section_code():
+    data = request.json
+    email = data.get('email')
+    
+    advocate = advocates_col.find_one({"email": email})
+    if not advocate:
+        return jsonify({"error": "Email not found"}), 404
+        
+    # Generate 6 digit code valid for 30s
+    code = str(random.randint(100000, 999999))
+    expires = datetime.now() + timedelta(seconds=30)
+    
+    advocates_col.update_one(
+        {"email": email},
+        {"$set": {"section_code": code, "section_code_expires": expires}}
+    )
+    
+    try:
+        msg = MIMEMultipart()
+        msg['Subject'] = 'Your Section Verification Code'
+        msg['From'] = f"JSM Chambers <{SMTP_USER}>"
+        msg['To'] = email
+        msg.attach(MIMEText(f"Your verification code is: {code}\nIt will expire in 30 seconds.", 'plain'))
+        
+        server = smtplib.SMTP(SMTP_HOST, int(SMTP_PORT))
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASSWORD)
+        server.send_message(msg)
+        server.quit()
+        return jsonify({"message": "Code sent"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/staff/verify-section-code', methods=['POST'])
+def verify_section_code():
+    data = request.json
+    email = data.get('email')
+    code = data.get('code')
+    
+    advocate = advocates_col.find_one({"email": email, "section_code": code})
+    if not advocate:
+        return jsonify({"valid": False, "error": "Invalid code"}), 400
+        
+    if datetime.now() > advocate.get("section_code_expires", datetime.now()):
+        return jsonify({"valid": False, "error": "Code expired"}), 400
+        
+    advocates_col.update_one({"_id": advocate["_id"]}, {"$unset": {"section_code": "", "section_code_expires": ""}})
+    return jsonify({"valid": True}), 200
+
 
 if __name__ == '__main__':
     app.run(debug=False, port=8081, host='0.0.0.0')

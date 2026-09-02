@@ -103,6 +103,82 @@
         .badge.active { background-color: #E8F5E9; color: #2E7D32; }
         .admin-section { display: none; }
         .admin-section.active { display: block; }
+    
+        @media (max-width: 768px) {
+            .dashboard-container { flex-direction: column; }
+            .sidebar { width: 100%; padding: 1rem; }
+            .sidebar ul { flex-direction: row; overflow-x: auto; white-space: nowrap; padding-bottom: 0.5rem; }
+            .sidebar ul li a { display: inline-block; }
+            .main-content { padding: 1rem; }
+            .stats-grid { grid-template-columns: 1fr; }
+            
+            /* Responsive tables */
+            .admin-section table, 
+            .admin-section thead, 
+            .admin-section tbody, 
+            .admin-section th, 
+            .admin-section td, 
+            .admin-section tr { 
+                display: block; 
+            }
+            .admin-section thead tr { 
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+            .admin-section tr { border: 1px solid #ccc; margin-bottom: 10px; border-radius: 8px; padding: 10px; background: #fff;}
+            .admin-section td { 
+                border: none;
+                border-bottom: 1px solid #eee; 
+                position: relative;
+                padding-left: 40% !important; 
+                text-align: left;
+                min-height: 40px;
+                display: flex;
+                align-items: center;
+                white-space: normal;
+                word-break: break-all;
+            }
+            .admin-section td:before { 
+                position: absolute;
+                top: 50%;
+                left: 10px;
+                transform: translateY(-50%);
+                width: 35%; 
+                padding-right: 10px; 
+                white-space: nowrap;
+                font-weight: bold;
+                color: #555;
+            }
+            
+            /* Add pseudo headers for responsiveness */
+            #recent-cases-tbody td:nth-of-type(1):before { content: "Client Name:"; }
+            #recent-cases-tbody td:nth-of-type(2):before { content: "Email:"; }
+            #recent-cases-tbody td:nth-of-type(3):before { content: "Type:"; }
+            #recent-cases-tbody td:nth-of-type(4):before { content: "Status:"; }
+            #recent-cases-tbody td:nth-of-type(5):before { content: "Assigned:"; }
+            #recent-cases-tbody td:nth-of-type(6):before { content: "Next Hearing:"; }
+            #recent-cases-tbody td:nth-of-type(7):before { content: "Action:"; }
+
+            #consultations-tbody td:nth-of-type(1):before, #staff-appts-tbody td:nth-of-type(1):before { content: "Name:"; }
+            #consultations-tbody td:nth-of-type(2):before, #staff-appts-tbody td:nth-of-type(2):before { content: "Email:"; }
+            #consultations-tbody td:nth-of-type(3):before, #staff-appts-tbody td:nth-of-type(3):before { content: "Status:"; }
+            #consultations-tbody td:nth-of-type(4):before, #staff-appts-tbody td:nth-of-type(4):before { content: "Date & Time:"; }
+            #consultations-tbody td:nth-of-type(5):before, #staff-appts-tbody td:nth-of-type(5):before { content: "Action:"; }
+
+            #admin-advocates-list td:nth-of-type(1):before { content: "Image:"; }
+            #admin-advocates-list td:nth-of-type(2):before { content: "Name:"; }
+            #admin-advocates-list td:nth-of-type(3):before { content: "Email:"; }
+            #admin-advocates-list td:nth-of-type(4):before { content: "Specialty:"; }
+            #admin-advocates-list td:nth-of-type(5):before { content: "Access:"; }
+            #admin-advocates-list td:nth-of-type(6):before { content: "Action:"; }
+            
+            #archived-cases-tbody td:nth-of-type(1):before, #staff-clients-tbody td:nth-of-type(1):before { content: "Client Name:"; }
+            #archived-cases-tbody td:nth-of-type(2):before, #staff-clients-tbody td:nth-of-type(2):before { content: "Email:"; }
+            #archived-cases-tbody td:nth-of-type(3):before, #staff-clients-tbody td:nth-of-type(3):before { content: "Type:"; }
+            #archived-cases-tbody td:nth-of-type(4):before, #staff-clients-tbody td:nth-of-type(4):before { content: "Status:"; }
+            #archived-cases-tbody td:nth-of-type(5):before { content: "Action:"; }
+        }
     </style>
 </head>
 <body>
@@ -118,10 +194,7 @@
                 <li><a href="#" id="nav-consultations">Incoming Appointments</a></li>
                 <li><a href="#" id="nav-advocates">Advocates Info</a></li>
                 <li><a href="#" id="nav-cases">Client Case Files</a></li>
-                <li><a href="#" id="nav-hearings">Court Hearings</a></li>
-                <li><a href="#" id="nav-docs">Documents Portal</a></li>
-                <li><a href="#" id="nav-reports">Financial & Reports</a></li>
-                <li><a href="#" id="nav-settings">Site Settings</a></li>
+                                                                <li><a href="#" id="nav-settings">Site Settings</a></li>
                 <li style="margin-top: auto;"><a href="#" onclick="sessionStorage.removeItem('adminLoggedIn'); window.location.href='admin-login.html'; return false;">Logout</a></li>
             </ul>
         </aside>
@@ -141,26 +214,37 @@
             <div id="content-area">
                 <div id="section-dashboard" class="admin-section active">
                     <!-- Dashboard View -->
+                
+                <div class="card" style="margin-bottom: 2rem; border-left: 4px solid var(--color-error); background: #fff5f5;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="color: var(--color-error); margin-bottom: 0.5rem;">🔒 Daily Section Passwords</h3>
+                            <p style="font-size: 0.85rem; color: #555;">These passwords change every 24 hours. Staff members need them to access restricted sections.</p>
+                        </div>
+                        <div style="display: flex; gap: 2rem; background: white; padding: 1rem; border-radius: 8px; border: 1px solid #ffcdd2;">
+                            <div>
+                                <div style="font-size: 0.75rem; color: #666; text-transform: uppercase;">Appointments Password</div>
+                                <div id="pwd-appts" style="font-size: 1.2rem; font-weight: bold; color: var(--color-primary); letter-spacing: 2px;">------</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; color: #666; text-transform: uppercase;">Clients Directory Password</div>
+                                <div id="pwd-clients" style="font-size: 1.2rem; font-weight: bold; color: var(--color-primary); letter-spacing: 2px;">------</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <h4>Total Active Cases</h4>
-                        <div class="value">142</div>
+                        <div class="value" id="stat-active-cases">0</div>
                     </div>
                     <div class="stat-card">
                         <h4>Registered Clients</h4>
-                        <div class="value">89</div>
-                    </div>
-                    <div class="stat-card">
-                        <h4>Hearings Today</h4>
-                        <div class="value">5</div>
-                    </div>
-                    <div class="stat-card">
-                        <h4>Pending Approvals</h4>
-                        <div class="value">12</div>
+                        <div class="value" id="stat-clients">0</div>
                     </div>
                     <div class="stat-card">
                         <h4>New Appointments</h4>
-                        <div class="value">3</div>
+                        <div class="value" id="stat-appointments">0</div>
                     </div>
                 </div>
 
@@ -222,8 +306,7 @@
                                 <tr>
                                     <th>Name</th>
                                     <th>Email</th>
-                                    <th>Service Requested</th>
-                                    <th>Status</th>
+                                                                        <th>Status</th>
                                     <th>Set Date & Time</th>
                                     <th>Action</th>
                                 </tr>
@@ -265,7 +348,9 @@
                                 <tr>
                                     <th>Image</th>
                                     <th>Name</th>
+                                    <th>Email</th>
                                     <th>Specialty</th>
+                                    <th>Access Control</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -381,23 +466,11 @@
                     </div>
                 </div>
 
-                <div id="section-hearings" class="admin-section">
-                    <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
-                        <h3>Court Hearings</h3>
-                        <p style="color: var(--color-text-light); margin-top: 1rem;">Calendar and scheduling for upcoming hearings.</p>
-                    </div>
+                
                 </div>
-                <div id="section-docs" class="admin-section">
-                    <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
-                        <h3>Documents Portal</h3>
-                        <p style="color: var(--color-text-light); margin-top: 1rem;">Upload and manage legal documents securely.</p>
-                    </div>
+                
                 </div>
-                <div id="section-reports" class="admin-section">
-                    <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
-                        <h3>Financial & Reports</h3>
-                        <p style="color: var(--color-text-light); margin-top: 1rem;">Generate financial and case reports.</p>
-                    </div>
+                
                 </div>
                 <div id="section-settings" class="admin-section">
                     <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
@@ -447,6 +520,6 @@
     </main>
     </div>
 
-    <script src="js/admin.js?v=9"></script>
+    <script src="js/admin.js?v=10"></script>
 </body>
 </html>

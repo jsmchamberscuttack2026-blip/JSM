@@ -45,7 +45,83 @@
     .form-group { margin-bottom: 1.5rem; }
     .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem; }
     .form-control { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 4px; font-family: inherit; }
-</style>
+
+        @media (max-width: 768px) {
+            .dashboard-container { flex-direction: column; }
+            .sidebar { width: 100%; padding: 1rem; }
+            .sidebar ul { flex-direction: row; overflow-x: auto; white-space: nowrap; padding-bottom: 0.5rem; }
+            .sidebar ul li a { display: inline-block; }
+            .main-content { padding: 1rem; }
+            .stats-grid { grid-template-columns: 1fr; }
+            
+            /* Responsive tables */
+            .admin-section table, 
+            .admin-section thead, 
+            .admin-section tbody, 
+            .admin-section th, 
+            .admin-section td, 
+            .admin-section tr { 
+                display: block; 
+            }
+            .admin-section thead tr { 
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+            .admin-section tr { border: 1px solid #ccc; margin-bottom: 10px; border-radius: 8px; padding: 10px; background: #fff;}
+            .admin-section td { 
+                border: none;
+                border-bottom: 1px solid #eee; 
+                position: relative;
+                padding-left: 40% !important; 
+                text-align: left;
+                min-height: 40px;
+                display: flex;
+                align-items: center;
+                white-space: normal;
+                word-break: break-all;
+            }
+            .admin-section td:before { 
+                position: absolute;
+                top: 50%;
+                left: 10px;
+                transform: translateY(-50%);
+                width: 35%; 
+                padding-right: 10px; 
+                white-space: nowrap;
+                font-weight: bold;
+                color: #555;
+            }
+            
+            /* Add pseudo headers for responsiveness */
+            #recent-cases-tbody td:nth-of-type(1):before { content: "Client Name:"; }
+            #recent-cases-tbody td:nth-of-type(2):before { content: "Email:"; }
+            #recent-cases-tbody td:nth-of-type(3):before { content: "Type:"; }
+            #recent-cases-tbody td:nth-of-type(4):before { content: "Status:"; }
+            #recent-cases-tbody td:nth-of-type(5):before { content: "Assigned:"; }
+            #recent-cases-tbody td:nth-of-type(6):before { content: "Next Hearing:"; }
+            #recent-cases-tbody td:nth-of-type(7):before { content: "Action:"; }
+
+            #consultations-tbody td:nth-of-type(1):before, #staff-appts-tbody td:nth-of-type(1):before { content: "Name:"; }
+            #consultations-tbody td:nth-of-type(2):before, #staff-appts-tbody td:nth-of-type(2):before { content: "Email:"; }
+            #consultations-tbody td:nth-of-type(3):before, #staff-appts-tbody td:nth-of-type(3):before { content: "Status:"; }
+            #consultations-tbody td:nth-of-type(4):before, #staff-appts-tbody td:nth-of-type(4):before { content: "Date & Time:"; }
+            #consultations-tbody td:nth-of-type(5):before, #staff-appts-tbody td:nth-of-type(5):before { content: "Action:"; }
+
+            #admin-advocates-list td:nth-of-type(1):before { content: "Image:"; }
+            #admin-advocates-list td:nth-of-type(2):before { content: "Name:"; }
+            #admin-advocates-list td:nth-of-type(3):before { content: "Email:"; }
+            #admin-advocates-list td:nth-of-type(4):before { content: "Specialty:"; }
+            #admin-advocates-list td:nth-of-type(5):before { content: "Access:"; }
+            #admin-advocates-list td:nth-of-type(6):before { content: "Action:"; }
+            
+            #archived-cases-tbody td:nth-of-type(1):before, #staff-clients-tbody td:nth-of-type(1):before { content: "Client Name:"; }
+            #archived-cases-tbody td:nth-of-type(2):before, #staff-clients-tbody td:nth-of-type(2):before { content: "Email:"; }
+            #archived-cases-tbody td:nth-of-type(3):before, #staff-clients-tbody td:nth-of-type(3):before { content: "Type:"; }
+            #archived-cases-tbody td:nth-of-type(4):before, #staff-clients-tbody td:nth-of-type(4):before { content: "Status:"; }
+            #archived-cases-tbody td:nth-of-type(5):before { content: "Action:"; }
+        }
+    </style>
 </head>
 <body>
     <div class="sidebar">
@@ -77,6 +153,59 @@
                 </div>
             </div>
         </section>
+
+        <!-- ================= APPOINTMENTS SECTION ================= -->
+        <section id="section-appointments" class="admin-section">
+            <div id="lock-gate-appointments" class="card" style="text-align: center; max-width: 400px; margin: 2rem auto;">
+                <h3 style="margin-bottom: 1rem;">🔒 Restricted Section</h3>
+                <p style="font-size: 0.85rem; color: var(--color-text-light); margin-bottom: 1.5rem;">Please enter the daily Appointments password to access this section.</p>
+                <div class="form-group">
+                    <input type="password" id="pwd-input-appointments" class="form-control" placeholder="Enter Daily Password">
+                </div>
+                <div id="pwd-verify-appointments" style="display:none;" class="form-group">
+                    <input type="text" id="code-input-appointments" class="form-control" placeholder="Enter Email Code (30s)">
+                </div>
+                <button class="btn btn-primary" style="width:100%; margin-bottom: 1rem;" onclick="verifySection('appointments')">Unlock Section</button>
+                <a href="#" style="font-size: 0.8rem; color: var(--color-primary);" onclick="forgotSectionPassword('appointments'); return false;">Forgot Password? Send Code to Email</a>
+            </div>
+
+            <div id="content-appointments" style="display:none;">
+                <div class="card">
+                    <h3>Incoming Appointments</h3>
+                    <table style="width: 100%; text-align: left; border-collapse: collapse; margin-top: 1rem; font-size: 0.85rem;" id="staff-appts-table">
+                        <thead><tr style="border-bottom: 1px solid #ddd; background: #f4f6f8;"><th style="padding:10px;">Name</th><th style="padding:10px;">Email</th><th style="padding:10px;">Status</th><th style="padding:10px;">Date & Time</th><th style="padding:10px;">Action</th></tr></thead>
+                        <tbody id="staff-appts-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= CLIENTS SECTION ================= -->
+        <section id="section-clients" class="admin-section">
+            <div id="lock-gate-clients" class="card" style="text-align: center; max-width: 400px; margin: 2rem auto;">
+                <h3 style="margin-bottom: 1rem;">🔒 Restricted Section</h3>
+                <p style="font-size: 0.85rem; color: var(--color-text-light); margin-bottom: 1.5rem;">Please enter the daily Clients Directory password to access this section.</p>
+                <div class="form-group">
+                    <input type="password" id="pwd-input-clients" class="form-control" placeholder="Enter Daily Password">
+                </div>
+                <div id="pwd-verify-clients" style="display:none;" class="form-group">
+                    <input type="text" id="code-input-clients" class="form-control" placeholder="Enter Email Code (30s)">
+                </div>
+                <button class="btn btn-primary" style="width:100%; margin-bottom: 1rem;" onclick="verifySection('clients')">Unlock Section</button>
+                <a href="#" style="font-size: 0.8rem; color: var(--color-primary);" onclick="forgotSectionPassword('clients'); return false;">Forgot Password? Send Code to Email</a>
+            </div>
+
+            <div id="content-clients" style="display:none;">
+                <div class="card">
+                    <h3>Clients Directory</h3>
+                    <table style="width: 100%; text-align: left; border-collapse: collapse; margin-top: 1rem; font-size: 0.85rem;" id="staff-clients-table">
+                        <thead><tr style="border-bottom: 1px solid #ddd; background: #f4f6f8;"><th style="padding:10px;">Name</th><th style="padding:10px;">Email</th><th style="padding:10px;">Case Type</th><th style="padding:10px;">Status</th></tr></thead>
+                        <tbody id="staff-clients-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <!-- EDIT CASE MODAL -->
@@ -148,7 +277,56 @@
 
         const staffData = JSON.parse(sessionStorage.getItem('staffData') || '{}');
         if (staffData.name) {
+            // Auto-sync permissions
+            fetch('/api/advocates')
+                .then(res => res.json())
+                .then(data => {
+                    const myAdv = data.find(a => a.email === staffData.email);
+                    if (myAdv) {
+                        staffData.access_appointments = myAdv.access_appointments || false;
+                        staffData.access_clients = myAdv.access_clients || false;
+                        sessionStorage.setItem('staffData', JSON.stringify(staffData));
+                        
+                        const sidebarUl = document.querySelector('.sidebar ul');
+                        
+                        if (staffData.access_appointments && !document.getElementById('nav-appointments')) {
+                            const li = document.createElement('li');
+                            li.innerHTML = '<a id="nav-appointments" style="cursor:pointer">Incoming Appointments 🔒</a>';
+                            sidebarUl.insertBefore(li, sidebarUl.lastElementChild);
+                            li.addEventListener('click', () => showSection('appointments'));
+                        } else if (!staffData.access_appointments && document.getElementById('nav-appointments')) {
+                            document.getElementById('nav-appointments').parentElement.remove();
+                        }
+                        
+                        if (staffData.access_clients && !document.getElementById('nav-clients')) {
+                            const li = document.createElement('li');
+                            li.innerHTML = '<a id="nav-clients" style="cursor:pointer">Clients Directory 🔒</a>';
+                            sidebarUl.insertBefore(li, sidebarUl.lastElementChild);
+                            li.addEventListener('click', () => showSection('clients'));
+                        } else if (!staffData.access_clients && document.getElementById('nav-clients')) {
+                            document.getElementById('nav-clients').parentElement.remove();
+                        }
+                    }
+                }).catch(e => console.error(e));
+
             document.getElementById('staff-name-display').innerText = staffData.name;
+            const sidebarUl = document.querySelector('.sidebar ul');
+            
+            if (staffData.access_appointments) {
+                const li = document.createElement('li');
+                li.innerHTML = '<a id="nav-appointments" style="cursor:pointer">Incoming Appointments 🔒</a>';
+                sidebarUl.insertBefore(li, sidebarUl.lastElementChild);
+                li.addEventListener('click', () => showSection('appointments'));
+            }
+            if (staffData.access_clients) {
+                const li = document.createElement('li');
+                li.innerHTML = '<a id="nav-clients" style="cursor:pointer">Clients Directory 🔒</a>';
+                sidebarUl.insertBefore(li, sidebarUl.lastElementChild);
+                li.addEventListener('click', () => showSection('clients'));
+            }
+            
+            document.getElementById('nav-dashboard').addEventListener('click', () => showSection('dashboard'));
+
         }
 
         document.getElementById('staff-logout').addEventListener('click', (e) => {
@@ -289,6 +467,30 @@
             btn.disabled = false;
         }
 
+        
+        let unlockedSections = {
+            'appointments': false,
+            'clients': false
+        };
+
+        function showSection(sectionId) {
+            document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+            document.getElementById('section-' + sectionId).classList.add('active');
+            
+            document.querySelectorAll('.sidebar ul li a').forEach(a => a.classList.remove('active'));
+            const activeNav = document.getElementById('nav-' + sectionId);
+            if(activeNav) activeNav.classList.add('active');
+
+            if ((sectionId === 'appointments' || sectionId === 'clients') && !unlockedSections[sectionId]) {
+                document.getElementById(`lock-gate-${sectionId}`).style.display = 'block';
+                document.getElementById(`content-${sectionId}`).style.display = 'none';
+            } else if (sectionId === 'appointments') {
+                loadStaffAppointments();
+            } else if (sectionId === 'clients') {
+                loadStaffClients();
+            }
+        }
+
         loadMyCases();
             } catch(e) {
                 alert('Error updating case');
@@ -341,7 +543,204 @@
             btn.disabled = false;
         }
 
+        
+        let unlockedSections = {
+            'appointments': false,
+            'clients': false
+        };
+
+        function showSection(sectionId) {
+            document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+            document.getElementById('section-' + sectionId).classList.add('active');
+            
+            document.querySelectorAll('.sidebar ul li a').forEach(a => a.classList.remove('active'));
+            const activeNav = document.getElementById('nav-' + sectionId);
+            if(activeNav) activeNav.classList.add('active');
+
+            if ((sectionId === 'appointments' || sectionId === 'clients') && !unlockedSections[sectionId]) {
+                document.getElementById(`lock-gate-${sectionId}`).style.display = 'block';
+                document.getElementById(`content-${sectionId}`).style.display = 'none';
+            } else if (sectionId === 'appointments') {
+                loadStaffAppointments();
+            } else if (sectionId === 'clients') {
+                loadStaffClients();
+            }
+        }
+
         loadMyCases();
-    </script>
+    
+        let isCodeMode = { 'appointments': false, 'clients': false };
+
+        async function verifySection(section) {
+            if (isCodeMode[section]) {
+                // Verify Email Code
+                const code = document.getElementById(`code-input-${section}`).value;
+                if (!code) return alert("Enter code");
+                
+                try {
+                    const res = await fetch('/api/staff/verify-section-code', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ email: staffData.email, code })
+                    });
+                    const result = await res.json();
+                    if (result.valid) {
+                        unlockedSections[section] = true;
+                        document.getElementById(`lock-gate-${section}`).style.display = 'none';
+                        document.getElementById(`content-${section}`).style.display = 'block';
+                        const navLink = document.getElementById(`nav-${section}`);
+                        navLink.innerHTML = navLink.innerHTML.replace('🔒', '🔓');
+                        if (section === 'appointments') loadStaffAppointments();
+                        if (section === 'clients') loadStaffClients();
+                    } else {
+                        alert(result.error);
+                    }
+                } catch(e) { console.error(e); }
+                
+            } else {
+                // Verify Daily Password
+                const pwd = document.getElementById(`pwd-input-${section}`).value;
+                if (!pwd) return alert("Enter password");
+                
+                try {
+                    const res = await fetch('/api/staff/verify-section', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ section, password: pwd })
+                    });
+                    const result = await res.json();
+                    if (result.valid) {
+                        unlockedSections[section] = true;
+                        document.getElementById(`lock-gate-${section}`).style.display = 'none';
+                        document.getElementById(`content-${section}`).style.display = 'block';
+                        const navLink = document.getElementById(`nav-${section}`);
+                        navLink.innerHTML = navLink.innerHTML.replace('🔒', '🔓');
+                        if (section === 'appointments') loadStaffAppointments();
+                        if (section === 'clients') loadStaffClients();
+                    } else {
+                        alert(result.error);
+                    }
+                } catch (e) { console.error(e); }
+            }
+        }
+
+        async function forgotSectionPassword(section) {
+            isCodeMode[section] = true;
+            document.getElementById(`pwd-input-${section}`).style.display = 'none';
+            document.getElementById(`pwd-verify-${section}`).style.display = 'block';
+            
+            try {
+                const res = await fetch('/api/staff/send-section-code', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email: staffData.email })
+                });
+                if (res.ok) alert("Verification code sent to your email. You have 30 seconds to enter it.");
+                else alert("Failed to send code.");
+            } catch (e) { console.error(e); }
+        }
+        
+        let staffApptCache = "";
+        async function loadStaffAppointments() {
+            try {
+                const res = await fetch('/api/appointments');
+                const data = await res.json();
+                
+                const newDataString = JSON.stringify(data);
+                if (newDataString === staffApptCache) return;
+                staffApptCache = newDataString;
+                
+                const tbody = document.getElementById('staff-appts-tbody');
+                tbody.innerHTML = '';
+                data.forEach(appt => {
+                    const status = appt.status || 'Pending';
+                    const isApproved = status === 'Approved';
+                    const dateVal = appt.appointment_date || '';
+                    const timeVal = appt.appointment_time || '';
+
+                    const statusBadge = isApproved 
+                        ? `<span style="background: #388E3C; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">Approved</span>`
+                        : `<span style="background: #F57C00; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">Pending</span>`;
+
+                    const dateInput = isApproved ? dateVal : `<input type="date" id="date-${appt._id}" class="form-control" style="width:130px; display:inline-block; margin-bottom:5px;">`;
+                    const timeInput = isApproved ? timeVal : `<input type="time" id="time-${appt._id}" class="form-control" style="width:110px; display:inline-block;">`;
+                    
+                    const approveBtn = isApproved 
+                        ? '' 
+                        : `<button class="btn btn-primary" style="padding:4px 8px; font-size:0.8rem; margin-right:5px;" onclick="approveStaffAppointment('${appt._id}')">Approve</button>`;
+                        
+                    const deleteBtn = `<button class="btn btn-outline" style="padding:4px 8px; font-size:0.8rem;" onclick="deleteStaffAppointment('${appt._id}')">Delete</button>`;
+
+                    const tr = document.createElement('tr');
+                    tr.style.borderBottom = '1px solid #eee';
+                    tr.innerHTML = `
+                        <td style="padding:10px;">${appt.name}</td>
+                        <td style="padding:10px;">${appt.email}</td>
+                        <td style="padding:10px;">${statusBadge}</td>
+                        <td style="padding:10px;">${dateInput}<br>${timeInput}</td>
+                        <td style="padding:10px;">
+                            ${approveBtn}
+                            ${deleteBtn}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch(e) { console.error(e); }
+        }
+        
+        window.approveStaffAppointment = async function(id) {
+            const date = document.getElementById(`date-${id}`).value;
+            const time = document.getElementById(`time-${id}`).value;
+            if(!date || !time) return alert('Please select a date and time.');
+            try {
+                const response = await fetch('/api/appointments/approve', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id, date, time })
+                });
+                if(response.ok) {
+                    alert('Appointment approved!');
+                    staffApptCache = "";
+                    loadStaffAppointments();
+                } else alert('Failed to approve');
+            } catch(err) { console.error(err); }
+        }
+
+        window.deleteStaffAppointment = async function(id) {
+            if(!confirm('Are you sure you want to delete this appointment?')) return;
+            try {
+                const response = await fetch(`/api/appointments/${id}`, { method: 'DELETE' });
+                if(response.ok) {
+                    staffApptCache = "";
+                    loadStaffAppointments();
+                }
+            } catch(err) { console.error(err); }
+        }
+
+        
+        let staffClientsCache = "";
+        async function loadStaffClients() {
+            try {
+                const res = await fetch('/api/archived-cases');
+                const clients = await res.json();
+                
+                const newDataString = JSON.stringify(clients);
+                if (newDataString === staffClientsCache) return;
+                staffClientsCache = newDataString;
+                
+                const tbody = document.getElementById('staff-clients-tbody');
+                tbody.innerHTML = '';
+                clients.forEach(c => {
+                    tbody.innerHTML += `<tr><td style="padding:10px; border-bottom:1px solid #eee;">${c.client_name}</td><td style="padding:10px; border-bottom:1px solid #eee;">${c.email}</td><td style="padding:10px; border-bottom:1px solid #eee;">${c.case_type}</td><td style="padding:10px; border-bottom:1px solid #eee;">${c.status}</td></tr>`;
+                });
+            } catch(e) { console.error(e); }
+        }
+
+
+        setInterval(() => {
+            if (unlockedSections['appointments']) loadStaffAppointments();
+            if (unlockedSections['clients']) loadStaffClients();
+        }, 1000);
+</script>
 </body>
 </html>
