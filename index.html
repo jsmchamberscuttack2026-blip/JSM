@@ -2180,6 +2180,18 @@ select:focus-visible{
 
 
 <body>
+    <!-- Full Page Loading Screen -->
+    <div id="public-loading-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s ease;">
+        <img id="public-loading-logo" src="" style="max-width: 200px; max-height: 200px; width: 80%; object-fit: contain; display: none; animation: pulse 2s infinite; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
+        <h2 id="public-loading-text" style="margin-top: 30px; color: #173650; font-family: 'Georgia', serif; letter-spacing: 2px; text-align: center;">JSM. Chambers<br><small style="font-size: 14px; font-weight: normal; color: #d3ae68;">Loading.......</small></h2>
+    </div>
+    <style>
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
 
 <!-- =========================================================
      DISCLAIMER

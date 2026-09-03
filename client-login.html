@@ -165,7 +165,10 @@ input:focus{
 
 <div class="wrapper">
 
-<div class="brand">JSM. CHAMBERS</div>
+<div class="brand" id="portal-brand-container" style="display: flex; flex-direction: column; align-items: center;">
+    <img id="portal-logo" src="" style="height: 60px; display: none; margin-bottom: 15px; border-radius: 4px;">
+    <span id="portal-title">JSM. CHAMBERS</span>
+</div>
 
 <div class="card">
 
@@ -365,5 +368,19 @@ input:focus{
     });
 </script>
 
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const res = await fetch('/api/settings');
+            const settings = await res.json();
+            if (settings.logoUrl) {
+                const topLogo = document.getElementById('portal-logo');
+                const portalTitle = document.getElementById('portal-title');
+                if(topLogo) { topLogo.src = settings.logoUrl; topLogo.style.display = 'block'; }
+                if(portalTitle) { portalTitle.style.display = 'none'; }
+            }
+        } catch(e) {}
+    });
+</script>
 </body>
 </html>

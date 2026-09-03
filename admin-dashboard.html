@@ -131,20 +131,18 @@
                 border: none;
                 border-bottom: 1px solid #eee; 
                 position: relative;
-                padding-left: 40% !important; 
+                padding: 10px 10px 10px 45% !important; 
                 text-align: left;
                 min-height: 40px;
-                display: flex;
-                align-items: center;
+                display: block;
                 white-space: normal;
-                word-break: break-all;
+                word-wrap: break-word;
             }
             .admin-section td:before { 
                 position: absolute;
-                top: 50%;
+                top: 10px;
                 left: 10px;
-                transform: translateY(-50%);
-                width: 35%; 
+                width: 40%; 
                 padding-right: 10px; 
                 white-space: nowrap;
                 font-weight: bold;
@@ -194,6 +192,7 @@
                 <li><a href="#" id="nav-consultations">Incoming Appointments</a></li>
                 <li><a href="#" id="nav-advocates">Advocates Info</a></li>
                 <li><a href="#" id="nav-cases">Client Case Files</a></li>
+                                                                <li><a href="#" id="nav-emails">Email Logs</a></li>
                                                                 <li><a href="#" id="nav-settings">Site Settings</a></li>
                 <li style="margin-top: auto;"><a href="#" onclick="sessionStorage.removeItem('adminLoggedIn'); window.location.href='admin-login.html'; return false;">Logout</a></li>
             </ul>
@@ -207,7 +206,6 @@
                     <p style="color: var(--color-text-light);">System Overview</p>
                 </div>
                 <div>
-                    <button class="btn btn-primary">Add New Case</button>
                 </div>
             </header>
 
@@ -221,14 +219,20 @@
                             <h3 style="color: var(--color-error); margin-bottom: 0.5rem;">🔒 Daily Section Passwords</h3>
                             <p style="font-size: 0.85rem; color: #555;">These passwords change every 24 hours. Staff members need them to access restricted sections.</p>
                         </div>
-                        <div style="display: flex; gap: 2rem; background: white; padding: 1rem; border-radius: 8px; border: 1px solid #ffcdd2;">
+                        <div style="display: flex; gap: 2rem; background: white; padding: 1rem; border-radius: 8px; border: 1px solid #ffcdd2; flex-wrap: wrap;">
                             <div>
                                 <div style="font-size: 0.75rem; color: #666; text-transform: uppercase;">Appointments Password</div>
-                                <div id="pwd-appts" style="font-size: 1.2rem; font-weight: bold; color: var(--color-primary); letter-spacing: 2px;">------</div>
+                                <div style="display: flex; gap: 15px; align-items: center; margin-top: 5px;">
+                                    <div id="pwd-appts" style="font-size: 1.2rem; font-weight: bold; color: var(--color-primary); letter-spacing: 2px;">------</div>
+                                    <button id="btn-email-pwd-appointments" class="btn btn-outline" style="padding: 2px 8px; font-size: 0.75rem;" onclick="emailSectionPassword('appointments')">Email Password</button>
+                                </div>
                             </div>
                             <div>
                                 <div style="font-size: 0.75rem; color: #666; text-transform: uppercase;">Clients Directory Password</div>
-                                <div id="pwd-clients" style="font-size: 1.2rem; font-weight: bold; color: var(--color-primary); letter-spacing: 2px;">------</div>
+                                <div style="display: flex; gap: 15px; align-items: center; margin-top: 5px;">
+                                    <div id="pwd-clients" style="font-size: 1.2rem; font-weight: bold; color: var(--color-primary); letter-spacing: 2px;">------</div>
+                                    <button id="btn-email-pwd-clients" class="btn btn-outline" style="padding: 2px 8px; font-size: 0.75rem;" onclick="emailSectionPassword('clients')">Email Password</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -466,18 +470,19 @@
                     </div>
                 </div>
 
-                
-                </div>
-                
-                </div>
-                
-                </div>
                 <div id="section-settings" class="admin-section">
                     <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
                         <h3>Office Information Settings</h3>
                         <p style="color: var(--color-text-light); margin-top: 1rem;">Update the public contact details displayed on the website footer.</p>
                         
                         <form id="office-info-form" style="margin-top: 2rem; max-width: 500px;">
+                            <div class="form-group">
+                                <label class="form-label" for="admin-logo">Chambers Logo</label>
+                                <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 10px;">
+                                    <img id="logo-preview" src="" style="max-height: 80px; display: none; border-radius: 4px; border: 1px solid #ccc;">
+                                </div>
+                                <input type="file" id="admin-logo" class="form-control" accept="image/*">
+                            </div>
                             <div class="form-group">
                                 <label class="form-label" for="admin-address">Address</label>
                                 <textarea id="admin-address" class="form-control" rows="3" required></textarea>
@@ -497,23 +502,45 @@
             </div>
         
         <!-- Email Logs Section -->
-        <section id="email-logs-section" class="admin-section" style="display: none;">
-            <h2>Email Delivery Logs</h2>
-            <div class="card">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Date & Time</th>
-                            <th>Recipient</th>
-                            <th>Subject</th>
-                            <th>Status</th>
-                            <th>SMTP Response</th>
-                        </tr>
-                    </thead>
-                    <tbody id="email-logs-table-body">
-                        <!-- Loaded dynamically -->
-                    </tbody>
-                </table>
+        <section id="section-emails" class="admin-section" >
+            <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 2rem;">
+                <h2>Client Email Logs</h2>
+                <p style="color: var(--color-text-light); margin-top: 1rem; margin-bottom: 1rem;">Emails sent to clients for active and finished cases.</p>
+                <div class="card" style="overflow-x: auto;">
+                    <table class="data-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Recipient (Client)</th>
+                                <th>Subject</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="client-email-logs-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
+                <h2>Staff Email Logs</h2>
+                <p style="color: var(--color-text-light); margin-top: 1rem; margin-bottom: 1rem;">System emails sent to staff (Login Codes, Assignments).</p>
+                <div class="card" style="overflow-x: auto;">
+                    <table class="data-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Recipient (Staff)</th>
+                                <th>Subject</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staff-email-logs-tbody">
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </section>
 
@@ -521,5 +548,38 @@
     </div>
 
     <script src="js/admin.js?v=10"></script>
+
+    <!-- Edit Advocate Modal -->
+    <div id="edit-advocate-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto;">
+            <h3 style="margin-bottom: 0.5rem;">Edit Advocate Details</h3>
+            <p style="color: var(--color-text-light); margin-bottom: 1.5rem; font-size: 0.9rem;">Update information for this legal professional.</p>
+            
+            <input type="hidden" id="edit-adv-id">
+            <div class="form-group">
+                <label class="form-label">Advocate Name</label>
+                <input type="text" id="edit-adv-name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" id="edit-adv-email" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Specialty / Title</label>
+                <input type="text" id="edit-adv-specialty" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Upload New Image (Optional)</label>
+                <input type="file" id="edit-adv-image" class="form-control" accept="image/*">
+                <small style="color: #666; display: block; margin-top: 5px;">Leave blank to keep the current image.</small>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
+                <button class="btn btn-outline" style="margin-right: 0.5rem;" onclick="closeEditAdvocateModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEditAdvocateModal()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

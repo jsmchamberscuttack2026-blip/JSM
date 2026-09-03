@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const navLinks = document.querySelectorAll('.sidebar ul li a');
     const sections = document.querySelectorAll('.admin-section');
 
+    checkEmailPasswordButtons();
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             if (link.getAttribute('href') === 'index.html') return;
@@ -215,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const statusClass = c.status === "Under Review" ? "pending" : "active";
                         tr.innerHTML = `
                             <td>${c.case_number || '#' + (cases.length - index)}</td>
-                            <td>${c.client_name}</td>
+                            <td><a href="#" onclick="printCaseDetails('${c._id}'); return false;" style="color: #0A192F; font-weight: bold; text-decoration: underline;">${c.client_name} 📄</a></td>
                             <td>${c.case_type}</td>
                             <td>${c.assigned_staff_email || 'Unassigned'}</td>
                             <td>${c.next_hearing || 'To Be Decided'}</td>
@@ -426,7 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cases.forEach(c => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td>${c.client_name}</td>
+                        <td><a href="#" onclick="printCaseDetails('${c._id}'); return false;" style="color: #0A192F; font-weight: bold; text-decoration: underline;">${c.client_name} 📄</a></td>
                         <td>${c.email}</td>
                         <td>${c.case_type}</td>
                         <td><span class="badge" style="background: #e0e0e0; color: #555;">${c.status}</span></td>
@@ -446,51 +447,27 @@ document.addEventListener('DOMContentLoaded', () => {
         loadArchivedCases();
         setInterval(loadArchivedCases, 1000);
     }
+    
+    // Email Logs Auto-Refresh
+    if (document.getElementById('nav-emails')) {
+        setInterval(() => {
+            if (document.getElementById('section-emails').classList.contains('active')) {
+                window.loadEmailLogs();
+            }
+        }, 2000);
+    }
 });
 
-
-async function loadEmailLogs() {
-    try {
-        const response = await fetch('/api/email-logs');
-        if (!response.ok) return;
-        const logs = await response.json();
-        
-        const tbody = document.getElementById('email-logs-table-body');
-        if (!tbody) return;
-        
-        tbody.innerHTML = '';
-        logs.forEach(log => {
-            let statusBadge = '';
-            if (log.status === 'SMTP Accepted') {
-                statusBadge = '<span class="status-badge status-approved">SMTP Accepted</span>';
-            } else if (log.status === 'Failed' || log.status === 'Rejected') {
-                statusBadge = `<span class="status-badge status-pending">${log.status}</span>`;
-            } else {
-                statusBadge = `<span class="status-badge">${log.status}</span>`;
-            }
-            
-            tbody.innerHTML += `
-                <tr>
-                    <td>${log.timestamp || 'N/A'}</td>
-                    <td>${log.recipient}</td>
-                    <td>${log.subject}</td>
-                    <td>${statusBadge}</td>
-                    <td><small style="color: #666;">${log.smtp_response}</small></td>
-                </tr>
-            `;
-        });
-    } catch (error) {
-        console.error("Failed to load email logs", error);
-    }
-}
 
 // ==========================================
 // ADVOCATES MANAGEMENT
 // ==========================================
+window.globalAdvocatesData = [];
 async function loadAdvocates() {
     try {
         const response = await fetch('/api/advocates');
         const advocates = await response.json();
+        window.globalAdvocatesData = advocates;
         const tbody = document.getElementById('admin-advocates-list');
         if (!tbody) return;
         tbody.innerHTML = '';
@@ -514,6 +491,7 @@ async function loadAdvocates() {
                     </div>
                 </td>
                 <td>
+                    <button class="btn" style="background:var(--color-secondary); color:white; padding: 4px 8px; margin-right: 5px;" onclick="openEditAdvocateModal('${adv._id}')">Edit</button>
                     <button class="btn" style="background:#e74c3c; color:white; padding: 4px 8px;" onclick="deleteAdvocate('${adv._id}')">Delete</button>
                 </td>
             `;
@@ -584,8 +562,28 @@ setTimeout(loadAdvocates, 500);
 // ==========================================
 // SETTINGS MANAGEMENT
 // ==========================================
+let globalLogoUrl = "";
+
 const officeInfoForm = document.getElementById('office-info-form');
 if (officeInfoForm) {
+    const logoInput = document.getElementById('admin-logo');
+    const logoPreview = document.getElementById('logo-preview');
+    
+    if(logoInput) {
+        logoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    globalLogoUrl = event.target.result;
+                    logoPreview.src = globalLogoUrl;
+                    logoPreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
     async function loadSettings() {
         try {
             const response = await fetch('/api/settings');
@@ -593,6 +591,11 @@ if (officeInfoForm) {
             if (data.address) document.getElementById('admin-address').value = data.address;
             if (data.phone) document.getElementById('admin-phone').value = data.phone;
             if (data.email) document.getElementById('admin-email').value = data.email;
+            if (data.logoUrl) {
+                globalLogoUrl = data.logoUrl;
+                logoPreview.src = globalLogoUrl;
+                logoPreview.style.display = 'block';
+            }
         } catch(err) {
             console.error(err);
         }
@@ -610,7 +613,7 @@ if (officeInfoForm) {
             await fetch('/api/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ address, phone, email })
+                body: JSON.stringify({ address, phone, email, logoUrl: globalLogoUrl })
             });
             alert('Settings Saved Successfully');
         } catch(err) {
@@ -685,3 +688,298 @@ if (officeInfoForm) {
             console.error(e);
         }
     }
+
+    window.printCaseDetails = async function(id) {
+        // Open window synchronously to avoid popup blockers on mobile
+        const printWindow = window.open('', '', 'width=800,height=900');
+        if (!printWindow) {
+            alert("Popup blocked! Please allow popups for this site.");
+            return;
+        }
+        printWindow.document.write('<html><head><title>Loading...</title></head><body style="font-family:sans-serif; padding:40px;"><h2>Generating Report...</h2></body></html>');
+        
+        try {
+            const res = await fetch(`/api/cases/${id}`);
+            const c = await res.json();
+            
+            let hearingHtml = '<ul>';
+            if(c.hearing_history && c.hearing_history.length > 0) {
+                c.hearing_history.forEach(date => { hearingHtml += `<li>${date}</li>` });
+            } else {
+                if(c.next_hearing) hearingHtml += `<li>${c.next_hearing}</li>`;
+                else hearingHtml += `<li>No hearings recorded</li>`;
+            }
+            hearingHtml += '</ul>';
+
+            let emailsHtml = '<ul>';
+            if(c.email_logs && c.email_logs.length > 0) {
+                c.email_logs.forEach(log => { 
+                    emailsHtml += `<li><strong>${log.timestamp || 'Unknown Date'}:</strong> ${log.subject} <em>(${log.status})</em></li>` 
+                });
+            } else {
+                emailsHtml += `<li>No emails sent to this client.</li>`;
+            }
+            emailsHtml += '</ul>';
+            
+            const totalEmails = c.email_logs ? c.email_logs.length : 0;
+
+            printWindow.document.open();
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Case Details - ${c.client_name}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 40px; line-height: 1.6; }
+                        .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #0A192F; padding-bottom: 20px; }
+                        .header h1 { margin: 0; color: #0A192F; font-family: 'Playfair Display', serif; }
+                        .header p { margin: 5px 0 0; color: #666; }
+                        .details { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+                        .details div { padding: 15px; border: 1px solid #eee; background: #fafafa; border-radius: 8px; }
+                        .section { margin-bottom: 30px; }
+                        .section h3 { border-bottom: 1px solid #ccc; padding-bottom: 10px; color: #333; }
+                        @media print {
+                            body { padding: 0; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>JSM. Chambers</h1>
+                        <p>Case Information Report</p>
+                    </div>
+                    
+                    <div class="details">
+                        <div>
+                            <strong>Client Name:</strong><br> ${c.client_name}
+                        </div>
+                        <div>
+                            <strong>Email Address:</strong><br> ${c.email}
+                        </div>
+                        <div>
+                            <strong>Case Number:</strong><br> ${c.case_number || 'Not Assigned'}
+                        </div>
+                        <div>
+                            <strong>Case Type / Subject:</strong><br> ${c.case_type}
+                        </div>
+                        <div>
+                            <strong>Status:</strong><br> ${c.status}
+                        </div>
+                        <div>
+                            <strong>Assigned Advocate:</strong><br> ${c.assigned_staff_email || 'Unassigned'}
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h3>Hearing History</h3>
+                        ${hearingHtml}
+                    </div>
+
+                    <div class="section">
+                        <h3>Email Communication History (Total Sent: ${totalEmails})</h3>
+                        ${emailsHtml}
+                    </div>
+
+                    <div class="section">
+                        <h3>Administrative Notes</h3>
+                        <p>${c.notes ? c.notes.replace(/\\n/g, '<br>') : 'No notes recorded.'}</p>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 50px; font-size: 0.8em; color: #888;">
+                        Generated on ${new Date().toLocaleString()} by JSM. Chambers Case Management System
+                    </div>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                printWindow.print();
+            }, 500);
+        } catch(e) {
+            console.error(e);
+            printWindow.document.write('<h2>Error generating report.</h2>');
+            alert('Failed to fetch case details for printing.');
+        }
+    };
+
+    window.loadEmailLogs = async function() {
+        const clientTbody = document.getElementById('client-email-logs-tbody');
+        const staffTbody = document.getElementById('staff-email-logs-tbody');
+        if(!clientTbody || !staffTbody) return;
+        
+        try {
+            const res = await fetch('/api/email-logs');
+            const data = await res.json();
+            
+            clientTbody.innerHTML = '';
+            if(data.client_logs.length === 0) {
+                clientTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999; padding: 2rem;">No client emails sent yet.</td></tr>';
+            } else {
+                data.client_logs.forEach(log => {
+                    clientTbody.innerHTML += `<tr>
+                        <td>${log.timestamp || ''}</td>
+                        <td>${log.recipient || ''}</td>
+                        <td>${log.subject || ''}</td>
+                        <td>${log.status || ''}</td>
+                        <td>
+                            <button class="btn btn-secondary" onclick="deleteEmailLog('${log._id}')" style="background: var(--color-error); color: white; padding: 0.3rem 0.6rem; font-size: 0.8rem;">Delete</button>
+                        </td>
+                    </tr>`;
+                });
+            }
+            
+            staffTbody.innerHTML = '';
+            if(data.staff_logs.length === 0) {
+                staffTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999; padding: 2rem;">No staff emails sent yet.</td></tr>';
+            } else {
+                data.staff_logs.forEach(log => {
+                    staffTbody.innerHTML += `<tr>
+                        <td>${log.timestamp || ''}</td>
+                        <td>${log.recipient || ''}</td>
+                        <td>${log.subject || ''}</td>
+                        <td>${log.status || ''}</td>
+                        <td>
+                            <button class="btn btn-secondary" onclick="deleteEmailLog('${log._id}')" style="background: var(--color-error); color: white; padding: 0.3rem 0.6rem; font-size: 0.8rem;">Delete</button>
+                        </td>
+                    </tr>`;
+                });
+            }
+        } catch(e) {
+            console.error(e);
+        }
+    };
+
+    window.deleteEmailLog = async function(id) {
+        if (!confirm('Are you sure you want to delete this email log?')) return;
+        try {
+            const response = await fetch(`/api/email-logs/${id}`, { method: 'DELETE' });
+            if (response.ok) {
+                window.loadEmailLogs();
+            } else {
+                alert('Failed to delete email log.');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error deleting email log.');
+        }
+    };
+
+    // Initialize Email Password Buttons on Load
+    function checkEmailPasswordButtons() {
+        ['appointments', 'clients'].forEach(section => {
+            const btn = document.getElementById('btn-email-pwd-' + section);
+            if (!btn) return;
+            const lastSent = localStorage.getItem('email_sent_v2_' + section);
+            if (lastSent) {
+                const hoursPassed = (Date.now() - parseInt(lastSent)) / (1000 * 60 * 60);
+                if (hoursPassed < 24) {
+                    btn.innerText = 'Email Sent';
+                    btn.disabled = true;
+                    btn.style.opacity = '0.5';
+                    btn.style.cursor = 'not-allowed';
+                } else {
+                    btn.innerText = 'Email Password';
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                }
+            }
+        });
+    }
+
+    window.emailSectionPassword = async function(section) {
+        const btn = document.getElementById('btn-email-pwd-' + section);
+        if(!btn) return;
+        
+        btn.innerText = 'Sending...';
+        btn.disabled = true;
+        
+        try {
+            const response = await fetch('/api/email-section-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ section })
+            });
+            
+            if (response.ok) {
+                localStorage.setItem('email_sent_v2_' + section, Date.now());
+                checkEmailPasswordButtons();
+            } else {
+                alert('Failed to send email.');
+                btn.innerText = 'Email Password';
+                btn.disabled = false;
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error sending email.');
+            btn.innerText = 'Email Password';
+            btn.disabled = false;
+        }
+    };
+
+    // Edit Advocate Modal Logic
+    let editAdvocateImageUrl = "";
+    
+    window.openEditAdvocateModal = function(id) {
+        const adv = window.globalAdvocatesData.find(a => a._id === id || a.id === id);
+        if(!adv) return;
+        
+        document.getElementById('edit-adv-id').value = adv._id;
+        document.getElementById('edit-adv-name').value = adv.name || '';
+        document.getElementById('edit-adv-email').value = adv.email || '';
+        document.getElementById('edit-adv-specialty').value = adv.specialty || '';
+        document.getElementById('edit-adv-image').value = '';
+        editAdvocateImageUrl = ""; // reset
+        
+        document.getElementById('edit-advocate-modal').style.display = 'flex';
+    };
+
+    window.closeEditAdvocateModal = function() {
+        document.getElementById('edit-advocate-modal').style.display = 'none';
+    };
+
+    const editAdvImageInput = document.getElementById('edit-adv-image');
+    if(editAdvImageInput) {
+        editAdvImageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    editAdvocateImageUrl = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    window.saveEditAdvocateModal = async function() {
+        const id = document.getElementById('edit-adv-id').value;
+        const name = document.getElementById('edit-adv-name').value;
+        const email = document.getElementById('edit-adv-email').value;
+        const specialty = document.getElementById('edit-adv-specialty').value;
+        
+        if(!name || !email || !specialty) {
+            alert('Please fill out all required fields.');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/advocates/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, specialty, imageUrl: editAdvocateImageUrl })
+            });
+
+            if (response.ok) {
+                closeEditAdvocateModal();
+                loadAdvocates();
+                alert('Advocate details updated successfully.');
+            } else {
+                const data = await response.json();
+                alert(data.error || 'Failed to update advocate.');
+            }
+        } catch(error) {
+            console.error(error);
+            alert('Error updating advocate.');
+        }
+    };

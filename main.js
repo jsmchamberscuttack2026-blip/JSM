@@ -146,6 +146,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const publicOfficeInfo = document.getElementById('public-office-info');
   if(publicOfficeInfo) {
       fetch('/api/settings').then(res => res.json()).then(info => {
+          if (info.logoUrl) {
+              const marks = document.querySelectorAll('.logo-mark');
+              marks.forEach(mark => {
+                  mark.innerHTML = `<img src="${info.logoUrl}" style="width:100%; height:100%; object-fit:contain; border-radius:12px;">`;
+                  mark.style.background = 'transparent';
+              });
+              
+              const loadLogo = document.getElementById('public-loading-logo');
+              const loadText = document.getElementById('public-loading-text');
+              if(loadLogo) { 
+                  loadLogo.src = info.logoUrl; 
+                  loadLogo.style.display = 'block'; 
+                  if(loadText) loadText.style.display = 'none'; // Hide text if we have logo
+              }
+          }
           if(info.address || info.phone || info.email) {
               publicOfficeInfo.innerHTML = `
                 ${(info.address || '').replace(/\n/g, '<br>')}<br>
@@ -196,4 +211,18 @@ document.addEventListener('DOMContentLoaded', () => {
       setInterval(loadAdvocates, 1000);
   }
 
+    // Public Loading Screen Logic (3 Seconds)
+    if (!sessionStorage.getItem('publicLoadingScreenShown')) {
+        setTimeout(() => {
+            const screen = document.getElementById('public-loading-screen');
+            if(screen) {
+                screen.style.opacity = '0';
+                setTimeout(() => screen.style.display = 'none', 500);
+            }
+            sessionStorage.setItem('publicLoadingScreenShown', 'true');
+        }, 3000);
+    } else {
+        const screen = document.getElementById('public-loading-screen');
+        if(screen) screen.style.display = 'none';
+    }
 });

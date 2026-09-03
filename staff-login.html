@@ -21,8 +21,9 @@
 
     <nav class="navbar">
         <div class="container">
-            <a href="index.html" class="logo">
-                <h1>JSM. <span>Chambers</span></h1>
+            <a href="index.html" class="logo" style="display: flex; align-items: center; gap: 10px;">
+                <img id="portal-logo" src="" style="height: 40px; border-radius: 4px; display: none;">
+                <h1 id="portal-title">JSM. <span>Chambers</span></h1>
             </a>
             <a href="index.html" class="btn btn-outline" style="padding: 0.5rem 1rem;">Back to Home</a>
         </div>
@@ -233,5 +234,19 @@
             }
         });
     </script>
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const res = await fetch('/api/settings');
+            const settings = await res.json();
+            if (settings.logoUrl) {
+                const topLogo = document.getElementById('portal-logo');
+                const portalTitle = document.getElementById('portal-title');
+                if(topLogo) { topLogo.src = settings.logoUrl; topLogo.style.display = 'block'; }
+                if(portalTitle) { portalTitle.style.display = 'none'; }
+            }
+        } catch(e) {}
+    });
+</script>
 </body>
 </html>

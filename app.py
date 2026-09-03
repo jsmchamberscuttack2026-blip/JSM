@@ -241,8 +241,11 @@ Please log into the Admin Dashboard to approve and set a date/time."""
 
 @app.route('/')
 def serve_index():
-
     return send_from_directory('.', 'index.html')
+
+@app.route('/<path:path>')
+def serve_static(path):
+    return send_from_directory('.', path)
 
 @app.route('/api/appointments', methods=['POST'])
 def create_appointment():
@@ -339,10 +342,79 @@ def delete_all_appointments():
 
 @app.route('/api/email-logs', methods=['GET'])
 def get_email_logs():
-    logs = list(email_logs_col.find().sort('_id', -1).limit(100))
+    logs = list(email_logs_col.find().sort('_id', -1).limit(300))
+    
+    staff_emails = [adv.get('email', '') for adv in advocates_col.find({}, {"email": 1})]
+    
+    client_logs = []
+    staff_logs = []
+    
     for log in logs:
         log['_id'] = str(log['_id'])
-    return jsonify(logs), 200
+        if 'timestamp' in log and log['timestamp']:
+            if not isinstance(log['timestamp'], str):
+                try: log['timestamp'] = log['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+                except: log['timestamp'] = str(log['timestamp'])
+                
+        rec = log.get('recipient', '')
+        sub = log.get('subject', '')
+        
+        if rec in staff_emails or "Login Verification Code" in sub or "New Case Assigned" in sub:
+            staff_logs.append(log)
+        else:
+            client_logs.append(log)
+            
+    return jsonify({"client_logs": client_logs, "staff_logs": staff_logs}), 200
+
+
+
+@app.route('/api/email-section-password', methods=['POST'])
+def email_section_password():
+    data = request.json
+    section = data.get('section')
+    if section not in ['appointments', 'clients']:
+        return jsonify({"error": "Invalid section"}), 400
+        
+    config = ensure_daily_passwords()
+    pwd = config.get(section + '_password', '')
+    
+    advocates = list(advocates_col.find({"email": {"$exists": True, "$ne": ""}}))
+    emails_sent = 0
+    
+    section_name = "Incoming Appointments" if section == "appointments" else "Clients Directory"
+    
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        for adv in advocates:
+            if adv.get('email') and adv.get(f'access_{section}', False):
+                subject = f"JSM. Chambers - Daily Password for {section_name}"
+                body = f"""
+                <p>Dear {adv.get('name', 'Advocate')},</p>
+                <p>The daily access password for the <strong>{section_name}</strong> section has been generated.</p>
+                <h3 style="background: #f4f4f4; padding: 15px; border-radius: 5px; letter-spacing: 2px;">{pwd}</h3>
+                <p>Please use this password to unlock the section in your Staff Dashboard.</p>
+                <p>This password is valid for 24 hours.</p>
+                <br>
+                <p>Regards,<br>Admin Team</p>
+                """
+                msg = MIMEMultipart()
+                msg['From'] = SMTP_USER
+                msg['To'] = adv['email']
+                msg['Subject'] = subject
+                msg.attach(MIMEText(body, 'html', 'utf-8'))
+                executor.submit(send_email_core, adv['email'], msg, subject)
+                emails_sent += 1
+            
+    return jsonify({"success": True, "emails_sent": emails_sent}), 200
+
+@app.route('/api/email-logs/<id>', methods=['DELETE'])
+def delete_email_log(id):
+    try:
+        result = email_logs_col.delete_one({"_id": ObjectId(id)})
+        if result.deleted_count > 0:
+            return jsonify({"message": "Email log deleted"}), 200
+        return jsonify({"error": "Email log not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/admin-login', methods=['POST'])
 def admin_login():
@@ -409,6 +481,30 @@ def get_archived_cases():
 
 
 
+@app.route('/api/cases/<id>', methods=['GET'])
+def get_single_case(id):
+    c = cases_col.find_one({"_id": ObjectId(id)})
+    if c:
+        c['_id'] = str(c['_id'])
+        
+        email = c.get('email', '')
+        if email:
+            logs = list(email_logs_col.find({"recipient": email}).sort('_id', -1))
+            for log in logs:
+                log['_id'] = str(log['_id'])
+                if 'timestamp' in log and log['timestamp']:
+                    if not isinstance(log['timestamp'], str):
+                        try:
+                            log['timestamp'] = log['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+                        except:
+                            log['timestamp'] = str(log['timestamp'])
+            c['email_logs'] = logs
+        else:
+            c['email_logs'] = []
+            
+        return jsonify(c), 200
+    return jsonify({"error": "Not found"}), 404
+
 @app.route('/api/cases/<id>', methods=['PUT'])
 def update_case(id):
     data = request.get_json(force=True, silent=True) or {}
@@ -420,7 +516,9 @@ def update_case(id):
     
     update_fields = {}
     if 'status' in data: update_fields['status'] = data['status']
-    if 'next_hearing' in data: update_fields['next_hearing'] = data['next_hearing']
+    if 'next_hearing' in data: 
+        update_fields['next_hearing'] = data['next_hearing']
+        cases_col.update_one({"_id": ObjectId(id)}, {"$addToSet": {"hearing_history": data['next_hearing']}})
     if 'notes' in data: update_fields['notes'] = data['notes']
     if 'case_number' in data: update_fields['case_number'] = data['case_number']
     if 'assigned_staff_email' in data: update_fields['assigned_staff_email'] = data['assigned_staff_email']
