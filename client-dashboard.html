@@ -427,6 +427,14 @@ body{
                     <span>Active Case</span>
                 </div>
                 <div class="info-row">
+                    <div class="info-label">Chamber Case Number</div>
+                    <div class="info-value" id="info-chamber">Loading...</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Court Case Number</div>
+                    <div class="info-value" id="info-court">Loading...</div>
+                </div>
+                <div class="info-row">
                     <div class="info-label">Case Type</div>
                     <div class="info-value" id="info-type">Loading...</div>
                 </div>
@@ -458,6 +466,34 @@ body{
 </main>
 
 <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const setRes = await fetch('/api/settings');
+            const settings = await setRes.json();
+            if (settings.logoUrl) {
+                const logo = document.getElementById('loading-logo');
+                if (logo) {
+                    logo.src = settings.logoUrl;
+                    logo.style.display = 'block';
+                }
+            }
+        } catch(e) {}
+
+        if (!sessionStorage.getItem('clientLoadingScreenShown')) {
+            setTimeout(() => {
+                const screen = document.getElementById('login-loading-screen');
+                if(screen) {
+                    screen.style.opacity = '0';
+                    setTimeout(() => screen.style.display = 'none', 500);
+                }
+                sessionStorage.setItem('clientLoadingScreenShown', 'true');
+            }, 3000); // 3 seconds loading animation
+        } else {
+            const screen = document.getElementById('login-loading-screen');
+            if(screen) screen.style.display = 'none';
+        }
+    });
+
     function logout(e) {
         if(e) e.preventDefault();
         localStorage.removeItem('clientCaseId');
@@ -516,6 +552,8 @@ body{
 
 
             // Info Box
+            document.getElementById('info-chamber').innerText = data.chamber_case_number || 'Not Assigned';
+            document.getElementById('info-court').innerText = data.court_case_number || 'Not Assigned';
             document.getElementById('info-type').innerText = data.case_type;
             document.getElementById('info-email').innerText = data.email;
             document.getElementById('info-date').innerText = data.created_at;

@@ -40,7 +40,7 @@
     
     /* Modal styles */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
-    .modal { background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+    .modal { background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 900px; max-height: 90vh; overflow-y: auto; }
     .modal h3 { margin-bottom: 1.5rem; }
     .form-group { margin-bottom: 1.5rem; }
     .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem; }
@@ -55,39 +55,30 @@
             .stats-grid { grid-template-columns: 1fr; }
             
             /* Responsive tables */
-            .admin-section table, 
-            .admin-section thead, 
-            .admin-section tbody, 
-            .admin-section th, 
-            .admin-section td, 
-            .admin-section tr { 
-                display: block; 
-            }
-            .admin-section thead tr { 
-                position: absolute;
-                top: -9999px;
-                left: -9999px;
-            }
-            .admin-section tr { border: 1px solid #ccc; margin-bottom: 10px; border-radius: 8px; padding: 10px; background: #fff;}
-            .admin-section td { 
-                border: none;
-                border-bottom: 1px solid #eee; 
-                position: relative;
-                padding: 10px 10px 10px 45% !important; 
-                text-align: left;
-                min-height: 40px;
+            .data-table, .data-table thead, .data-table tbody, .data-table tr, .data-table td, .data-table th {
                 display: block;
-                white-space: normal;
-                word-wrap: break-word;
             }
-            .admin-section td:before { 
-                position: absolute;
-                top: 10px;
-                left: 10px;
-                width: 40%; 
-                padding-right: 10px; 
-                white-space: nowrap;
+            .data-table thead tr {
+                display: none;
+            }
+            .data-table tr {
+                margin-bottom: 1rem;
+                border: 1px solid #e7ebf0;
+                border-radius: 8px;
+            }
+            .data-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                text-align: right;
+                border: none;
+                border-bottom: 1px solid #e7ebf0;
+                padding: 10px !important;
+            }
+            .data-table td::before {
                 font-weight: bold;
+                text-align: left;
+                margin-right: 1rem;
                 color: #555;
             }
             
@@ -132,6 +123,34 @@
             gap: 10px !important;
         }
     }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #ffffff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .data-table th, .data-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e7ebf0;
+        }
+        .data-table th {
+            background-color: #f4f6f8;
+            color: #173650;
+            font-weight: 600;
+        }
+        .badge {
+            padding: 0.3rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .badge.pending { background-color: #FFF3E0; color: #E65100; }
+        .badge.active { background-color: #E8F5E9; color: #2E7D32; }
+
 </style>
 </head>
 <body>
@@ -145,7 +164,35 @@
             50% { transform: scale(1.05); opacity: 0.7; }
             100% { transform: scale(1); opacity: 1; }
         }
-    </style>
+    
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #ffffff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .data-table th, .data-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e7ebf0;
+        }
+        .data-table th {
+            background-color: #f4f6f8;
+            color: #173650;
+            font-weight: 600;
+        }
+        .badge {
+            padding: 0.3rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .badge.pending { background-color: #FFF3E0; color: #E65100; }
+        .badge.active { background-color: #E8F5E9; color: #2E7D32; }
+
+</style>
     <div class="sidebar">
         <div class="sidebar-header">
             <h2>JSM. Chambers</h2>
@@ -153,6 +200,7 @@
         </div>
         <ul>
             <li><a class="active" id="nav-dashboard">My Cases</a></li>
+            <li><a href="#" id="nav-about" onclick="showSection('about')">About Me</a></li>
             <li style="margin-top: auto;"><a href="#" id="staff-logout">Logout</a></li>
         </ul>
     </div>
@@ -166,6 +214,8 @@
         </header>
 
         <section id="section-dashboard" class="admin-section active">
+            
+
             <div class="card">
                 <h3>Assigned Cases</h3>
                 <p style="color: var(--color-text-light); margin-top: 0.5rem;">Manage the cases that have been assigned to you.</p>
@@ -194,8 +244,8 @@
             <div id="content-appointments" style="display:none;">
                 <div class="card">
                     <h3>Incoming Appointments</h3>
-                    <table style="width: 100%; text-align: left; border-collapse: collapse; margin-top: 1rem; font-size: 0.85rem;" id="staff-appts-table">
-                        <thead><tr style="border-bottom: 1px solid #ddd; background: #f4f6f8;"><th style="padding:10px;">Name</th><th style="padding:10px;">Email</th><th style="padding:10px;">Status</th><th style="padding:10px;">Date & Time</th><th style="padding:10px;">Action</th></tr></thead>
+                    <table class="data-table" style="margin-top: 1rem;" id="staff-appts-table">
+                        <thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Date & Time</th><th>Action</th></tr></thead>
                         <tbody id="staff-appts-tbody"></tbody>
                     </table>
                 </div>
@@ -220,10 +270,84 @@
             <div id="content-clients" style="display:none;">
                 <div class="card">
                     <h3>Clients Directory</h3>
-                    <table style="width: 100%; text-align: left; border-collapse: collapse; margin-top: 1rem; font-size: 0.85rem;" id="staff-clients-table">
-                        <thead><tr style="border-bottom: 1px solid #ddd; background: #f4f6f8;"><th style="padding:10px;">Name</th><th style="padding:10px;">Email</th><th style="padding:10px;">Case Type</th><th style="padding:10px;">Status</th></tr></thead>
+                    <table class="data-table" style="margin-top: 1rem;" id="staff-clients-table">
+                        <thead><tr><th>Name</th><th>Email</th><th>Case Type</th><th>Status</th></tr></thead>
                         <tbody id="staff-clients-tbody"></tbody>
                     </table>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ABOUT ME SECTION -->
+        <section id="section-about" class="admin-section">
+            <div class="dashboard-card" style="max-width: 600px; margin: 0 auto; padding: 2rem;">
+                <h2 style="color: var(--color-primary); border-bottom: 2px solid var(--color-border); padding-bottom: 0.5rem; margin-bottom: 1.5rem;">About Staff Information</h2>
+                
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <img id="about-img" src="" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #f4f6f8; display: none;">
+                    <div id="about-img-placeholder" style="width: 120px; height: 120px; border-radius: 50%; background: var(--color-primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 3rem; margin: 0 auto;">?</div>
+                </div>
+                
+                <div style="display: grid; gap: 1rem;">
+                    <div><small style="color: #667085; text-transform: uppercase; font-weight: bold;">Full Name</small><div id="about-name" style="font-size: 1.1rem; color: #0A192F;"></div></div>
+                    <div><small style="color: #667085; text-transform: uppercase; font-weight: bold;">Email Address</small><div id="about-email" style="font-size: 1.1rem; color: #0A192F;"></div></div>
+                    <div><small style="color: #667085; text-transform: uppercase; font-weight: bold;">Specialty / Role</small><div id="about-specialty" style="font-size: 1.1rem; color: #0A192F;"></div></div>
+                    <div>
+                        <small style="color: #667085; text-transform: uppercase; font-weight: bold;">Access Permissions</small>
+                        <div style="margin-top: 0.5rem;">
+                            <span id="about-access-appointments" class="badge">Appointments</span>
+                            <span id="about-access-clients" class="badge">Clients Directory</span>
+                            <span id="about-access-addcase" class="badge">Add New Case</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <section id="section-addcase" class="admin-section">
+            <div id="lock-gate-addcase" class="card" style="text-align: center; max-width: 400px; margin: 2rem auto;">
+                <h3 style="margin-bottom: 1rem;">🔒 Restricted Section</h3>
+                <p style="font-size: 0.85rem; color: var(--color-text-light); margin-bottom: 1.5rem;">Please enter the daily Add New Case password to access this section.</p>
+                <div class="form-group">
+                    <input type="password" id="pwd-input-addcase" class="form-control" placeholder="Enter Daily Password">
+                </div>
+                <div id="pwd-verify-addcase" style="display:none;" class="form-group">
+                    <input type="text" id="code-input-addcase" class="form-control" placeholder="Enter Email Code (30s)">
+                </div>
+                <button class="btn btn-primary" style="width:100%; margin-bottom: 1rem;" onclick="verifySection('addcase')">Unlock Section</button>
+                <a href="#" style="font-size: 0.8rem; color: var(--color-primary);" onclick="forgotSectionPassword('addcase'); return false;">Forgot Password? Send Code to Email</a>
+            </div>
+            <div id="content-addcase" style="display: none;">
+                <h2 style="color: var(--color-primary); margin-bottom: 2rem;">Add New Case File</h2>
+                <div class="card" style="margin-bottom: 2rem;">
+                    <p style="color: var(--color-text-light); margin-top: 0.5rem; margin-bottom: 1.5rem;">Create a case file for a client. They will be emailed a secure auto-generated password.</p>
+                    <form id="staff-add-case-form" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label" for="case-client-name">Client Name</label>
+                            <input type="text" id="case-client-name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="case-email">Client Email</label>
+                            <input type="email" id="case-email" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="case-type">Case Type / Subject</label>
+                            <input type="text" id="case-type" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="case-chamber-number">Chamber Case Number</label>
+                            <input type="text" id="case-chamber-number" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="case-court-number">Court Case Number</label>
+                            <input type="text" id="case-court-number" class="form-control">
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1; display: flex; align-items: flex-end;">
+                            <button type="submit" class="btn btn-primary" style="padding: 0.6rem 2rem;">Create Case & Send Email</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </section>
@@ -231,10 +355,20 @@
     </main>
 
     <!-- EDIT CASE MODAL -->
-    <div class="modal-overlay" id="edit-case-modal">
-        <div class="modal">
+    <div id="edit-case-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100000; justify-content: center; align-items: center;">
+        <div style="background: #ffffff; padding: 2rem; border-radius: 8px; width: 100%; max-width: 900px; max-height: 90vh; overflow-y: auto;">
             <h3>Update Case Details</h3>
             <input type="hidden" id="modal-case-id">
+            
+            <div class="form-group">
+                <label class="form-label">Chamber Case Number</label>
+                <input type="text" id="modal-chamber-case-number" class="form-control" placeholder="Assign Chamber Case Number">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Court Case Number</label>
+                <input type="text" id="modal-court-case-number" class="form-control" placeholder="Assign Court Case Number">
+            </div>
             
             <div class="form-group">
                 <label class="form-label">Status</label>
@@ -333,7 +467,50 @@
                     if (myAdv) {
                         staffData.access_appointments = myAdv.access_appointments || false;
                         staffData.access_clients = myAdv.access_clients || false;
+                        staffData.access_add_case = myAdv.access_add_case || false;
                         sessionStorage.setItem('staffData', JSON.stringify(staffData));
+                        
+                        // Populate About Me
+                        document.getElementById('about-name').innerText = myAdv.name || 'N/A';
+                        document.getElementById('about-email').innerText = myAdv.email || 'N/A';
+                        document.getElementById('about-specialty').innerText = myAdv.specialty || 'Staff Member';
+                        if (myAdv.image) {
+                            document.getElementById('about-img').src = myAdv.image;
+                            document.getElementById('about-img').style.display = 'block';
+                            document.getElementById('about-img-placeholder').style.display = 'none';
+                        } else {
+                            document.getElementById('about-img-placeholder').innerText = myAdv.name ? myAdv.name.charAt(0) : '?';
+                        }
+                        const badgeAppt = document.getElementById('about-access-appointments');
+                        const badgeClient = document.getElementById('about-access-clients');
+                        badgeAppt.className = 'badge active';
+                        badgeAppt.innerText = 'Appointments';
+                        badgeAppt.style.display = myAdv.access_appointments ? 'inline-block' : 'none';
+                        
+                        badgeClient.className = 'badge active';
+                        badgeClient.innerText = 'Clients Directory';
+                        badgeClient.style.display = myAdv.access_clients ? 'inline-block' : 'none';
+                        
+                        const badgeAddCase = document.getElementById('about-access-addcase');
+                        badgeAddCase.className = 'badge active';
+                        badgeAddCase.innerText = 'Add New Case';
+                        badgeAddCase.style.display = myAdv.access_add_case ? 'inline-block' : 'none';
+                        
+                        // If no permissions at all, maybe show a message
+                        if (!myAdv.access_appointments && !myAdv.access_clients && !myAdv.access_add_case) {
+                            if (!document.getElementById('no-access-msg')) {
+                                const msg = document.createElement('span');
+                                msg.id = 'no-access-msg';
+                                msg.style.color = '#80919d';
+                                msg.style.fontSize = '0.9rem';
+                                msg.innerText = 'No extra sections assigned.';
+                                badgeAppt.parentElement.appendChild(msg);
+                            }
+                        } else {
+                            const msg = document.getElementById('no-access-msg');
+                            if (msg) msg.remove();
+                        }
+
                         
                         const sidebarUl = document.querySelector('.sidebar ul');
                         
@@ -346,6 +523,15 @@
                             document.getElementById('nav-appointments').parentElement.remove();
                         }
                         
+                        if (staffData.access_add_case && !document.getElementById('nav-addcase')) {
+                            const li = document.createElement('li');
+                            li.innerHTML = '<a id="nav-addcase" style="cursor:pointer">Add New Case 🔒</a>';
+                            sidebarUl.insertBefore(li, sidebarUl.lastElementChild);
+                            li.addEventListener('click', () => showSection('addcase'));
+                        } else if (!staffData.access_add_case && document.getElementById('nav-addcase')) {
+                            document.getElementById('nav-addcase').parentElement.remove();
+                        }
+
                         if (staffData.access_clients && !document.getElementById('nav-clients')) {
                             const li = document.createElement('li');
                             li.innerHTML = '<a id="nav-clients" style="cursor:pointer">Clients Directory 🔒</a>';
@@ -410,7 +596,7 @@
                                 <h4 style="margin: 0; font-size: 1.1rem; color: #0b1f33;">${c.client_name}</h4>
                                 <span style="background: ${statusColor}22; color: ${statusColor}; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: bold;">${c.status}</span>
                             </div>
-                            <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #667085;">🏷️ ${c.case_number || 'No Case Number'}</p>
+                            <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #667085;">🏷️ Ch: ${c.chamber_case_number || '-'} | Ct: ${c.court_case_number || '-'}</p>
                             <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #667085;">💼 ${c.case_type}</p>
                             <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: #667085;">📅 ${c.next_hearing}</p>
                         </div>
@@ -429,6 +615,8 @@
             if (!c) return;
             
             document.getElementById('modal-case-id').value = c._id;
+            document.getElementById('modal-chamber-case-number').value = c.chamber_case_number || "";
+            document.getElementById('modal-court-case-number').value = c.court_case_number || "";
             document.getElementById('modal-status').value = c.status;
             document.getElementById('modal-hearing').value = c.next_hearing;
             document.getElementById('modal-notes').value = c.notes || "";
@@ -456,8 +644,52 @@
             document.getElementById('edit-case-modal').style.display = 'none';
         }
 
+        document.getElementById('staff-add-case-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const originalText = btn.innerText;
+            btn.innerText = 'Creating & Emailing...';
+            btn.disabled = true;
+
+            const payload = {
+                client_name: document.getElementById('case-client-name').value,
+                email: document.getElementById('case-email').value,
+                case_type: document.getElementById('case-type').value,
+                chamber_case_number: document.getElementById('case-chamber-number').value,
+                court_case_number: document.getElementById('case-court-number').value,
+                // Assign to the staff member who creates it!
+                assigned_staff_email: staffData.email || ""
+            };
+
+            try {
+                const res = await fetch('/api/cases', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    alert('Case created and email sent successfully!');
+                    e.target.reset();
+                    // Reload my cases to show the new one
+                    myCasesCache = "";
+                    loadStaffDashboard();
+                } else {
+                    alert('Failed to create case.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error creating case.');
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        });
+
         async function saveCaseModal() {
             const id = document.getElementById('modal-case-id').value;
+            const chamber_case_number = document.getElementById('modal-chamber-case-number').value;
+            const court_case_number = document.getElementById('modal-court-case-number').value;
             const status = document.getElementById('modal-status').value;
             const next_hearing = document.getElementById('modal-hearing').value;
             const notes = document.getElementById('modal-notes').value;
@@ -466,7 +698,7 @@
                 await fetch(`/api/cases/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status, next_hearing, notes })
+                    body: JSON.stringify({ status, next_hearing, notes, chamber_case_number, court_case_number })
                 });
                 alert('Case details updated successfully!');
                 closeCaseModal();
@@ -529,7 +761,7 @@
             const activeNav = document.getElementById('nav-' + sectionId);
             if(activeNav) activeNav.classList.add('active');
 
-            if ((sectionId === 'appointments' || sectionId === 'clients') && !unlockedSections[sectionId]) {
+            if ((sectionId === 'appointments' || sectionId === 'clients' || sectionId === 'addcase') && !unlockedSections[sectionId]) {
                 document.getElementById(`lock-gate-${sectionId}`).style.display = 'block';
                 document.getElementById(`content-${sectionId}`).style.display = 'none';
             } else if (sectionId === 'appointments') {
@@ -605,7 +837,7 @@
             const activeNav = document.getElementById('nav-' + sectionId);
             if(activeNav) activeNav.classList.add('active');
 
-            if ((sectionId === 'appointments' || sectionId === 'clients') && !unlockedSections[sectionId]) {
+            if ((sectionId === 'appointments' || sectionId === 'clients' || sectionId === 'addcase') && !unlockedSections[sectionId]) {
                 document.getElementById(`lock-gate-${sectionId}`).style.display = 'block';
                 document.getElementById(`content-${sectionId}`).style.display = 'none';
             } else if (sectionId === 'appointments') {
@@ -640,6 +872,7 @@
                         navLink.innerHTML = navLink.innerHTML.replace('🔒', '🔓');
                         if (section === 'appointments') loadStaffAppointments();
                         if (section === 'clients') loadStaffClients();
+                        // No specific load function for addcase needed since it's just a form
                     } else {
                         alert(result.error);
                     }
@@ -665,6 +898,7 @@
                         navLink.innerHTML = navLink.innerHTML.replace('🔒', '🔓');
                         if (section === 'appointments') loadStaffAppointments();
                         if (section === 'clients') loadStaffClients();
+                        // No specific load function for addcase needed since it's just a form
                     } else {
                         alert(result.error);
                     }
@@ -799,14 +1033,47 @@
             const res = await fetch(`/api/cases/${id}`);
             const c = await res.json();
             
-            let hearingHtml = '<ul>';
+            let chamberAddress = 'Cuttack, Odisha';
+            try {
+                const setRes = await fetch('/api/settings');
+                const settings = await setRes.json();
+                if (settings.address) chamberAddress = settings.address;
+            } catch(e) {}
+            
+            let hearingHtml = `
+            <style>
+            .timeline { display: flex; align-items: flex-start; overflow-x: auto; padding: 20px 0; margin-bottom: 20px; font-family: sans-serif; }
+            .timeline-item { position: relative; text-align: center; min-width: 120px; flex: 1; }
+            .timeline { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .timeline-item::after { content: ''; position: absolute; top: 12px; left: 50%; width: 100%; border-top: 3px solid #e2e8f0; z-index: 1; }
+            .timeline-item:last-child::after { display: none; }
+            .timeline-dot { width: 14px; height: 14px; background: #173650; border-radius: 50%; margin: 0 auto 10px auto; position: relative; z-index: 2; border: 4px solid #173650; }
+            .timeline-date { font-size: 0.85rem; color: #333; font-weight: bold; padding: 0 10px; }
+            .timeline-finished .timeline-dot { background: #2e7d32; border-color: #2e7d32; }
+            .timeline-finished .timeline-date { color: #2e7d32; }
+            </style>
+            <div class="timeline">
+            `;
+            
+            let dates = [];
             if(c.hearing_history && c.hearing_history.length > 0) {
-                c.hearing_history.forEach(date => { hearingHtml += `<li>${date}</li>` });
-            } else {
-                if(c.next_hearing) hearingHtml += `<li>${c.next_hearing}</li>`;
-                else hearingHtml += `<li>No hearings recorded</li>`;
+                dates = [...c.hearing_history];
+            } else if (c.next_hearing && c.next_hearing !== 'To Be Decided') {
+                dates.push(c.next_hearing);
             }
-            hearingHtml += '</ul>';
+            
+            if (dates.length === 0) {
+                hearingHtml += `<div style="color: #666; font-style: italic; padding: 10px;">No hearings recorded</div>`;
+            } else {
+                dates.forEach(date => { 
+                    hearingHtml += `<div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-date">${date}</div></div>`; 
+                });
+                
+                if (c.status && c.status.toLowerCase().includes('finished')) {
+                    hearingHtml += `<div class="timeline-item timeline-finished"><div class="timeline-dot"></div><div class="timeline-date">Finished</div></div>`;
+                }
+            }
+            hearingHtml += '</div>';
 
             let emailsHtml = '<ul>';
             if(c.email_logs && c.email_logs.length > 0) {
@@ -837,12 +1104,42 @@
                         @media print {
                             body { padding: 0; }
                         }
-                    </style>
+                    
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #ffffff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .data-table th, .data-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e7ebf0;
+        }
+        .data-table th {
+            background-color: #f4f6f8;
+            color: #173650;
+            font-weight: 600;
+        }
+        .badge {
+            padding: 0.3rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .badge.pending { background-color: #FFF3E0; color: #E65100; }
+        .badge.active { background-color: #E8F5E9; color: #2E7D32; }
+
+</style>
                 </head>
                 <body>
-                    <div class="header">
+                    <div class="report-container">
+                        <div class="header">
                         <h1>JSM. Chambers</h1>
-                        <p>Case Information Report</p>
+                        <p style="font-size: 0.9rem; color: #444;">${chamberAddress}</p>
+                        <p style="margin-top: 15px; font-weight: bold;">Case Information Report</p>
                     </div>
                     
                     <div class="details">
@@ -853,7 +1150,7 @@
                             <strong>Email Address:</strong><br> ${c.email}
                         </div>
                         <div>
-                            <strong>Case Number:</strong><br> ${c.case_number || 'Not Assigned'}
+                            <strong>Chamber Case No:</strong><br> ${c.chamber_case_number || 'Not Assigned'}<br><strong>Court Case No:</strong><br> ${c.court_case_number || 'Not Assigned'}
                         </div>
                         <div>
                             <strong>Case Type / Subject:</strong><br> ${c.case_type}
@@ -883,6 +1180,7 @@
                     
                     <div style="text-align: center; margin-top: 50px; font-size: 0.8em; color: #888;">
                         Generated on ${new Date().toLocaleString()} by JSM. Chambers Case Management System
+                    </div>
                     </div>
                 </body>
                 </html>

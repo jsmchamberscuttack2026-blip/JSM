@@ -234,6 +234,13 @@
                                     <button id="btn-email-pwd-clients" class="btn btn-outline" style="padding: 2px 8px; font-size: 0.75rem;" onclick="emailSectionPassword('clients')">Email Password</button>
                                 </div>
                             </div>
+                            <div>
+                                <div style="font-size: 0.75rem; color: #666; text-transform: uppercase;">Add New Case Password</div>
+                                <div style="display: flex; gap: 15px; align-items: center; margin-top: 5px;">
+                                    <div id="pwd-addcase" style="font-size: 1.2rem; font-weight: bold; color: var(--color-primary); letter-spacing: 2px;">------</div>
+                                    <button id="btn-email-pwd-addcase" class="btn btn-outline" style="padding: 2px 8px; font-size: 0.75rem;" onclick="emailSectionPassword('addcase')">Email Password</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -397,7 +404,7 @@
                     <!-- Case Edit Modal -->
                     <div id="case-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
                         
-                        <div style="background: white; padding: 2rem; border-radius: 12px; width: 600px; max-width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                        <div style="background: white; padding: 2rem; border-radius: 12px; width: 900px; max-width: 95%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                                 <div>
                                     <h3 id="modal-client-name" style="margin: 0; font-size: 1.5rem;">Client Name</h3>
@@ -420,8 +427,12 @@
                             </div>
                             
                             <div class="form-group">
-                                <label class="form-label">Case Number</label>
-                                <input type="text" id="modal-case-number" class="form-control" placeholder="e.g. CC-2026-01">
+                                <label class="form-label">Chamber Case Number</label>
+                                <input type="text" id="modal-chamber-case-number" class="form-control" placeholder="Assign Chamber Case Number">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Court Case Number</label>
+                                <input type="text" id="modal-court-case-number" class="form-control" placeholder="Assign Court Case Number">
                             </div>
 
                             <div class="form-group">
@@ -581,5 +592,61 @@
         </div>
     </div>
 
+
+    <!-- ID Card Modal -->
+    <div id="id-card-modal" class="modal" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+        <div class="modal-content" style="background: white; width: 400px; border-radius: 12px; padding: 0; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+            <div style="padding: 1rem 1.5rem; background: var(--color-primary); color: white; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0;">Staff ID Card</h3>
+                <span style="cursor: pointer; font-size: 1.5rem;" onclick="document.getElementById('id-card-modal').style.display='none'">&times;</span>
+            </div>
+            
+            <div style="padding: 2rem; display: flex; flex-direction: column; align-items: center; background: #f8f9fa;">
+                
+                <!-- The actual ID Card to be snapshotted -->
+                <div id="id-card-canvas" style="width: 250px; background: white; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; position: relative; border: 1px solid #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                    <!-- Header -->
+                    <div style="background: var(--color-primary); color: white; text-align: center; padding: 15px 10px; border-bottom: 3px solid var(--color-secondary);">
+                        <h4 id="id-card-office-name" style="margin: 0; font-size: 1.1rem; letter-spacing: 1px; text-transform: uppercase;">JSM CHAMBERS</h4>
+                        <div style="font-size: 0.6rem; margin-top: 2px; opacity: 0.9;">ADVOCATES & LEGAL CONSULTANTS</div>
+                    </div>
+                    
+                    <!-- Photo -->
+                    <div style="text-align: center; margin-top: 20px;">
+                        <div id="id-card-photo-container" style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--color-primary); margin: 0 auto; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f0f0f0;">
+                            <img id="id-card-photo" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                            <div id="id-card-photo-placeholder" style="font-size: 2.5rem; color: #ccc; display: block;">👤</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Details -->
+                    <div style="text-align: center; padding: 15px 10px 20px 10px;">
+                        <h3 id="id-card-name" style="margin: 0 0 5px 0; color: var(--color-primary); font-size: 1.2rem;">John Doe</h3>
+                        <div id="id-card-role" style="color: var(--color-secondary); font-weight: bold; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 15px;">Senior Advocate</div>
+                        
+                        <div style="background: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">
+                            <div style="font-size: 0.65rem; color: #666; text-transform: uppercase;">Employee ID</div>
+                            <div id="id-card-id" style="font-size: 0.85rem; font-weight: bold; color: #333; letter-spacing: 1px;">EMP-001</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Footer -->
+                    <div style="background: var(--color-primary); color: white; text-align: center; padding: 8px 10px; font-size: 0.6rem;">
+                        <div id="id-card-address" style="opacity: 0.9;">Chamber Address Line 1, City</div>
+                    </div>
+                </div>
+                
+                <div style="width: 100%; margin-top: 2rem; display: flex; flex-direction: column; gap: 10px;">
+                    <button id="btn-email-id-card" onclick="sendIdCardEmail()" class="btn btn-primary" style="width: 100%; padding: 12px; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                        <span>✉️</span> Email ID Card to Staff
+                    </button>
+                    <button class="btn btn-outline" style="width: 100%; padding: 12px;" onclick="document.getElementById('id-card-modal').style.display='none'">Close</button>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </body>
 </html>

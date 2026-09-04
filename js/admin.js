@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <h4 style="margin: 0; font-size: 1.1rem; color: #0b1f33;">${c.client_name}</h4>
                                 <span style="background: ${statusColor}22; color: ${statusColor}; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: bold;">${c.status}</span>
                             </div>
-                            <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #667085;">🏷️ ${c.case_number || 'Unassigned No.'}</p>
+                            <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #667085;">🏷️ Chamber: ${c.chamber_case_number || '-'} | Court: ${c.court_case_number || '-'}</p>
                             <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #667085;">💼 ${c.case_type}</p>
                             <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #667085;">👤 ${c.assigned_staff_email || 'Unassigned Staff'}</p>
                             <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: #667085;">📅 ${c.next_hearing}</p>
@@ -215,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const tr = document.createElement('tr');
                         const statusClass = c.status === "Under Review" ? "pending" : "active";
                         tr.innerHTML = `
-                            <td>${c.case_number || '#' + (cases.length - index)}</td>
+                            <td>C: ${c.chamber_case_number || '-'} <br> Ct: ${c.court_case_number || '-'}</td>
                             <td><a href="#" onclick="printCaseDetails('${c._id}'); return false;" style="color: #0A192F; font-weight: bold; text-decoration: underline;">${c.client_name} 📄</a></td>
                             <td>${c.case_type}</td>
                             <td>${c.assigned_staff_email || 'Unassigned'}</td>
@@ -252,10 +252,12 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.disabled = true;
 
             try {
+                const chamber_case_number = document.getElementById('add-chamber-case-number') ? document.getElementById('add-chamber-case-number').value : '';
+                const court_case_number = document.getElementById('add-court-case-number') ? document.getElementById('add-court-case-number').value : '';
                 const response = await fetch('/api/cases', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ client_name, email, case_type })
+                    body: JSON.stringify({ client_name, email, case_type, chamber_case_number, court_case_number })
                 });
                 const data = await response.json();
                 if (response.ok) {
@@ -285,7 +287,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('modal-status').value = c.status;
         document.getElementById('modal-hearing').value = c.next_hearing;
         document.getElementById('modal-notes').value = c.notes || "";
-        document.getElementById('modal-case-number').value = c.case_number || "";
+        document.getElementById('modal-chamber-case-number').value = c.chamber_case_number || "";
+        document.getElementById('modal-court-case-number').value = c.court_case_number || "";
         populateStaffDropdown(c.assigned_staff_email || "");
         
         // Load Message History
@@ -319,13 +322,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const status = document.getElementById('modal-status').value;
         const next_hearing = document.getElementById('modal-hearing').value;
         const notes = document.getElementById('modal-notes').value;
-        const case_number = document.getElementById('modal-case-number').value;
+        const chamber_case_number = document.getElementById('modal-chamber-case-number').value;
+        const court_case_number = document.getElementById('modal-court-case-number').value;
         const assigned_staff_email = document.getElementById('modal-assigned-staff').value;
         try {
             await fetch(`/api/cases/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status, next_hearing, notes, case_number, assigned_staff_email })
+                body: JSON.stringify({ status, next_hearing, notes, chamber_case_number, court_case_number, assigned_staff_email })
             });
             alert('Case details saved successfully!');
             closeCaseModal();
@@ -481,17 +485,22 @@ async function loadAdvocates() {
                 <td>
                     <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                         <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 5px;">
-                            <input type="checkbox" ${adv.access_appointments ? 'checked' : ''} onchange="updateAccess('${adv._id}', this.checked, ${adv.access_clients ? 'true' : 'false'})">
+                            <input type="checkbox" ${adv.access_appointments ? 'checked' : ''} onchange="updateAccess('${adv._id}', this.checked, ${adv.access_clients ? 'true' : 'false'}, ${adv.access_add_case ? 'true' : 'false'})">
                             Appointments Access
                         </label>
                         <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 5px;">
-                            <input type="checkbox" ${adv.access_clients ? 'checked' : ''} onchange="updateAccess('${adv._id}', ${adv.access_appointments ? 'true' : 'false'}, this.checked)">
+                            <input type="checkbox" ${adv.access_clients ? 'checked' : ''} onchange="updateAccess('${adv._id}', ${adv.access_appointments ? 'true' : 'false'}, this.checked, ${adv.access_add_case ? 'true' : 'false'})">
                             Clients Directory Access
+                        </label>
+                        <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" ${adv.access_add_case ? 'checked' : ''} onchange="updateAccess('${adv._id}', ${adv.access_appointments ? 'true' : 'false'}, ${adv.access_clients ? 'true' : 'false'}, this.checked)">
+                            Add New Case Access
                         </label>
                     </div>
                 </td>
                 <td>
                     <button class="btn" style="background:var(--color-secondary); color:white; padding: 4px 8px; margin-right: 5px;" onclick="openEditAdvocateModal('${adv._id}')">Edit</button>
+                    <button class="btn" style="background:#9b59b6; color:white; padding: 4px 8px; margin-right: 5px;" onclick="showIdCard('${adv._id}')">ID Card</button>
                     <button class="btn" style="background:#e74c3c; color:white; padding: 4px 8px;" onclick="deleteAdvocate('${adv._id}')">Delete</button>
                 </td>
             `;
@@ -666,8 +675,9 @@ if (officeInfoForm) {
             const res = await fetch('/api/system-config');
             if (res.ok) {
                 const config = await res.json();
-                document.getElementById('pwd-appts').innerText = config.appointments_password;
-                document.getElementById('pwd-clients').innerText = config.clients_password;
+                document.getElementById('pwd-appts').innerText = config.appointments_password || '------';
+                document.getElementById('pwd-clients').innerText = config.clients_password || '------';
+                if(document.getElementById('pwd-addcase')) document.getElementById('pwd-addcase').innerText = config.addcase_password || '------';
             }
         } catch (e) {
             console.error(e);
@@ -675,12 +685,12 @@ if (officeInfoForm) {
     }
     loadSystemConfig();
 
-    window.updateAccess = async function(id, access_appointments, access_clients) {
+    window.updateAccess = async function(id, access_appointments, access_clients, access_add_case) {
         try {
             await fetch(`/api/advocates/${id}/access`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({access_appointments, access_clients})
+                body: JSON.stringify({access_appointments, access_clients, access_add_case})
             });
             advocatesCache = "";
             loadAdvocates();
@@ -702,14 +712,47 @@ if (officeInfoForm) {
             const res = await fetch(`/api/cases/${id}`);
             const c = await res.json();
             
-            let hearingHtml = '<ul>';
+            let chamberAddress = 'Cuttack, Odisha';
+            try {
+                const setRes = await fetch('/api/settings');
+                const settings = await setRes.json();
+                if (settings.address) chamberAddress = settings.address;
+            } catch(e) {}
+            
+            let hearingHtml = `
+            <style>
+            .timeline { display: flex; align-items: flex-start; overflow-x: auto; padding: 20px 0; margin-bottom: 20px; font-family: sans-serif; }
+            .timeline-item { position: relative; text-align: center; min-width: 120px; flex: 1; }
+            .timeline { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .timeline-item::after { content: ''; position: absolute; top: 12px; left: 50%; width: 100%; border-top: 3px solid #e2e8f0; z-index: 1; }
+            .timeline-item:last-child::after { display: none; }
+            .timeline-dot { width: 14px; height: 14px; background: #173650; border-radius: 50%; margin: 0 auto 10px auto; position: relative; z-index: 2; border: 4px solid #173650; }
+            .timeline-date { font-size: 0.85rem; color: #333; font-weight: bold; padding: 0 10px; }
+            .timeline-finished .timeline-dot { background: #2e7d32; border-color: #2e7d32; }
+            .timeline-finished .timeline-date { color: #2e7d32; }
+            </style>
+            <div class="timeline">
+            `;
+            
+            let dates = [];
             if(c.hearing_history && c.hearing_history.length > 0) {
-                c.hearing_history.forEach(date => { hearingHtml += `<li>${date}</li>` });
-            } else {
-                if(c.next_hearing) hearingHtml += `<li>${c.next_hearing}</li>`;
-                else hearingHtml += `<li>No hearings recorded</li>`;
+                dates = [...c.hearing_history];
+            } else if (c.next_hearing && c.next_hearing !== 'To Be Decided') {
+                dates.push(c.next_hearing);
             }
-            hearingHtml += '</ul>';
+            
+            if (dates.length === 0) {
+                hearingHtml += `<div style="color: #666; font-style: italic; padding: 10px;">No hearings recorded</div>`;
+            } else {
+                dates.forEach(date => { 
+                    hearingHtml += `<div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-date">${date}</div></div>`; 
+                });
+                
+                if (c.status && c.status.toLowerCase().includes('finished')) {
+                    hearingHtml += `<div class="timeline-item timeline-finished"><div class="timeline-dot"></div><div class="timeline-date">Finished</div></div>`;
+                }
+            }
+            hearingHtml += '</div>';
 
             let emailsHtml = '<ul>';
             if(c.email_logs && c.email_logs.length > 0) {
@@ -729,23 +772,72 @@ if (officeInfoForm) {
                 <head>
                     <title>Case Details - ${c.client_name}</title>
                     <style>
-                        body { font-family: Arial, sans-serif; padding: 40px; line-height: 1.6; }
-                        .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #0A192F; padding-bottom: 20px; }
-                        .header h1 { margin: 0; color: #0A192F; font-family: 'Playfair Display', serif; }
-                        .header p { margin: 5px 0 0; color: #666; }
+                        body { 
+                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                            padding: 40px; 
+                            line-height: 1.6; 
+                            background-color: #f0f4f8; 
+                            color: #2c3e50; 
+                            -webkit-print-color-adjust: exact; 
+                            print-color-adjust: exact; 
+                        }
+                        .report-container { 
+                            background: #ffffff; 
+                            padding: 40px; 
+                            border-radius: 12px; 
+                            box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+                            border-top: 10px solid #2980b9; 
+                        }
+                        .header { 
+                            text-align: center; 
+                            margin-bottom: 30px; 
+                            padding-bottom: 20px; 
+                            border-bottom: 2px dashed #3498db; 
+                        }
+                        .header h1 { margin: 0; color: #2c3e50; font-family: 'Playfair Display', serif; font-size: 2.8rem; letter-spacing: 1px; }
+                        .header p { margin: 5px 0 0; color: #7f8c8d; font-size: 1.1rem; }
                         .details { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
-                        .details div { padding: 15px; border: 1px solid #eee; background: #fafafa; border-radius: 8px; }
-                        .section { margin-bottom: 30px; }
-                        .section h3 { border-bottom: 1px solid #ccc; padding-bottom: 10px; color: #333; }
+                        .details div { 
+                            padding: 20px; 
+                            background: #e8f4f8; 
+                            border-left: 6px solid #3498db; 
+                            border-radius: 0 8px 8px 0; 
+                            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+                        }
+                        .details div:nth-child(2) { background: #fdf5e6; border-left-color: #f39c12; }
+                        .details div:nth-child(3) { background: #eafaf1; border-left-color: #2ecc71; }
+                        .details div:nth-child(4) { background: #f9ebea; border-left-color: #e74c3c; }
+                        .section { 
+                            margin-bottom: 30px; 
+                            padding: 25px; 
+                            background: #ffffff; 
+                            border: 1px solid #e1e8ed; 
+                            border-radius: 8px; 
+                            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+                        }
+                        .section h3 { 
+                            border-bottom: 3px solid #9b59b6; 
+                            padding-bottom: 10px; 
+                            color: #8e44ad; 
+                            margin-top: 0; 
+                            font-size: 1.4rem; 
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
+                        }
+                        .section:nth-of-type(2) h3 { border-bottom-color: #e67e22; color: #d35400; }
+                        .section:nth-of-type(3) h3 { border-bottom-color: #16a085; color: #117a65; }
                         @media print {
-                            body { padding: 0; }
+                            body { padding: 0; background: white; }
+                            .report-container { box-shadow: none; padding: 0; border: none; }
                         }
                     </style>
                 </head>
                 <body>
-                    <div class="header">
+                    <div class="report-container">
+                        <div class="header">
                         <h1>JSM. Chambers</h1>
-                        <p>Case Information Report</p>
+                        <p style="font-size: 0.9rem; color: #444;">${chamberAddress}</p>
+                        <p style="margin-top: 15px; font-weight: bold;">Case Information Report</p>
                     </div>
                     
                     <div class="details">
@@ -756,7 +848,7 @@ if (officeInfoForm) {
                             <strong>Email Address:</strong><br> ${c.email}
                         </div>
                         <div>
-                            <strong>Case Number:</strong><br> ${c.case_number || 'Not Assigned'}
+                            <strong>Chamber Case Number:</strong><br> ${c.chamber_case_number || 'Not Assigned'}<br><strong>Court Case Number:</strong><br> ${c.court_case_number || 'Not Assigned'}
                         </div>
                         <div>
                             <strong>Case Type / Subject:</strong><br> ${c.case_type}
@@ -786,6 +878,7 @@ if (officeInfoForm) {
                     
                     <div style="text-align: center; margin-top: 50px; font-size: 0.8em; color: #888;">
                         Generated on ${new Date().toLocaleString()} by JSM. Chambers Case Management System
+                    </div>
                     </div>
                 </body>
                 </html>
@@ -866,25 +959,7 @@ if (officeInfoForm) {
 
     // Initialize Email Password Buttons on Load
     function checkEmailPasswordButtons() {
-        ['appointments', 'clients'].forEach(section => {
-            const btn = document.getElementById('btn-email-pwd-' + section);
-            if (!btn) return;
-            const lastSent = localStorage.getItem('email_sent_v2_' + section);
-            if (lastSent) {
-                const hoursPassed = (Date.now() - parseInt(lastSent)) / (1000 * 60 * 60);
-                if (hoursPassed < 24) {
-                    btn.innerText = 'Email Sent';
-                    btn.disabled = true;
-                    btn.style.opacity = '0.5';
-                    btn.style.cursor = 'not-allowed';
-                } else {
-                    btn.innerText = 'Email Password';
-                    btn.disabled = false;
-                    btn.style.opacity = '1';
-                    btn.style.cursor = 'pointer';
-                }
-            }
-        });
+        // Disabled cooldown to allow multiple emails to be sent
     }
 
     window.emailSectionPassword = async function(section) {
@@ -902,8 +977,13 @@ if (officeInfoForm) {
             });
             
             if (response.ok) {
-                localStorage.setItem('email_sent_v2_' + section, Date.now());
-                checkEmailPasswordButtons();
+                btn.innerText = 'Email Sent!';
+                setTimeout(() => {
+                    btn.innerText = 'Email Password';
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                }, 2000);
             } else {
                 alert('Failed to send email.');
                 btn.innerText = 'Email Password';
@@ -983,3 +1063,88 @@ if (officeInfoForm) {
             alert('Error updating advocate.');
         }
     };
+
+
+let currentIdCardAdvocate = null;
+
+function showIdCard(id) {
+    const adv = window.globalAdvocatesData.find(a => a._id === id);
+    if (!adv) return;
+    
+    currentIdCardAdvocate = adv;
+    
+    document.getElementById('id-card-name').innerText = adv.name || 'N/A';
+    document.getElementById('id-card-role').innerText = adv.specialty || 'Staff Member';
+    
+    // Generate a pseudo ID number using their Mongo ID or email
+    const idPrefix = (adv.specialty && adv.specialty.toLowerCase().includes('advocate')) ? 'ADV' : 'STF';
+    const idSuffix = adv._id.substring(adv._id.length - 4).toUpperCase();
+    document.getElementById('id-card-id').innerText = `${idPrefix}-${idSuffix}`;
+    
+    const photo = document.getElementById('id-card-photo');
+    const placeholder = document.getElementById('id-card-photo-placeholder');
+    if (adv.image) {
+        photo.src = adv.image;
+        photo.style.display = 'block';
+        placeholder.style.display = 'none';
+    } else {
+        photo.style.display = 'none';
+        placeholder.style.display = 'block';
+    }
+    
+    // Attempt to get office info from settings cache if available
+    try {
+        fetch('/api/settings').then(r => r.json()).then(data => {
+            if (data.chamber_name) document.getElementById('id-card-office-name').innerText = data.chamber_name;
+            if (data.chamber_address) document.getElementById('id-card-address').innerText = data.chamber_address;
+        });
+    } catch(e) {}
+    
+    document.getElementById('id-card-modal').style.display = 'flex';
+}
+
+window.sendIdCardEmail = async function() {
+    if (!currentIdCardAdvocate || !currentIdCardAdvocate.email) {
+        alert("This staff member does not have a registered email address.");
+        return;
+    }
+    
+    const btn = document.getElementById('btn-email-id-card');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span>⏳</span> Generating & Sending...';
+    btn.disabled = true;
+    
+    try {
+        const canvas = await html2canvas(document.getElementById('id-card-canvas'), {
+            scale: 2, // High resolution
+            useCORS: true,
+            backgroundColor: null
+        });
+        
+        const base64Image = canvas.toDataURL('image/png');
+        
+        const res = await fetch('/api/staff/email-id-card', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: currentIdCardAdvocate.email,
+                name: currentIdCardAdvocate.name,
+                image_data: base64Image
+            })
+        });
+        
+        const result = await res.json();
+        if (res.ok) {
+            alert("ID Card emailed successfully!");
+            document.getElementById('id-card-modal').style.display = 'none';
+        } else {
+            alert(result.error || "Failed to send email");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("An error occurred while generating or sending the ID card: " + e.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+};
