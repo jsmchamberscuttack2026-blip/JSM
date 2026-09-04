@@ -22,6 +22,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 app.config['SECRET_KEY'] = 'secret!'
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB
 
 MONGO_URI = os.environ.get("MONGO_URI")
 DB_NAME = os.environ.get("DB_NAME", "jsmchambers_db")
@@ -802,6 +803,25 @@ def staff_login():
         
     return jsonify({"error": "Invalid staff credentials"}), 401
 
+@app.route('/api/advocates/<id>', methods=['PUT'])
+def update_advocate(id):
+    data = request.json
+    update_fields = {}
+    if 'name' in data:
+        update_fields['name'] = data['name']
+    if 'email' in data:
+        update_fields['email'] = data['email']
+    if 'specialty' in data:
+        update_fields['specialty'] = data['specialty']
+    if 'imageUrl' in data:
+        update_fields['imageUrl'] = data['imageUrl']
+    if not update_fields:
+        return jsonify({"error": "No fields to update"}), 400
+    result = advocates_col.update_one({"_id": ObjectId(id)}, {"$set": update_fields})
+    if result.matched_count:
+        return jsonify({"message": "Advocate updated"}), 200
+    return jsonify({"error": "Advocate not found"}), 404
+
 @app.route('/api/advocates/<id>', methods=['DELETE'])
 def delete_advocate(id):
     result = advocates_col.delete_one({"_id": ObjectId(id)})
@@ -1012,5 +1032,13 @@ def email_id_card():
         return jsonify({"error": str(e)}), 500
 
 
+@app.after_request
+def add_header(response):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "-1"
+    return response
+
 if __name__ == '__main__':
     app.run(debug=False, port=8081, host='0.0.0.0')
+

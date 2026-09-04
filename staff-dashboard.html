@@ -474,8 +474,8 @@
                         document.getElementById('about-name').innerText = myAdv.name || 'N/A';
                         document.getElementById('about-email').innerText = myAdv.email || 'N/A';
                         document.getElementById('about-specialty').innerText = myAdv.specialty || 'Staff Member';
-                        if (myAdv.image) {
-                            document.getElementById('about-img').src = myAdv.image;
+                        if (myAdv.imageUrl) {
+                            document.getElementById('about-img').src = myAdv.imageUrl;
                             document.getElementById('about-img').style.display = 'block';
                             document.getElementById('about-img-placeholder').style.display = 'none';
                         } else {

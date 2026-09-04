@@ -1,3 +1,28 @@
+// Helper: compress an image File to a small base64 JPEG
+window.compressImage = function(file, maxSize = 300) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                let w = img.width, h = img.height;
+                if (w > h) { if (w > maxSize) { h = Math.round(h * maxSize / w); w = maxSize; } }
+                else { if (h > maxSize) { w = Math.round(w * maxSize / h); h = maxSize; } }
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', 0.80));
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+};
+
 // Admin Auth Check
 if (sessionStorage.getItem('adminLoggedIn') !== 'true') {
     window.location.href = 'admin-login.html';
@@ -535,11 +560,7 @@ if (addAdvocateForm) {
         
         let imageUrl = '';
         if (fileInput.files.length > 0) {
-            const file = fileInput.files[0];
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            await new Promise(resolve => reader.onload = resolve);
-            imageUrl = reader.result;
+            imageUrl = await window.compressImage(fileInput.files[0]);
         }
         
         try {
@@ -597,6 +618,10 @@ if (officeInfoForm) {
         try {
             const response = await fetch('/api/settings');
             const data = await response.json();
+            if (data.appointments_open !== undefined) {
+                document.getElementById('admin-appointments-open').checked = data.appointments_open;
+            }
+            if (data.chamber_name) document.getElementById('admin-chamber-name').value = data.chamber_name;
             if (data.address) document.getElementById('admin-address').value = data.address;
             if (data.phone) document.getElementById('admin-phone').value = data.phone;
             if (data.email) document.getElementById('admin-email').value = data.email;
@@ -612,6 +637,8 @@ if (officeInfoForm) {
     
     officeInfoForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const appointments_open = document.getElementById('admin-appointments-open').checked;
+        const chamber_name = document.getElementById('admin-chamber-name').value;
         const address = document.getElementById('admin-address').value;
         const phone = document.getElementById('admin-phone').value;
         const email = document.getElementById('admin-email').value;
@@ -622,7 +649,7 @@ if (officeInfoForm) {
             await fetch('/api/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ address, phone, email, logoUrl: globalLogoUrl })
+                body: JSON.stringify({ appointments_open, chamber_name, address, phone, email, logoUrl: globalLogoUrl })
             });
             alert('Settings Saved Successfully');
         } catch(err) {
@@ -1009,8 +1036,19 @@ if (officeInfoForm) {
         document.getElementById('edit-adv-email').value = adv.email || '';
         document.getElementById('edit-adv-specialty').value = adv.specialty || '';
         document.getElementById('edit-adv-image').value = '';
-        editAdvocateImageUrl = ""; // reset
+        editAdvocateImageUrl = adv.imageUrl || ''; // keep existing photo unless replaced
         
+        const preview = document.getElementById('edit-adv-image-preview');
+        const placeholder = document.getElementById('edit-adv-image-placeholder');
+        if (editAdvocateImageUrl) {
+            preview.src = editAdvocateImageUrl;
+            preview.style.display = 'block';
+            placeholder.style.display = 'none';
+        } else {
+            preview.style.display = 'none';
+            placeholder.style.display = 'flex';
+        }
+
         document.getElementById('edit-advocate-modal').style.display = 'flex';
     };
 
@@ -1018,37 +1056,50 @@ if (officeInfoForm) {
         document.getElementById('edit-advocate-modal').style.display = 'none';
     };
 
-    const editAdvImageInput = document.getElementById('edit-adv-image');
-    if(editAdvImageInput) {
-        editAdvImageInput.addEventListener('change', function(e) {
+    document.addEventListener('change', async function(e) {
+        if (e.target && e.target.id === 'edit-adv-image') {
             const file = e.target.files[0];
             if (file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    editAdvocateImageUrl = event.target.result;
-                };
-                reader.readAsDataURL(file);
+                editAdvocateImageUrl = await window.compressImage(file);
+                document.getElementById('edit-adv-image-preview').src = editAdvocateImageUrl;
+                document.getElementById('edit-adv-image-preview').style.display = 'block';
+                document.getElementById('edit-adv-image-placeholder').style.display = 'none';
             }
-        });
-    }
+        }
+    });
+
+    window.removeAdvImage = function() {
+        editAdvocateImageUrl = '';
+        const fileInput = document.getElementById('edit-adv-image');
+        if (fileInput) fileInput.value = '';
+        document.getElementById('edit-adv-image-preview').style.display = 'none';
+        document.getElementById('edit-adv-image-placeholder').style.display = 'flex';
+    };
 
     window.saveEditAdvocateModal = async function() {
         const id = document.getElementById('edit-adv-id').value;
         const name = document.getElementById('edit-adv-name').value;
         const email = document.getElementById('edit-adv-email').value;
         const specialty = document.getElementById('edit-adv-specialty').value;
+        const fileInput = document.getElementById('edit-adv-image');
         
         if(!name || !email || !specialty) {
             alert('Please fill out all required fields.');
             return;
         }
 
+        let finalImageUrl = editAdvocateImageUrl; // use existing if no new file
+        if (fileInput && fileInput.files.length > 0) {
+            finalImageUrl = await window.compressImage(fileInput.files[0]);
+        }
+
         try {
             const response = await fetch(`/api/advocates/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, specialty, imageUrl: editAdvocateImageUrl })
+                body: JSON.stringify({ name, email, specialty, imageUrl: finalImageUrl })
             });
+
 
             if (response.ok) {
                 closeEditAdvocateModal();
@@ -1070,36 +1121,60 @@ let currentIdCardAdvocate = null;
 function showIdCard(id) {
     const adv = window.globalAdvocatesData.find(a => a._id === id);
     if (!adv) return;
-    
+
     currentIdCardAdvocate = adv;
-    
+
     document.getElementById('id-card-name').innerText = adv.name || 'N/A';
     document.getElementById('id-card-role').innerText = adv.specialty || 'Staff Member';
-    
-    // Generate a pseudo ID number using their Mongo ID or email
+
+    // Generate employee ID
     const idPrefix = (adv.specialty && adv.specialty.toLowerCase().includes('advocate')) ? 'ADV' : 'STF';
     const idSuffix = adv._id.substring(adv._id.length - 4).toUpperCase();
     document.getElementById('id-card-id').innerText = `${idPrefix}-${idSuffix}`;
-    
+
+    // Handle staff photo
     const photo = document.getElementById('id-card-photo');
     const placeholder = document.getElementById('id-card-photo-placeholder');
-    if (adv.image) {
-        photo.src = adv.image;
+    if (adv.imageUrl) {
+        photo.onload = null;
+        photo.src = adv.imageUrl;
         photo.style.display = 'block';
         placeholder.style.display = 'none';
     } else {
+        photo.src = '';
         photo.style.display = 'none';
         placeholder.style.display = 'block';
     }
-    
-    // Attempt to get office info from settings cache if available
-    try {
-        fetch('/api/settings').then(r => r.json()).then(data => {
-            if (data.chamber_name) document.getElementById('id-card-office-name').innerText = data.chamber_name;
-            if (data.chamber_address) document.getElementById('id-card-address').innerText = data.chamber_address;
-        });
-    } catch(e) {}
-    
+
+    // Fetch settings: address, chamber name, logo
+    fetch('/api/settings').then(r => r.json()).then(data => {
+        // Chamber name
+        if (data.chamber_name) {
+            document.getElementById('id-card-office-name').innerText = data.chamber_name;
+        }
+        // Address
+        if (data.address) {
+            document.getElementById('id-card-address').innerText = data.address;
+        }
+        // Logo
+        const logoEl = document.getElementById('id-card-logo');
+        const logoFallback = document.getElementById('id-card-logo-fallback');
+        if (logoEl && data.logoUrl) {
+            logoEl.onload = function() {
+                logoEl.style.display = 'block';
+                if (logoFallback) logoFallback.style.display = 'none';
+            };
+            logoEl.onerror = function() {
+                logoEl.style.display = 'none';
+                if (logoFallback) logoFallback.style.display = 'block';
+            };
+            logoEl.src = data.logoUrl;
+        } else {
+            if (logoEl) logoEl.style.display = 'none';
+            if (logoFallback) logoFallback.style.display = 'block';
+        }
+    }).catch(() => {});
+
     document.getElementById('id-card-modal').style.display = 'flex';
 }
 

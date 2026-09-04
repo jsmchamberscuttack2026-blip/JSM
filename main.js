@@ -142,10 +142,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Load Dynamic Office Information
-  const publicOfficeInfo = document.getElementById('public-office-info');
-  if(publicOfficeInfo) {
-      fetch('/api/settings').then(res => res.json()).then(info => {
+  // Load Dynamic Office Information & Settings
+  fetch('/api/settings').then(res => res.json()).then(info => {
+      // 1. Appointments Open/Closed logic
+      if (info.appointments_open === false) {
+          const appForm = document.getElementById('appointmentForm') || document.getElementById('appointment-form');
+          if (appForm) {
+              appForm.innerHTML = '<div style="text-align:center; padding: 2rem;"><div style="font-size:3rem; margin-bottom:1rem;">🔒</div><h3 style="color:var(--color-primary);">Appointments Closed</h3><p style="color:#666;">We are currently not accepting new appointments. Please check back later or contact us directly.</p></div>';
+          }
+          document.querySelectorAll('button, a').forEach(btn => {
+              if (btn.innerText && btn.innerText.includes('Book Appointment')) {
+                  btn.style.opacity = '0.5';
+                  btn.style.cursor = 'not-allowed';
+                  btn.onclick = (e) => { e.preventDefault(); alert('Appointments are currently closed.'); return false; };
+              }
+          });
+      }
+
+      // 2. Load Office Info
+      const publicOfficeInfo = document.getElementById('public-office-info');
+      if(publicOfficeInfo) {
           if (info.logoUrl) {
               const marks = document.querySelectorAll('.logo-mark');
               marks.forEach(mark => {
@@ -158,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
               if(loadLogo) { 
                   loadLogo.src = info.logoUrl; 
                   loadLogo.style.display = 'block'; 
-                  if(loadText) loadText.style.display = 'none'; // Hide text if we have logo
+                  if(loadText) loadText.style.display = 'none';
               }
           }
           if(info.address || info.phone || info.email) {
@@ -168,8 +184,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 Email: ${info.email || ''}
               `;
           }
-      }).catch(err => console.error("Error loading settings:", err));
-  }
+      }
+  }).catch(err => console.error("Error loading settings:", err));
 
   // Load and Render Advocates from API
   const advocatesGrid = document.getElementById('advocates-grid');
@@ -188,7 +204,10 @@ document.addEventListener('DOMContentLoaded', () => {
                       const div = document.createElement('div');
                       div.className = 'advocate';
                       const role = adv.role || 'Legal Professional';
-                      const imageHtml = adv.imageUrl ? `<div class="advocate-image" style="background-image: url('${adv.imageUrl}'); background-size: cover; background-position: center;"></div>` : '';
+                      let imageHtml = '';
+                      if (adv.imageUrl) {
+                          imageHtml = `<img class="adv-profile-photo" src="${adv.imageUrl}" style="width: 100%; height: 310px; object-fit: cover; display: block;" alt="${adv.name}">`;
+                      }
                       div.innerHTML = `
                           ${imageHtml}
                           <div class="advocate-info">

@@ -2237,7 +2237,7 @@ PRIVATE LEGAL ORGANIZATION
 
 <a href="#services">Legal Services</a>
 
-<a href="#advocates">Advocates</a>
+<a href="#advocates" style="display: none;">Advocates</a>
 
 <a href="#contact">Contact</a>
 
@@ -2637,7 +2637,7 @@ Explore Service →
      ADVOCATES
 ========================================================= -->
 
-<section class="advocates" id="advocates">
+<section class="advocates" id="advocates" style="display: none;">
 
 <div class="container">
 
@@ -2852,7 +2852,7 @@ Home
 Legal Services
 </a>
 
-<a href="#advocates">
+<a href="#advocates" style="display: none;">
 Advocates
 </a>
 
@@ -3124,6 +3124,38 @@ document.querySelectorAll("#navLinks a").forEach(function(link){
 });
 
 </script>
-<script src="js/main.js"></script>
+<script src="js/main.js?v=7"></script>
+<script>
+// Force-render advocates to bypass any cached main.js issues
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(async () => {
+        try {
+            const grid = document.getElementById('advocates-grid');
+            if (!grid) return;
+            const res = await fetch('/api/advocates?t=' + new Date().getTime());
+            const advs = await res.json();
+            
+            grid.innerHTML = '';
+            advs.forEach(adv => {
+                const div = document.createElement('div');
+                div.className = 'advocate';
+                let imgHtml = '';
+                if (adv.imageUrl && adv.imageUrl.length > 10) {
+                    imgHtml = `<img src="${adv.imageUrl}" style="width: 100%; height: 310px; object-fit: cover; display: block;" alt="Photo">`;
+                }
+                div.innerHTML = `
+                    ${imgHtml}
+                    <div class="advocate-info" style="padding: 25px;">
+                        <div class="advocate-role" style="color: var(--color-primary); font-weight: bold; margin-bottom: 5px;">${adv.role || 'Legal Professional'}</div>
+                        <h3 style="margin-bottom: 5px;">${adv.name}</h3>
+                        <p style="color: #a0a0a0;">${adv.specialty}</p>
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+        } catch(e) { console.error('Error fetching advocates', e); }
+    }, 1500); // Run slightly after main.js to override it
+});
+</script>
 </body>
 </html>
