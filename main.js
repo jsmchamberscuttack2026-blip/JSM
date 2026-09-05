@@ -245,3 +245,98 @@ document.addEventListener('DOMContentLoaded', () => {
         if(screen) screen.style.display = 'none';
     }
 });
+
+// Gallery Slideshow with Polling
+document.addEventListener('DOMContentLoaded', () => {
+    const gallerySection = document.getElementById('public-gallery');
+    const container = document.getElementById('gallery-container');
+    if (!gallerySection || !container) return;
+
+    let galleryCache = "";
+    let slideInterval = null;
+
+    async function loadGallery() {
+        try {
+            const res = await fetch('/api/gallery', { cache: 'no-store' });
+            const items = await res.json();
+            const dataString = JSON.stringify(items);
+            
+            // Only rebuild if the data actually changed
+            if (dataString === galleryCache) return;
+            galleryCache = dataString;
+
+            if (items.length > 0) {
+                gallerySection.style.display = 'block';
+                let html = '';
+                items.forEach((item, index) => {
+                    const activeClass = index === 0 ? 'active' : '';
+                    const descHtml = item.description ? `<div class="desc">${item.description}</div>` : '';
+                    html += `
+                        <div class="gallery-slide ${activeClass}">
+                            <img src="${item.imageUrl}" alt="Gallery Image">
+                            ${descHtml}
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+
+                if (slideInterval) clearInterval(slideInterval);
+                
+                if (items.length > 1) {
+                    let currentIndex = 0;
+                    slideInterval = setInterval(() => {
+                        const slides = container.querySelectorAll('.gallery-slide');
+                        if(slides.length === 0) return;
+                        slides[currentIndex].classList.remove('active');
+                        currentIndex = (currentIndex + 1) % slides.length;
+                        slides[currentIndex].classList.add('active');
+                    }, 3000);
+                }
+            } else {
+                gallerySection.style.display = 'none';
+                container.innerHTML = '';
+                if (slideInterval) clearInterval(slideInterval);
+            }
+        } catch (err) {
+            console.error('Error loading gallery:', err);
+        }
+    }
+
+    loadGallery();
+    // Poll every 3 seconds for new gallery images
+    setInterval(loadGallery, 3000);
+});
+
+// Footer Alert Polling
+document.addEventListener('DOMContentLoaded', () => {
+    const footerAlertBar = document.getElementById('footer-alert-bar');
+    const footerAlertText = document.getElementById('footer-alert-text');
+    if (!footerAlertBar || !footerAlertText) return;
+
+    let alertCache = null;
+
+    async function loadFooterAlert() {
+        try {
+            const res = await fetch('/api/settings', { cache: 'no-store' });
+            const data = await res.json();
+            
+            const alertMsg = data.footer_alert || "";
+            if (alertMsg !== alertCache) {
+                alertCache = alertMsg;
+                if (alertMsg.trim() !== "") {
+                    footerAlertText.innerText = "⚠ " + alertMsg.trim() + " ⚠";
+                    footerAlertBar.style.display = 'block';
+                } else {
+                    footerAlertBar.style.display = 'none';
+                    footerAlertText.innerText = "";
+                }
+            }
+        } catch (e) {
+            console.error("Error loading settings:", e);
+        }
+    }
+    
+    loadFooterAlert();
+    // Poll every 5 seconds
+    setInterval(loadFooterAlert, 5000);
+});

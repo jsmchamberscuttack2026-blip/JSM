@@ -42,6 +42,7 @@ try:
     settings_col = db['settings']
     cases_col = db['cases']
     email_logs_col = db['email_logs']
+    gallery_col = db['gallery']
     logging.info("Successfully connected to MongoDB")
 except Exception as e:
     logging.error(f"Error connecting to MongoDB: {e}")
@@ -419,6 +420,15 @@ def delete_email_log(id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/email-logs/staff/<path:email>', methods=['DELETE'])
+def delete_staff_email_logs(email):
+    try:
+        result = email_logs_col.delete_many({"recipient": email})
+        return jsonify({"message": f"{result.deleted_count} logs deleted"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/admin-login', methods=['POST'])
 def admin_login():
     data = request.get_json(force=True, silent=True) or {}
@@ -744,6 +754,7 @@ def add_advocate():
     specialty = data.get('specialty')
     role = data.get('role', 'Legal Professional')
     image_url = data.get('imageUrl', '')
+    phone = data.get('phone', '')
     
     if not name or not specialty or not email:
         return jsonify({"error": "Missing required fields"}), 400
@@ -757,6 +768,7 @@ def add_advocate():
     result = advocates_col.insert_one({
         "name": name,
         "email": email,
+        "phone": phone,
         "password": password,
         "specialty": specialty,
         "role": role,
@@ -813,6 +825,8 @@ def update_advocate(id):
         update_fields['email'] = data['email']
     if 'specialty' in data:
         update_fields['specialty'] = data['specialty']
+    if 'phone' in data:
+        update_fields['phone'] = data['phone']
     if 'imageUrl' in data:
         update_fields['imageUrl'] = data['imageUrl']
     if not update_fields:
@@ -1032,7 +1046,37 @@ def email_id_card():
         return jsonify({"error": str(e)}), 500
 
 
+
+@app.route('/api/gallery', methods=['GET'])
+def get_gallery():
+    if gallery_col is None: return jsonify([])
+    items = list(gallery_col.find())
+    for item in items:
+        item['_id'] = str(item['_id'])
+    return jsonify(items)
+
+@app.route('/api/gallery', methods=['POST'])
+def add_gallery():
+    data = request.get_json(force=True, silent=True) or {}
+    image_url = data.get('imageUrl')
+    description = data.get('description', '')
+    if not image_url:
+        return jsonify({"error": "Image is required"}), 400
+    new_item = {
+        "imageUrl": image_url,
+        "description": description
+    }
+    result = gallery_col.insert_one(new_item)
+    new_item['_id'] = str(result.inserted_id)
+    return jsonify(new_item), 201
+
+@app.route('/api/gallery/<id>', methods=['DELETE'])
+def delete_gallery(id):
+    gallery_col.delete_one({"_id": ObjectId(id)})
+    return jsonify({"success": True}), 200
+
 @app.after_request
+
 def add_header(response):
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"

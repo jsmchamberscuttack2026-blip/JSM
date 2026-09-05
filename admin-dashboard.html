@@ -347,6 +347,10 @@
                                 <input type="text" id="adv-specialty" class="form-control" required placeholder="e.g. Senior Counsel - Civil Litigation">
                             </div>
                             <div class="form-group">
+                                <label class="form-label" for="adv-phone">Mobile Number</label>
+                                <input type="text" id="adv-phone" class="form-control" required placeholder="e.g. +91 9876543210">
+                            </div>
+                            <div class="form-group">
                                 <label class="form-label" for="adv-image">Upload Image (Optional)</label>
                                 <input type="file" id="adv-image" class="form-control" accept="image/*">
                             </div>
@@ -514,54 +518,48 @@
                                 <input type="text" id="admin-phone" class="form-control" required>
                             </div>
                             <div class="form-group">
+                                <label class="form-label" for="admin-footer-alert">Footer Alert Message (Optional)</label>
+                                <input type="text" id="admin-footer-alert" class="form-control" placeholder="e.g. Important Notice: Office closed on Friday">
+                            </div>
+                            <div class="form-group">
                                 <label class="form-label" for="admin-email">Email Address</label>
                                 <input type="email" id="admin-email" class="form-control" required>
                             </div>
                             <button type="submit" class="btn btn-primary">Save Settings</button>
                         </form>
                     </div>
+                    <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow); margin-top: 2rem;">
+                        <h3>Gallery Management</h3>
+                        <p style="color: var(--color-text-light); margin-top: 1rem;">Upload images to display in the public gallery slideshow.</p>
+                        
+                        <form id="add-gallery-form" style="margin-top: 1.5rem; max-width: 500px; display: flex; flex-direction: column; gap: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label" for="gallery-image">Gallery Image</label>
+                                <input type="file" id="gallery-image" class="form-control" accept="image/*" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="gallery-desc">Description (Optional)</label>
+                                <input type="text" id="gallery-desc" class="form-control" placeholder="Caption for image">
+                            </div>
+                            <button type="submit" class="btn btn-secondary">Upload Image</button>
+                        </form>
+
+                        <h4 style="margin-top: 2rem; margin-bottom: 1rem;">Current Gallery Images</h4>
+                        <div id="gallery-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+                            <!-- Gallery items will be loaded here -->
+                        </div>
+                    </div>
+
                 </div>
             </div>
         
         <!-- Email Logs Section -->
         <section id="section-emails" class="admin-section" >
-            <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 2rem;">
-                <h2>Client Email Logs</h2>
-                <p style="color: var(--color-text-light); margin-top: 1rem; margin-bottom: 1rem;">Emails sent to clients for active and finished cases.</p>
-                <div class="card" style="overflow-x: auto;">
-                    <table class="data-table" style="width: 100%;">
-                        <thead>
-                            <tr>
-                                <th>Date & Time</th>
-                                <th>Recipient (Client)</th>
-                                <th>Subject</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="client-email-logs-tbody">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
             <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
                 <h2>Staff Email Logs</h2>
-                <p style="color: var(--color-text-light); margin-top: 1rem; margin-bottom: 1rem;">System emails sent to staff (Login Codes, Assignments).</p>
-                <div class="card" style="overflow-x: auto;">
-                    <table class="data-table" style="width: 100%;">
-                        <thead>
-                            <tr>
-                                <th>Date & Time</th>
-                                <th>Recipient (Staff)</th>
-                                <th>Subject</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="staff-email-logs-tbody">
-                        </tbody>
-                    </table>
+                <p style="color: var(--color-text-light); margin-top: 1rem; margin-bottom: 1.5rem;">System emails sent to staff (Login Codes, Assignments) grouped by Staff Member.</p>
+                <div id="staff-email-logs-container">
+                    <!-- Staff-wise logs will be dynamically injected here -->
                 </div>
             </div>
         </section>
@@ -569,7 +567,7 @@
     </main>
     </div>
 
-    <script src="js/admin.js?v=15"></script>
+    <script src="js/admin.js?v=17"></script>
 
     <!-- Edit Advocate Modal -->
     <div id="edit-advocate-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
@@ -589,6 +587,10 @@
             <div class="form-group">
                 <label class="form-label">Specialty / Title</label>
                 <input type="text" id="edit-adv-specialty" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Mobile Number</label>
+                <input type="text" id="edit-adv-phone" class="form-control" required>
             </div>
             <div class="form-group">
                 <label class="form-label">Advocate Image</label>
@@ -621,100 +623,37 @@
             <div style="padding: 2rem; display: flex; flex-direction: column; align-items: center; background: #1a1a2e;">
 
                 <!-- THE PREMIUM ID CARD (snapshotted) -->
-                <div id="id-card-canvas" style="
-                    width: 300px;
-                    background: #FEFEFE;
-                    border-radius: 16px;
-                    box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.4);
-                    overflow: hidden;
-                    position: relative;
-                    font-family: 'Segoe UI', Georgia, serif;
-                    border: 1.5px solid #D4AF37;
-                ">
+                                <div id="id-card-canvas" style="width:400px;margin:auto;background:linear-gradient(145deg,#fff,#f2f2f2);border-radius:16px;padding:22px;box-shadow:0 8px 25px rgba(0,0,0,0.3);font-family:Arial,sans-serif;box-sizing:border-box;">
+    <div style="position:relative;background-color:#e6f2ff;color:#222;padding:15px;border-radius:8px;margin-bottom:15px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.05);">
+        <img src="assets/images/75_constitution.jpg" alt="75 Years" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);height:55px;object-fit:contain;border-radius:4px;border:1px solid rgba(212,175,55,0.4);padding:2px;background:white;">
+        <div style="text-align:center;">
+            <h2 style="letter-spacing:2px;margin:0;font-size:22px;">OFFICIAL ID</h2>
+            <p id="id-card-office-name" style="margin:5px 0 0 0;font-weight:bold;text-transform:uppercase;color:#444;font-size:15px;">JSM. Chambers</p>
+            <p id="id-card-address" style="margin:3px 0 0 0;font-size:10px;color:#666;">Chamber Address, City</p>
+        </div>
+        <img src="assets/images/advocate_logo.jpg" alt="Advocate Logo" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);height:55px;object-fit:contain;border-radius:4px;border:1px solid rgba(212,175,55,0.4);background:white;padding:2px;">
+    </div>
 
-                    <!-- TOP HEADER -->
-                    <div style="background: linear-gradient(135deg, #0A1628 0%, #0d1f3c 60%, #1a2f50 100%); padding: 16px 14px 14px 14px; position: relative; overflow: hidden;">
-                        <!-- Gold geometric accent top-right -->
-                        <div style="position:absolute; top:-10px; right:-10px; width:60px; height:60px; border: 2px solid rgba(212,175,55,0.4); transform: rotate(45deg); border-radius: 4px;"></div>
-                        <div style="position:absolute; top:4px; right:4px; width:30px; height:30px; border: 1px solid rgba(212,175,55,0.25); transform: rotate(45deg); border-radius: 2px;"></div>
-                        <!-- Card slot notch -->
-                        <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:40px; height:5px; background: rgba(255,255,255,0.08); border-radius: 0 0 5px 5px;"></div>
+    <div style="display:flex;align-items:center;gap:22px;padding:20px 0">
+        <div style="flex-shrink:0;">
+            <img id="id-card-photo" src="" style="width:105px;height:125px;object-fit:cover;border-radius:5px;display:inline-block;" crossorigin="anonymous">
+            <div id="id-card-photo-placeholder" style="width:105px;height:125px;border-radius:5px;background:#e0e0e0;display:none;align-items:center;justify-content:center;font-size:3rem;color:#666;">👤</div>
+        </div>
 
-                        <!-- Header content -->
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <!-- Chamber Logo (falls back to scales icon if no logo) -->
-                            <div style="width:36px; height:36px; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
-                                <img id="id-card-logo" src="" alt="" crossorigin="anonymous"
-                                    style="width:36px; height:36px; object-fit:contain; display:none; border-radius:4px;"
-                                    onerror="this.style.display='none'; document.getElementById('id-card-logo-fallback').style.display='block';">
-                                <div id="id-card-logo-fallback" style="font-size:1.8rem; line-height:1;">⚖</div>
-                            </div>
-                            <div style="flex:1;">
-                                <div id="id-card-office-name" style="color:#D4AF37; font-family:'Playfair Display',Georgia,serif; font-size:0.85rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; line-height:1.2; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">JSM CHAMBERS</div>
-                                <div style="color:rgba(255,255,255,0.65); font-size:0.42rem; letter-spacing:2px; text-transform:uppercase; margin-top:3px;">JUSTICE &nbsp;|&nbsp; GUIDANCE &nbsp;|&nbsp; SOLUTIONS</div>
-                            </div>
-                        </div>
+        <div style="flex:1;">
+            <h2 id="id-card-name" style="margin:0 0 10px;font-size:20px;color:#222;">Adv. NAME</h2>
+            <p id="id-card-role" style="margin:7px 0;font-size:14px;color:#555">Senior Advocate</p>
+            <p style="margin:7px 0;font-size:14px;color:#555">ID: <span id="id-card-id">LAW-2026-015</span></p>
+            <p style="margin:7px 0;font-size:14px;color:#555">Mobile: <span id="id-card-phone">9876543210</span></p>
+            <p style="margin:7px 0;font-size:14px;color:#555;word-break:break-all;">Email: <span id="id-card-email">staff@example.com</span></p>
+        </div>
+    </div>
 
-                        <!-- Gold divider -->
-                        <div style="height:1px; background: linear-gradient(90deg, transparent, #D4AF37, #f0d060, #D4AF37, transparent); margin-top:12px; opacity:0.7;"></div>
-                    </div>
+    <div style="text-align:center;border-top:1px solid #aaa;padding-top:12px;font-size:11px;color:#555;">
+        Professional Identity • Authorized Personnel
+    </div>
+</div>
 
-                    <!-- MAIN PROFILE AREA -->
-                    <div style="background:#FEFEFE; padding: 18px 14px 12px 14px; position: relative; overflow: hidden;">
-
-                        <!-- Watermark courthouse columns -->
-                        <div style="position:absolute; right:-5px; top:10px; font-size:4rem; color:rgba(10,22,40,0.04); font-family:serif; line-height:1; pointer-events:none; user-select:none;">🏛</div>
-
-                        <!-- Left vertical text -->
-                        <div style="position:absolute; left:4px; top:50%; transform:translateY(-50%) rotate(-90deg); font-size:0.32rem; color:rgba(212,175,55,0.5); letter-spacing:1.5px; text-transform:uppercase; white-space:nowrap; transform-origin:center; writing-mode:vertical-rl; text-orientation:mixed; font-weight:600;">LEGAL MINDS &nbsp;|&nbsp; STRONGER SOCIETY</div>
-
-                        <!-- Right vertical text -->
-                        <div style="position:absolute; right:5px; top:18px; font-size:0.3rem; color:rgba(10,22,40,0.2); letter-spacing:2px; text-transform:uppercase; text-align:center; line-height:2; font-weight:700;">
-                            <div>LAW</div>
-                            <div>TRUTH</div>
-                            <div>JUSTICE</div>
-                            <div>ALWAYS</div>
-                        </div>
-
-                        <!-- Profile Photo Circle -->
-                        <div style="text-align:center; margin-bottom:12px;">
-                            <div id="id-card-photo-container" style="width:90px; height:90px; border-radius:50%; border:3px solid #D4AF37; margin:0 auto; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#f5f0e8; box-shadow: 0 4px 15px rgba(212,175,55,0.3), 0 0 0 1px rgba(212,175,55,0.15);">
-                                <img id="id-card-photo" src="" style="width:100%; height:100%; object-fit:cover; display:none;" crossorigin="anonymous">
-                                <div id="id-card-photo-placeholder" style="font-size:2.5rem; color:#c8b89a; line-height:1; display:block;">👤</div>
-                            </div>
-                        </div>
-
-                        <!-- Name -->
-                        <div style="text-align:center;">
-                            <h3 id="id-card-name" style="margin:0 0 6px 0; color:#0A1628; font-family:'Playfair Display',Georgia,serif; font-size:1.05rem; font-weight:700; letter-spacing:0.5px;">Advocate Name</h3>
-
-                            <!-- Gold thin divider under name -->
-                            <div style="height:1px; background:linear-gradient(90deg, transparent, #D4AF37, transparent); margin: 4px auto 8px auto; width:70%;"></div>
-
-                            <!-- Designation -->
-                            <div id="id-card-role" style="color:#8B6914; font-size:0.5rem; font-weight:700; text-transform:uppercase; letter-spacing:2px; margin-bottom:12px;">Senior Advocate</div>
-                        </div>
-
-                        <!-- Employee ID Box -->
-                        <div style="background:linear-gradient(135deg, #f8f5ee, #fdfbf6); border:1px solid rgba(212,175,55,0.4); border-radius:8px; padding:7px 10px; text-align:center; margin: 0 20px 0 20px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);">
-                            <div style="font-size:0.38rem; color:#999; text-transform:uppercase; letter-spacing:2px; margin-bottom:3px;">Employee ID</div>
-                            <div id="id-card-id" style="font-size:0.75rem; font-weight:700; color:#0A1628; letter-spacing:3px; font-family:'Courier New', monospace;">ADV-0001</div>
-                        </div>
-                    </div>
-
-                    <!-- BOTTOM FOOTER -->
-                    <div style="background:linear-gradient(135deg, #0A1628 0%, #0d1f3c 100%); padding:10px 14px; position:relative; overflow:hidden;">
-                        <!-- Gold diagonal accent bottom-left -->
-                        <div style="position:absolute; bottom:-15px; left:-15px; width:50px; height:50px; border: 2px solid rgba(212,175,55,0.3); transform:rotate(45deg);"></div>
-
-                        <div style="display:flex; align-items:center; gap:6px; justify-content:center;">
-                            <span style="color:#D4AF37; font-size:0.7rem;">📍</span>
-                            <div style="width:1px; height:16px; background:rgba(212,175,55,0.4);"></div>
-                            <div id="id-card-address" style="color:rgba(255,255,255,0.8); font-size:0.42rem; letter-spacing:0.5px; text-align:center;">Chamber Address, City</div>
-                        </div>
-                    </div>
-
-                </div>
                 <!-- END ID CARD -->
 
                 <!-- Action Buttons -->

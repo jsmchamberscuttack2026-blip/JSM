@@ -6,150 +6,151 @@
 <title>JSM Chambers | Staff Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
+
     :root {
-        --color-primary: #102b42;
-        --color-secondary: #c2a661;
-        --color-bg: #f4f6f8;
+        --color-primary: #102a43;
+        --color-secondary: #d4af37; /* Gold accent */
+        --color-bg: #f4f7f6;
         --color-card: #ffffff;
-        --color-text: #14202b;
-        --color-text-light: #596a7a;
+        --color-text: #2d3748;
+        --color-text-light: #718096;
         --border: #e2e8f0;
+        --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
+        --shadow-md: 0 4px 6px rgba(0,0,0,0.05);
+        --shadow-lg: 0 10px 15px rgba(0,0,0,0.05);
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Inter, Arial, sans-serif; background: var(--color-bg); color: var(--color-text); display: flex; height: 100vh; overflow: hidden; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--color-bg); color: var(--color-text); display: flex; height: 100vh; overflow: hidden; }
     
-    .sidebar { width: 260px; background: var(--color-primary); color: white; display: flex; flex-direction: column; }
-    .sidebar-header { padding: 2rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
-    .sidebar-header h2 { color: var(--color-secondary); font-size: 1.2rem; margin-bottom: 0.2rem; }
-    .sidebar ul { list-style: none; padding: 1.5rem 0; flex: 1; display: flex; flex-direction: column; }
-    .sidebar ul li a { display: block; padding: 1rem 1.5rem; color: #a0aec0; text-decoration: none; font-weight: 500; transition: 0.2s; border-left: 4px solid transparent; cursor: pointer; }
-    .sidebar ul li a:hover, .sidebar ul li a.active { background: rgba(255,255,255,0.05); color: white; border-left-color: var(--color-secondary); }
+    /* Global Sidebar replaced by Off-Canvas */
     
-    .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
-    .header { background: white; padding: 1.5rem 2.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-    .admin-section { padding: 2.5rem; display: none; }
+    
+    
+    
+    
+    
+    .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
+    .header { background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); padding: 1.5rem 3rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 5; }
+    .header h2 { font-size: 1.8rem; color: var(--color-primary); margin-bottom: 0.2rem; }
+    .admin-section { padding: 3rem; display: none; animation: fadeIn 0.4s ease; }
     .admin-section.active { display: block; }
-    .card { background: var(--color-card); border-radius: 8px; padding: 2rem; border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.02); margin-bottom: 2rem; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     
+    .card { background: var(--color-card); border-radius: 12px; padding: 2.5rem; border: 1px solid var(--border); box-shadow: var(--shadow-md); margin-bottom: 2rem; transition: transform 0.2s, box-shadow 0.2s; }
+    .card:hover { box-shadow: var(--shadow-lg); }
+    .card h3 { color: var(--color-primary); font-size: 1.3rem; margin-bottom: 0.5rem; }
+    
+    
+    .nav-btn {
+        padding: 10px 16px;
+        background: #f0f4f8;
+        color: var(--color-primary);
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+        border: 1px solid transparent;
+    }
+    .nav-btn:hover { background: #e2e8f0; }
+    .nav-btn.active { background: var(--color-primary); color: white; box-shadow: 0 4px 6px rgba(16, 42, 67, 0.2); border-color: var(--color-primary); }
+
     /* Grid for cases */
-    .cases-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 1.5rem; }
+    .cases-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+    .case-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 10px; border-top: 4px solid var(--color-secondary); }
+    .case-card h4 { font-size: 1.1rem; color: var(--color-primary); }
     
-    .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; font-family: inherit; font-size: 0.9rem; }
-    .btn-primary { background: var(--color-primary); color: white; }
+    .btn { padding: 0.75rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: inherit; font-size: 0.95rem; transition: all 0.2s; }
+    .btn-primary { background: var(--color-primary); color: white; box-shadow: 0 4px 6px rgba(16, 42, 67, 0.2); }
+    .btn-primary:hover { background: #0b1d2e; transform: translateY(-1px); }
     .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--color-text); }
+    .btn-outline:hover { background: #f8f9fa; }
     
     /* Modal styles */
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
-    .modal { background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 900px; max-height: 90vh; overflow-y: auto; }
-    .modal h3 { margin-bottom: 1.5rem; }
-    .form-group { margin-bottom: 1.5rem; }
-    .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem; }
-    .form-control { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 4px; font-family: inherit; }
-
-        @media (max-width: 768px) {
-            .dashboard-container { flex-direction: column; }
-            .sidebar { width: 100%; padding: 1rem; }
-            .sidebar ul { flex-direction: row; overflow-x: auto; white-space: nowrap; padding-bottom: 0.5rem; }
-            .sidebar ul li a { display: inline-block; }
-            .main-content { padding: 1rem; }
-            .stats-grid { grid-template-columns: 1fr; }
-            
-            /* Responsive tables */
-            .data-table, .data-table thead, .data-table tbody, .data-table tr, .data-table td, .data-table th {
-                display: block;
-            }
-            .data-table thead tr {
-                display: none;
-            }
-            .data-table tr {
-                margin-bottom: 1rem;
-                border: 1px solid #e7ebf0;
-                border-radius: 8px;
-            }
-            .data-table td {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                text-align: right;
-                border: none;
-                border-bottom: 1px solid #e7ebf0;
-                padding: 10px !important;
-            }
-            .data-table td::before {
-                font-weight: bold;
-                text-align: left;
-                margin-right: 1rem;
-                color: #555;
-            }
-            
-            /* Add pseudo headers for responsiveness */
-            #recent-cases-tbody td:nth-of-type(1):before { content: "Client Name:"; }
-            #recent-cases-tbody td:nth-of-type(2):before { content: "Email:"; }
-            #recent-cases-tbody td:nth-of-type(3):before { content: "Type:"; }
-            #recent-cases-tbody td:nth-of-type(4):before { content: "Status:"; }
-            #recent-cases-tbody td:nth-of-type(5):before { content: "Assigned:"; }
-            #recent-cases-tbody td:nth-of-type(6):before { content: "Next Hearing:"; }
-            #recent-cases-tbody td:nth-of-type(7):before { content: "Action:"; }
-
-            #consultations-tbody td:nth-of-type(1):before, #staff-appts-tbody td:nth-of-type(1):before { content: "Name:"; }
-            #consultations-tbody td:nth-of-type(2):before, #staff-appts-tbody td:nth-of-type(2):before { content: "Email:"; }
-            #consultations-tbody td:nth-of-type(3):before, #staff-appts-tbody td:nth-of-type(3):before { content: "Status:"; }
-            #consultations-tbody td:nth-of-type(4):before, #staff-appts-tbody td:nth-of-type(4):before { content: "Date & Time:"; }
-            #consultations-tbody td:nth-of-type(5):before, #staff-appts-tbody td:nth-of-type(5):before { content: "Action:"; }
-
-            #admin-advocates-list td:nth-of-type(1):before { content: "Image:"; }
-            #admin-advocates-list td:nth-of-type(2):before { content: "Name:"; }
-            #admin-advocates-list td:nth-of-type(3):before { content: "Email:"; }
-            #admin-advocates-list td:nth-of-type(4):before { content: "Specialty:"; }
-            #admin-advocates-list td:nth-of-type(5):before { content: "Access:"; }
-            #admin-advocates-list td:nth-of-type(6):before { content: "Action:"; }
-            
-            #archived-cases-tbody td:nth-of-type(1):before, #staff-clients-tbody td:nth-of-type(1):before { content: "Client Name:"; }
-            #archived-cases-tbody td:nth-of-type(2):before, #staff-clients-tbody td:nth-of-type(2):before { content: "Email:"; }
-            #archived-cases-tbody td:nth-of-type(3):before, #staff-clients-tbody td:nth-of-type(3):before { content: "Type:"; }
-            #archived-cases-tbody td:nth-of-type(4):before, #staff-clients-tbody td:nth-of-type(4):before { content: "Status:"; }
-            #archived-cases-tbody td:nth-of-type(5):before { content: "Action:"; }
-        }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(16, 42, 67, 0.8); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center; }
+    .modal { background: white; padding: 2.5rem; border-radius: 12px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); animation: scaleUp 0.3s ease; }
+    @keyframes scaleUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal h3 { margin-bottom: 1.5rem; color: var(--color-primary); border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
     
-    @media(max-width: 600px) {
-        #portal-logo-container {
-            position: relative !important;
-            left: 0 !important;
-            transform: none !important;
-            margin-right: auto;
+    .form-group { margin-bottom: 1.5rem; }
+    .form-label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: var(--color-text); }
+    .form-control { width: 100%; padding: 0.85rem; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 1rem; transition: border-color 0.2s; background: #f8fafc; }
+    .form-control:focus { outline: none; border-color: var(--color-secondary); background: #fff; box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1); }
+
+    /* Tables */
+    .data-table { width: 100%; border-collapse: collapse; background: #ffffff; border-radius: 8px; overflow: hidden; margin-top: 1rem; }
+    .data-table th, .data-table td { padding: 1.2rem; text-align: left; border-bottom: 1px solid var(--border); }
+    .data-table th { background-color: #f8fafc; color: var(--color-primary); font-weight: 600; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; }
+    .badge { padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .badge.pending { background-color: #FEF3C7; color: #D97706; }
+    .badge.active { background-color: #D1FAE5; color: #059669; }
+
+    
+    
+    /* Global Sidebar Removed */
+    
+    
+    .main-content { order: 1; overflow-x: hidden; width: 100%; flex: 1; display: flex; flex-direction: column; position: relative; }
+
+    /* MOBILE SCREEN FRIENDLY DESIGN */
+    @media (max-width: 850px) {
+        body { flex-direction: column; }
+        
+        #mobile-menu-btn { display: block !important; }
+        
+        /* Off-canvas Sidebar for Mobile */
+        .sidebar { 
+            position: fixed; 
+            top: 0; 
+            left: -320px; 
+            width: 280px; 
+            height: 100vh; 
+            z-index: 9999; 
+            flex-direction: column; 
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            box-shadow: 4px 0 15px rgba(0,0,0,0.5);
+            padding: 0;
         }
-        .topbar {
-            padding: 0 10px !important;
-            gap: 10px !important;
+        .sidebar.open {
+            left: 0;
         }
+        .sidebar-header { display: block; padding: 2rem 1.5rem; }
+        
+        .header h2 { font-size: 1.3rem; }
+        .header p { font-size: 0.85rem; }
+        .admin-section { padding: 1rem; }
+        .card { padding: 1.5rem; }
+        
+        /* Cases Grid Mobile */
+        .cases-grid { grid-template-columns: 1fr; gap: 1rem; }
+        
+        /* Responsive Tables for Mobile */
+        .data-table, .data-table thead, .data-table tbody, .data-table tr, .data-table td, .data-table th { display: block; }
+        .data-table thead tr { display: none; }
+        .data-table tr { margin-bottom: 1rem; border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-sm); }
+        .data-table td { display: flex; justify-content: space-between; align-items: center; text-align: right; border: none; border-bottom: 1px solid var(--border); padding: 12px !important; }
+        .data-table td:last-child { border-bottom: none; }
+        .data-table td::before { font-weight: 600; text-align: left; margin-right: 1rem; color: var(--color-primary); }
+        
+        /* Pseudo Headers */
+        #staff-appts-tbody td:nth-of-type(1):before { content: "Name:"; }
+        #staff-appts-tbody td:nth-of-type(2):before { content: "Email:"; }
+        #staff-appts-tbody td:nth-of-type(3):before { content: "Status:"; }
+        #staff-appts-tbody td:nth-of-type(4):before { content: "Date/Time:"; }
+        #staff-appts-tbody td:nth-of-type(5):before { content: "Action:"; }
+        
+        #staff-clients-tbody td:nth-of-type(1):before { content: "Client Name:"; }
+        #staff-clients-tbody td:nth-of-type(2):before { content: "Email:"; }
+        #staff-clients-tbody td:nth-of-type(3):before { content: "Type:"; }
+        #staff-clients-tbody td:nth-of-type(4):before { content: "Status:"; }
+        #staff-clients-tbody td:nth-of-type(5):before { content: "Action:"; }
     }
 
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: #ffffff;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        .data-table th, .data-table td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid #e7ebf0;
-        }
-        .data-table th {
-            background-color: #f4f6f8;
-            color: #173650;
-            font-weight: 600;
-        }
-        .badge {
-            padding: 0.3rem 0.6rem;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-        .badge.pending { background-color: #FFF3E0; color: #E65100; }
-        .badge.active { background-color: #E8F5E9; color: #2E7D32; }
 
 </style>
 </head>
@@ -193,27 +194,25 @@
         .badge.active { background-color: #E8F5E9; color: #2E7D32; }
 
 </style>
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <h2>JSM. Chambers</h2>
-            <p style="font-size: 0.85rem; color: #80919d;">Staff Portal</p>
-        </div>
-        <ul>
-            <li><a class="active" id="nav-dashboard">My Cases</a></li>
-            <li><a href="#" id="nav-about" onclick="showSection('about')">About Me</a></li>
-            <li style="margin-top: auto;"><a href="#" id="staff-logout">Logout</a></li>
-        </ul>
-    </div>
-
     <main class="main-content">
-        <header class="header">
+        
+        
+        <header class="header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
             <div>
                 <h2>Welcome, <span id="staff-name-display">Advocate</span></h2>
                 <p style="color: var(--color-text-light);">Legal Professional Dashboard</p>
             </div>
+            <nav id="staff-nav" style="display: flex; gap: 10px; align-items: center; overflow-x: auto; padding-bottom: 5px;">
+                <a class="nav-btn" id="nav-dashboard" onclick="showSection('dashboard')">📁 Cases</a>
+                <a class="nav-btn active" id="nav-about" onclick="showSection('about')">👤 About</a>
+                <a class="nav-btn" id="staff-logout">🚪 Logout</a>
+            </nav>
         </header>
 
-        <section id="section-dashboard" class="admin-section active">
+        
+
+
+        <section id="section-dashboard" class="admin-section">
             
 
             <div class="card">
@@ -280,7 +279,7 @@
 
 
         <!-- ABOUT ME SECTION -->
-        <section id="section-about" class="admin-section">
+        <section id="section-about" class="admin-section active">
             <div class="dashboard-card" style="max-width: 600px; margin: 0 auto; padding: 2rem;">
                 <h2 style="color: var(--color-primary); border-bottom: 2px solid var(--color-border); padding-bottom: 0.5rem; margin-bottom: 1.5rem;">About Staff Information</h2>
                 
@@ -426,16 +425,28 @@
         </div>
     </div>
 
+
+    <!-- Big Logo Popup Screen -->
+    <div id="logo-popup-screen" style="position: fixed; inset: 0; background: rgba(16, 42, 67, 0.95); backdrop-filter: blur(8px); z-index: 10001; display: none; align-items: center; justify-content: center; flex-direction: column; transition: opacity 0.5s ease;">
+        <img id="big-popup-logo" src="assets/images/advocate_logo.jpg" alt="Advocate Logo" style="max-width: 80%; max-height: 80vh; object-fit: contain; border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); transform: scale(0.5); transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+    </div>
+
     <script>
+
     document.addEventListener('DOMContentLoaded', async () => {
+        let advocateLogoUrl = null;
         try {
             const res = await fetch('/api/settings');
             const settings = await res.json();
             if (settings.logoUrl) {
+                advocateLogoUrl = settings.logoUrl;
                 const topLogo = document.getElementById('portal-logo');
                 const loadLogo = document.getElementById('loading-logo');
-                if(topLogo) { topLogo.src = settings.logoUrl; topLogo.style.display = 'block'; }
-                if(loadLogo) { loadLogo.src = settings.logoUrl; loadLogo.style.display = 'block'; }
+                
+                
+                if(topLogo) { topLogo.src = advocateLogoUrl; topLogo.style.display = 'block'; }
+                if(loadLogo) { loadLogo.src = advocateLogoUrl; loadLogo.style.display = 'block'; }
+                
             }
         } catch(e) {}
 
@@ -444,10 +455,33 @@
                 const screen = document.getElementById('login-loading-screen');
                 if(screen) {
                     screen.style.opacity = '0';
-                    setTimeout(() => screen.style.display = 'none', 500);
+                    setTimeout(() => {
+                        screen.style.display = 'none';
+                        
+                        // Show Big Logo Popup if logo exists
+                        const popup = document.getElementById('logo-popup-screen');
+                        const bigLogo = document.getElementById('big-popup-logo');
+                        if(popup && bigLogo) {
+                            popup.style.display = 'flex';
+                            popup.style.opacity = '0'; // start hidden
+                            
+                            // Trigger reflow for transition
+                            void popup.offsetWidth;
+                            
+                            popup.style.opacity = '1';
+                            bigLogo.style.transform = 'scale(1)';
+                            
+                            // Hide after 3 seconds
+                            setTimeout(() => {
+                                popup.style.opacity = '0';
+                                bigLogo.style.transform = 'scale(1.1)'; // slight outward fade
+                                setTimeout(() => popup.style.display = 'none', 500);
+                            }, 3000);
+                        }
+                    }, 500);
                 }
                 sessionStorage.setItem('loadingScreenShown', 'true');
-            }, 4000); // 4 seconds loading animation
+            }, 4000); // 4 seconds initial loading animation
         } else {
             const screen = document.getElementById('login-loading-screen');
             if(screen) screen.style.display = 'none';
@@ -512,51 +546,63 @@
                         }
 
                         
-                        const sidebarUl = document.querySelector('.sidebar ul');
+                        const staffNav = document.getElementById('staff-nav');
+                        const logoutBtn = document.getElementById('staff-logout');
                         
                         if (staffData.access_appointments && !document.getElementById('nav-appointments')) {
-                            const li = document.createElement('li');
-                            li.innerHTML = '<a id="nav-appointments" style="cursor:pointer">Incoming Appointments 🔒</a>';
-                            sidebarUl.insertBefore(li, sidebarUl.lastElementChild);
-                            li.addEventListener('click', () => showSection('appointments'));
+                            const a = document.createElement('a');
+                            a.className = 'nav-btn';
+                            a.id = 'nav-appointments';
+                            a.innerHTML = '📅 Appts 🔒';
+                            a.onclick = () => showSection('appointments');
+                            staffNav.insertBefore(a, logoutBtn);
                         } else if (!staffData.access_appointments && document.getElementById('nav-appointments')) {
-                            document.getElementById('nav-appointments').parentElement.remove();
+                            document.getElementById('nav-appointments').remove();
                         }
                         
                         if (staffData.access_add_case && !document.getElementById('nav-addcase')) {
-                            const li = document.createElement('li');
-                            li.innerHTML = '<a id="nav-addcase" style="cursor:pointer">Add New Case 🔒</a>';
-                            sidebarUl.insertBefore(li, sidebarUl.lastElementChild);
-                            li.addEventListener('click', () => showSection('addcase'));
+                            const a = document.createElement('a');
+                            a.className = 'nav-btn';
+                            a.id = 'nav-addcase';
+                            a.innerHTML = '➕ Case 🔒';
+                            a.onclick = () => showSection('addcase');
+                            staffNav.insertBefore(a, logoutBtn);
                         } else if (!staffData.access_add_case && document.getElementById('nav-addcase')) {
-                            document.getElementById('nav-addcase').parentElement.remove();
+                            document.getElementById('nav-addcase').remove();
                         }
 
                         if (staffData.access_clients && !document.getElementById('nav-clients')) {
-                            const li = document.createElement('li');
-                            li.innerHTML = '<a id="nav-clients" style="cursor:pointer">Clients Directory 🔒</a>';
-                            sidebarUl.insertBefore(li, sidebarUl.lastElementChild);
-                            li.addEventListener('click', () => showSection('clients'));
+                            const a = document.createElement('a');
+                            a.className = 'nav-btn';
+                            a.id = 'nav-clients';
+                            a.innerHTML = '👥 Clients 🔒';
+                            a.onclick = () => showSection('clients');
+                            staffNav.insertBefore(a, logoutBtn);
                         } else if (!staffData.access_clients && document.getElementById('nav-clients')) {
-                            document.getElementById('nav-clients').parentElement.remove();
+                            document.getElementById('nav-clients').remove();
                         }
                     }
                 }).catch(e => console.error(e));
 
             document.getElementById('staff-name-display').innerText = staffData.name;
-            const sidebarUl = document.querySelector('.sidebar ul');
+            const staffNav = document.getElementById('staff-nav');
+            const logoutBtn = document.getElementById('staff-logout');
             
             if (staffData.access_appointments) {
-                const li = document.createElement('li');
-                li.innerHTML = '<a id="nav-appointments" style="cursor:pointer">Incoming Appointments 🔒</a>';
-                sidebarUl.insertBefore(li, sidebarUl.lastElementChild);
-                li.addEventListener('click', () => showSection('appointments'));
+                const a = document.createElement('a');
+                a.className = 'nav-btn';
+                a.id = 'nav-appointments';
+                a.innerHTML = '📅 Appts 🔒';
+                a.onclick = () => showSection('appointments');
+                staffNav.insertBefore(a, logoutBtn);
             }
             if (staffData.access_clients) {
-                const li = document.createElement('li');
-                li.innerHTML = '<a id="nav-clients" style="cursor:pointer">Clients Directory 🔒</a>';
-                sidebarUl.insertBefore(li, sidebarUl.lastElementChild);
-                li.addEventListener('click', () => showSection('clients'));
+                const a = document.createElement('a');
+                a.className = 'nav-btn';
+                a.id = 'nav-clients';
+                a.innerHTML = '👥 Clients 🔒';
+                a.onclick = () => showSection('clients');
+                staffNav.insertBefore(a, logoutBtn);
             }
             
             document.getElementById('nav-dashboard').addEventListener('click', () => showSection('dashboard'));
@@ -574,19 +620,31 @@
         let myCases = [];
         const grid = document.getElementById('staff-cases-grid');
 
-        async function loadMyCases() {
-            if (!staffData.email) return;
+                async function loadMyCases() {
             try {
-                const res = await fetch(`/api/staff-cases/${staffData.email}`);
+                grid.innerHTML = '<p style="color: #667085; font-style: italic;">Loading cases for ' + (staffData.email || 'unknown') + '...</p>';
+                if (!staffData || !staffData.email) {
+                    grid.innerHTML = '<p style="color: red;">Error: Staff email missing. Please Logout and Login again.</p>';
+                    return;
+                }
+                const res = await fetch(`/api/staff-cases/${encodeURIComponent(staffData.email)}`);
+                if (!res.ok) {
+                    throw new Error(`Server returned ${res.status}`);
+                }
                 myCases = await res.json();
                 
+                if (!Array.isArray(myCases)) {
+                    throw new Error("Invalid response from server. Expected array.");
+                }
+                
                 if (myCases.length === 0) {
-                    grid.innerHTML = '<p style="color: #999; grid-column: 1/-1;">No cases assigned to you yet.</p>';
+                    grid.innerHTML = '<p style="color: #0b1f33; font-weight: 500;">No cases assigned to you yet.</p>';
                     return;
                 }
 
                 grid.innerHTML = '';
                 myCases.forEach(c => {
+
                     const card = document.createElement('div');
                     card.style.cssText = "background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between;";
                     let statusColor = c.status === "Under Review" ? "#b7791f" : "#2e7d32";
@@ -702,6 +760,11 @@
                 });
                 alert('Case details updated successfully!');
                 closeCaseModal();
+                loadMyCases();
+            } catch(e) {
+                alert('Error updating case');
+            }
+        }
                 
         async function sendMessageToClient() {
             const id = document.getElementById('modal-case-id').value;
@@ -735,7 +798,7 @@
                     alert('Message sent successfully!');
                     document.getElementById('modal-msg-subject').value = '';
                     document.getElementById('modal-msg-body').value = '';
-                    fileInput.value = '';
+                    if (fileInput) fileInput.value = '';
                 } else {
                     alert(data.error || 'Failed to send message.');
                 }
@@ -747,17 +810,17 @@
             btn.disabled = false;
         }
 
-        
         let unlockedSections = {
             'appointments': false,
-            'clients': false
+            'clients': false,
+            'addcase': false
         };
 
         function showSection(sectionId) {
             document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
             document.getElementById('section-' + sectionId).classList.add('active');
             
-            document.querySelectorAll('.sidebar ul li a').forEach(a => a.classList.remove('active'));
+            document.querySelectorAll('#staff-nav .nav-btn').forEach(a => a.classList.remove('active'));
             const activeNav = document.getElementById('nav-' + sectionId);
             if(activeNav) activeNav.classList.add('active');
 
@@ -768,88 +831,13 @@
                 loadStaffAppointments();
             } else if (sectionId === 'clients') {
                 loadStaffClients();
-            }
-        }
-
-        loadMyCases();
-            } catch(e) {
-                alert('Error updating case');
             }
         }
 
         // Initialize
-        
-        async function sendMessageToClient() {
-            const id = document.getElementById('modal-case-id').value;
-            const subject = document.getElementById('modal-msg-subject').value;
-            const message = document.getElementById('modal-msg-body').value;
-            const fileInput = document.getElementById('modal-msg-file');
-            
-            if (!subject || !message) {
-                alert('Please enter a subject and a message.');
-                return;
-            }
-            
-            const btn = document.getElementById('btn-send-msg');
-            btn.innerText = 'Sending...';
-            btn.disabled = true;
-            
-            const formData = new FormData();
-            formData.append('subject', subject);
-            formData.append('message', message);
-            if (fileInput.files.length > 0) {
-                formData.append('file', fileInput.files[0]);
-            }
-            
-            try {
-                const res = await fetch(`/api/cases/${id}/email`, {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    alert('Message sent successfully!');
-                    document.getElementById('modal-msg-subject').value = '';
-                    document.getElementById('modal-msg-body').value = '';
-                    fileInput.value = '';
-                } else {
-                    alert(data.error || 'Failed to send message.');
-                }
-            } catch (err) {
-                alert('Server error.');
-            }
-            
-            btn.innerText = 'Send Message to Client';
-            btn.disabled = false;
-        }
-
-        
-        let unlockedSections = {
-            'appointments': false,
-            'clients': false
-        };
-
-        function showSection(sectionId) {
-            document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
-            document.getElementById('section-' + sectionId).classList.add('active');
-            
-            document.querySelectorAll('.sidebar ul li a').forEach(a => a.classList.remove('active'));
-            const activeNav = document.getElementById('nav-' + sectionId);
-            if(activeNav) activeNav.classList.add('active');
-
-            if ((sectionId === 'appointments' || sectionId === 'clients' || sectionId === 'addcase') && !unlockedSections[sectionId]) {
-                document.getElementById(`lock-gate-${sectionId}`).style.display = 'block';
-                document.getElementById(`content-${sectionId}`).style.display = 'none';
-            } else if (sectionId === 'appointments') {
-                loadStaffAppointments();
-            } else if (sectionId === 'clients') {
-                loadStaffClients();
-            }
-        }
-
         loadMyCases();
-    
-        let isCodeMode = { 'appointments': false, 'clients': false };
+        
+        let isCodeMode = { 'appointments': false, 'clients': false, 'addcase': false };
 
         async function verifySection(section) {
             if (isCodeMode[section]) {

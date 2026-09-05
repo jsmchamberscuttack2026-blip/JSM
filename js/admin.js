@@ -553,6 +553,7 @@ if (addAdvocateForm) {
         const name = document.getElementById('adv-name').value;
         const email = document.getElementById('adv-email').value;
         const specialty = document.getElementById('adv-specialty').value;
+        const phone = document.getElementById('adv-phone').value;
         const fileInput = document.getElementById('adv-image');
         
         const submitBtn = addAdvocateForm.querySelector('button');
@@ -567,7 +568,7 @@ if (addAdvocateForm) {
             const response = await fetch('/api/advocates', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, specialty, role: 'Legal Professional', imageUrl })
+                body: JSON.stringify({ name, email, specialty, phone, role: 'Legal Professional', imageUrl })
             });
             const data = await response.json();
             
@@ -625,6 +626,7 @@ if (officeInfoForm) {
             if (data.address) document.getElementById('admin-address').value = data.address;
             if (data.phone) document.getElementById('admin-phone').value = data.phone;
             if (data.email) document.getElementById('admin-email').value = data.email;
+            if (data.footer_alert) document.getElementById('admin-footer-alert').value = data.footer_alert;
             if (data.logoUrl) {
                 globalLogoUrl = data.logoUrl;
                 logoPreview.src = globalLogoUrl;
@@ -642,6 +644,7 @@ if (officeInfoForm) {
         const address = document.getElementById('admin-address').value;
         const phone = document.getElementById('admin-phone').value;
         const email = document.getElementById('admin-email').value;
+        const footer_alert = document.getElementById('admin-footer-alert').value;
         const btn = officeInfoForm.querySelector('button');
         btn.innerText = 'Saving...';
         
@@ -649,7 +652,7 @@ if (officeInfoForm) {
             await fetch('/api/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ appointments_open, chamber_name, address, phone, email, logoUrl: globalLogoUrl })
+                body: JSON.stringify({ appointments_open, chamber_name, address, phone, email, footer_alert, logoUrl: globalLogoUrl })
             });
             alert('Settings Saved Successfully');
         } catch(err) {
@@ -661,6 +664,98 @@ if (officeInfoForm) {
     
     setTimeout(loadSettings, 500);
 }
+
+    // ==========================================
+    // Gallery Management
+    // ==========================================
+    const addGalleryForm = document.getElementById('add-gallery-form');
+    const galleryList = document.getElementById('gallery-list');
+    
+    window.loadGallery = async function() {
+        if (!galleryList) return;
+        try {
+            const res = await fetch('/api/gallery', { cache: 'no-store' });
+            const items = await res.json();
+            
+            galleryList.innerHTML = '';
+            if (items.length === 0) {
+                galleryList.innerHTML = '<p style="color: #666; font-style: italic;">No images in gallery.</p>';
+                return;
+            }
+            
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.style.border = '1px solid #ddd';
+                div.style.borderRadius = '8px';
+                div.style.overflow = 'hidden';
+                div.style.background = '#fff';
+                div.style.position = 'relative';
+                
+                div.innerHTML = `
+                    <img src="${item.imageUrl}" style="width: 100%; height: 140px; object-fit: cover;">
+                    <div style="padding: 10px;">
+                        <p style="margin: 0; font-size: 0.9rem; color: #333; min-height: 20px;">${item.description || '<i>No description</i>'}</p>
+                        <button onclick="window.deleteGalleryItem('${item._id}')" class="btn" style="margin-top: 10px; width: 100%; padding: 5px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">Delete</button>
+                    </div>
+                `;
+                galleryList.appendChild(div);
+            });
+        } catch (err) {
+            console.error(err);
+        }
+    };
+    
+    if (addGalleryForm) {
+        addGalleryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById('gallery-image');
+            const descInput = document.getElementById('gallery-desc');
+            const btn = addGalleryForm.querySelector('button');
+            
+            if (fileInput.files.length === 0) return;
+            
+            btn.innerText = 'Uploading...';
+            btn.disabled = true;
+            
+            try {
+                const imageUrl = await window.compressImage(fileInput.files[0]);
+                const description = descInput.value;
+                
+                await fetch('/api/gallery', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageUrl, description })
+                });
+                
+                fileInput.value = '';
+                descInput.value = '';
+                await window.loadGallery();
+            } catch (err) {
+                console.error(err);
+                alert("Error uploading image");
+            }
+            
+            btn.innerText = 'Upload Image';
+            btn.disabled = false;
+        });
+    }
+    
+    window.deleteGalleryItem = async function(id) {
+        if (!confirm("Are you sure you want to delete this gallery image?")) return;
+        try {
+            await fetch('/api/gallery/' + id, { method: 'DELETE' });
+            await window.loadGallery();
+        } catch (err) {
+            console.error(err);
+            alert("Error deleting image");
+        }
+    };
+    
+    setTimeout(() => {
+        if (typeof window.loadGallery === 'function') window.loadGallery();
+    }, 600);
+
+
 
     // Add logic to populate the staff dropdown
     async function populateStaffDropdown(selectedEmail) {
@@ -922,50 +1017,132 @@ if (officeInfoForm) {
         }
     };
 
+    
+    window.emailLogsDataHash = "";
+    
     window.loadEmailLogs = async function() {
-        const clientTbody = document.getElementById('client-email-logs-tbody');
-        const staffTbody = document.getElementById('staff-email-logs-tbody');
-        if(!clientTbody || !staffTbody) return;
+        const staffContainer = document.getElementById('staff-email-logs-container');
+        if(!staffContainer) return;
         
         try {
-            const res = await fetch('/api/email-logs');
-            const data = await res.json();
+            const [logsRes, advRes] = await Promise.all([
+                fetch('/api/email-logs'),
+                fetch('/api/advocates')
+            ]);
             
-            clientTbody.innerHTML = '';
-            if(data.client_logs.length === 0) {
-                clientTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999; padding: 2rem;">No client emails sent yet.</td></tr>';
-            } else {
-                data.client_logs.forEach(log => {
-                    clientTbody.innerHTML += `<tr>
-                        <td>${log.timestamp || ''}</td>
-                        <td>${log.recipient || ''}</td>
-                        <td>${log.subject || ''}</td>
-                        <td>${log.status || ''}</td>
-                        <td>
-                            <button class="btn btn-secondary" onclick="deleteEmailLog('${log._id}')" style="background: var(--color-error); color: white; padding: 0.3rem 0.6rem; font-size: 0.8rem;">Delete</button>
-                        </td>
-                    </tr>`;
-                });
-            }
+            const data = await logsRes.json();
+            const advocates = await advRes.json();
             
-            staffTbody.innerHTML = '';
-            if(data.staff_logs.length === 0) {
-                staffTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999; padding: 2rem;">No staff emails sent yet.</td></tr>';
+            const newDataHash = JSON.stringify(data);
+            if (window.emailLogsDataHash === newDataHash) return; // Skip redraw if data unchanged
+            window.emailLogsDataHash = newDataHash;
+            
+            // Remember currently open folders
+            const openFolders = new Set();
+            document.querySelectorAll('div[id^="folder-"]').forEach(f => {
+                if (f.style.display === 'block') openFolders.add(f.id.replace('folder-', ''));
+            });
+            
+            // Map email to name
+            const emailToName = {};
+            advocates.forEach(adv => emailToName[adv.email] = adv.name);
+            
+            // Group staff_logs by recipient
+            const staffGroups = {};
+            data.staff_logs.forEach(log => {
+                const email = log.recipient;
+                if (!staffGroups[email]) staffGroups[email] = [];
+                staffGroups[email].push(log);
+            });
+            
+            staffContainer.innerHTML = '';
+            
+            if(Object.keys(staffGroups).length === 0) {
+                staffContainer.innerHTML = '<p style="text-align: center; color: #999; padding: 2rem;">No staff emails sent yet.</p>';
             } else {
-                data.staff_logs.forEach(log => {
-                    staffTbody.innerHTML += `<tr>
-                        <td>${log.timestamp || ''}</td>
-                        <td>${log.recipient || ''}</td>
-                        <td>${log.subject || ''}</td>
-                        <td>${log.status || ''}</td>
-                        <td>
-                            <button class="btn btn-secondary" onclick="deleteEmailLog('${log._id}')" style="background: var(--color-error); color: white; padding: 0.3rem 0.6rem; font-size: 0.8rem;">Delete</button>
-                        </td>
-                    </tr>`;
-                });
+                for (const email in staffGroups) {
+                    const name = emailToName[email] || email;
+                    const logs = staffGroups[email];
+                    const folderId = email.replace(/[^a-zA-Z0-9]/g, ''); // safe ID
+                    
+                    const isOpen = openFolders.has(folderId);
+                    const displayStyle = isOpen ? 'block' : 'none';
+                    const iconArrow = isOpen ? '▲' : '▼';
+                    
+                    let html = `
+                        <div style="margin-bottom: 1rem; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                            <div onclick="toggleFolder('${folderId}')" style="background: var(--color-primary); color: white; padding: 1rem 1.5rem; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: background 0.2s;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    📁 ${name} <span style="font-size: 0.9rem; font-weight: normal; opacity: 0.8;">(${email})</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <button onclick="event.stopPropagation(); deleteStaffFolderLogs('${email}')" style="background: var(--color-error); color: white; padding: 0.3rem 0.6rem; font-size: 0.85rem; border-radius: 4px; border: none; cursor: pointer; display: flex; align-items: center; gap: 5px;">🗑️ Delete All</button>
+                                    <span id="icon-${folderId}">${iconArrow}</span>
+                                </div>
+                            </div>
+                            <div id="folder-${folderId}" style="display: ${displayStyle}; overflow-x: auto; background: white;">
+                                <table class="data-table" style="width: 100%; border: none; margin: 0;">
+                                    <thead style="background: #f8f9fa;">
+                                        <tr>
+                                            <th>Date & Time</th>
+                                            <th>Subject</th>
+                                            <th>Status</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                    `;
+                    
+                    logs.forEach(log => {
+                        html += `<tr>
+                            <td>${log.timestamp || ''}</td>
+                            <td>${log.subject || ''}</td>
+                            <td>
+                                <span style="background: ${log.status === 'Sent' ? '#e6f4ea' : '#fce8e8'}; color: ${log.status === 'Sent' ? '#1e8e3e' : '#d93025'}; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">
+                                    ${log.status || ''}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-secondary" onclick="deleteEmailLog('${log._id}')" style="background: var(--color-error); color: white; padding: 0.3rem 0.6rem; font-size: 0.8rem;">Delete</button>
+                            </td>
+                        </tr>`;
+                    });
+                    
+                    html += `</tbody></table></div></div>`;
+                    staffContainer.innerHTML += html;
+                }
             }
         } catch(e) {
             console.error(e);
+        }
+    };
+
+    window.toggleFolder = function(id) {
+        const folder = document.getElementById('folder-' + id);
+        const icon = document.getElementById('icon-' + id);
+        if (folder.style.display === 'none') {
+            folder.style.display = 'block';
+            icon.innerText = '▲';
+        } else {
+            folder.style.display = 'none';
+            icon.innerText = '▼';
+        }
+    };
+
+    
+    window.deleteStaffFolderLogs = async function(email) {
+        if (!confirm(`Are you sure you want to delete ALL email logs for ${email}? This cannot be undone.`)) return;
+        try {
+            const response = await fetch(`/api/email-logs/staff/${encodeURIComponent(email)}`, { method: 'DELETE' });
+            if (response.ok) {
+                alert('All logs for this staff member have been deleted.');
+                loadEmailLogs(); // reload UI
+            } else {
+                alert('Failed to delete logs.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error deleting logs.');
         }
     };
 
@@ -1035,6 +1212,7 @@ if (officeInfoForm) {
         document.getElementById('edit-adv-name').value = adv.name || '';
         document.getElementById('edit-adv-email').value = adv.email || '';
         document.getElementById('edit-adv-specialty').value = adv.specialty || '';
+        document.getElementById('edit-adv-phone').value = adv.phone || '';
         document.getElementById('edit-adv-image').value = '';
         editAdvocateImageUrl = adv.imageUrl || ''; // keep existing photo unless replaced
         
@@ -1081,6 +1259,7 @@ if (officeInfoForm) {
         const name = document.getElementById('edit-adv-name').value;
         const email = document.getElementById('edit-adv-email').value;
         const specialty = document.getElementById('edit-adv-specialty').value;
+        const phone = document.getElementById('edit-adv-phone').value;
         const fileInput = document.getElementById('edit-adv-image');
         
         if(!name || !email || !specialty) {
@@ -1097,7 +1276,7 @@ if (officeInfoForm) {
             const response = await fetch(`/api/advocates/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, specialty, imageUrl: finalImageUrl })
+                body: JSON.stringify({ name, email, specialty, phone, imageUrl: finalImageUrl })
             });
 
 
@@ -1126,6 +1305,8 @@ function showIdCard(id) {
 
     document.getElementById('id-card-name').innerText = adv.name || 'N/A';
     document.getElementById('id-card-role').innerText = adv.specialty || 'Staff Member';
+    document.getElementById('id-card-phone').innerText = adv.phone || 'N/A';
+    document.getElementById('id-card-email').innerText = adv.email || 'N/A';
 
     // Generate employee ID
     const idPrefix = (adv.specialty && adv.specialty.toLowerCase().includes('advocate')) ? 'ADV' : 'STF';
@@ -1154,7 +1335,8 @@ function showIdCard(id) {
         }
         // Address
         if (data.address) {
-            document.getElementById('id-card-address').innerText = data.address;
+            const addressEl = document.getElementById('id-card-address');
+            if (addressEl) addressEl.innerText = data.address;
         }
         // Logo
         const logoEl = document.getElementById('id-card-logo');
