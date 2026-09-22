@@ -24,7 +24,7 @@ import json
 import google.generativeai as genai
 
 # Setup Gemini API
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AQ.Ab8RN6IBMVFLPYgY4N6qkf5E0qLnB9xgvgtqjlND2hITrOsNPA")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
 
 
@@ -1389,8 +1389,11 @@ def parse_ai_command():
         '''
         
         import requests
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={GEMINI_API_KEY}"
-        headers = {'Content-Type': 'application/json'}
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent"
+        headers = {
+            'Content-Type': 'application/json',
+            'X-goog-api-key': GEMINI_API_KEY
+        }
         payload = {
             "contents": [{"parts": [{"text": prompt}]}]
         }
