@@ -1,7 +1,7 @@
 from datetime import timedelta
 import concurrent.futures
 import os
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from pymongo import MongoClient
 from bson import ObjectId
 import smtplib
@@ -10,13 +10,23 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 from email.utils import formatdate, make_msgid
-from datetime import datetime
+from datetime import datetime, timedelta
+from fpdf import FPDF
+import io
+import math
 import random
 import certifi
 import logging
 import socket
 import random
 import string
+import json
+import google.generativeai as genai
+
+# Setup Gemini API
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AQ.Ab8RN6IBMVFLPYgY4N6qkf5E0qLnB9xgvgtqjlND2hITrOsNPA")
+genai.configure(api_key=GEMINI_API_KEY)
+
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -43,6 +53,7 @@ try:
     cases_col = db['cases']
     email_logs_col = db['email_logs']
     gallery_col = db['gallery']
+    ai_audit_logs_col = db['ai_audit_logs']
     logging.info("Successfully connected to MongoDB")
 except Exception as e:
     logging.error(f"Error connecting to MongoDB: {e}")
@@ -251,25 +262,261 @@ def serve_index():
 def serve_static(path):
     return send_from_directory('.', path)
 
+
+@app.route('/api/appointments/vacancy', methods=['GET'])
+def get_appointment_vacancy():
+    date_str = request.args.get('date')
+    if not date_str:
+        return jsonify({"error": "Missing date"}), 400
+        
+    try:
+        parsed_date = datetime.strptime(date_str, "%Y-%m-%d")
+    except ValueError:
+        return jsonify({"error": "Invalid date"}), 400
+        
+    config = config_col.find_one({"_id": "global_config"}) or {}
+    settings = config.get("appointment_settings", {})
+    available_days = settings.get("available_days", ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
+    max_per_day = int(settings.get("max_per_day", 5))
+    
+    day_name = parsed_date.strftime("%A")
+    if day_name not in available_days:
+        return jsonify({"available": False, "message": f"Closed on {day_name}s"}), 200
+        
+    if parsed_date.date() == datetime.now().date():
+        sh, sm = map(int, settings.get("start_time", "10:00").split(':'))
+        start_time_dt = datetime.now().replace(hour=sh, minute=sm, second=0, microsecond=0)
+        if datetime.now() > start_time_dt:
+            return jsonify({"available": False, "message": "Booking closed for today"}), 200
+            
+    count = appointments_col.count_documents({"appointment_date": date_str})
+    remaining = max_per_day - count
+    
+    if remaining <= 0:
+        return jsonify({"available": False, "message": "Fully booked"}), 200
+        
+    return jsonify({"available": True, "remaining": remaining}), 200
+
+
+
+@app.route('/api/appointments/download', methods=['GET'])
+def download_appointments_by_date():
+    target_date = request.args.get('date')
+    if not target_date:
+        target_date = datetime.now().strftime("%Y-%m-%d")
+        
+    appointments = list(appointments_col.find({"appointment_date": target_date}).sort("appointment_time", 1))
+    
+    pdf = FPDF()
+    pdf.add_page()
+    
+    try:
+        pdf.image('assets/images/advocate_logo.jpg', x=85, y=10, w=40)
+    except:
+        pass
+        
+    pdf.set_font("Arial", 'B', 16)
+    pdf.ln(40)
+    pdf.cell(200, 10, txt=f"JSM Chambers - Appointments for {target_date}", ln=1, align='C')
+    pdf.ln(10)
+    
+    if not appointments:
+        pdf.set_font("Arial", size=12)
+        pdf.cell(200, 10, txt=f"No appointments scheduled for {target_date}.", ln=1, align='C')
+    else:
+        # Table Header
+        pdf.set_font("Arial", 'B', 10)
+        pdf.cell(45, 10, "Time", border=1)
+        pdf.cell(50, 10, "Client Name", border=1)
+        pdf.cell(55, 10, "Email", border=1)
+        pdf.cell(40, 10, "Reason", border=1)
+        pdf.ln()
+        
+        # Table Body
+        pdf.set_font("Arial", size=9)
+        for appt in appointments:
+            time = str(appt.get('appointment_time', 'N/A'))
+            name = str(appt.get('name', 'N/A'))[:28]
+            email = str(appt.get('email', 'N/A'))[:32]
+            subject = str(appt.get('subject', 'N/A'))[:22]
+            
+            pdf.cell(45, 10, time, border=1)
+            pdf.cell(50, 10, name, border=1)
+            pdf.cell(55, 10, email, border=1)
+            pdf.cell(40, 10, subject, border=1)
+            pdf.ln()
+            
+    pdf_bytes = pdf.output(dest='S').encode('latin1')
+    
+    return send_file(
+        io.BytesIO(pdf_bytes),
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f'Appointments_{target_date}.pdf'
+    )
+
 @app.route('/api/appointments', methods=['POST'])
 def create_appointment():
     data = request.get_json(force=True, silent=True) or {}
     name = data.get('name')
     email = data.get('email')
-    service = data.get('service')
+    subject = data.get('subject', 'General Consultation')
+    requested_date = data.get('date')
     
+    if not requested_date:
+        return jsonify({"error": "Please select an appointment date."}), 400
+        
+    try:
+        parsed_date = datetime.strptime(requested_date, "%Y-%m-%d")
+    except ValueError:
+        return jsonify({"error": "Invalid date format."}), 400
+        
+    if parsed_date.date() < datetime.now().date():
+        return jsonify({"error": "Cannot book appointments in the past."}), 400
+
+    # Auto-assign logic based on settings
+    config = config_col.find_one({"_id": "global_config"}) or {}
+    settings = config.get("appointment_settings", {})
+    available_days = settings.get("available_days", ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
+    start_time_str = settings.get("start_time", "10:00")
+    end_time_str = settings.get("end_time", "17:00")
+    max_per_day = int(settings.get("max_per_day", 5))
+    
+    day_name = parsed_date.strftime("%A")
+    if day_name not in available_days:
+        return jsonify({"error": f"We do not accept appointments on {day_name}s. Please choose an available day: {', '.join(available_days)}."}), 400
+        
+    if parsed_date.date() == datetime.now().date():
+        sh, sm = map(int, start_time_str.split(':'))
+        start_time_dt = datetime.now().replace(hour=sh, minute=sm, second=0, microsecond=0)
+        if datetime.now() > start_time_dt:
+            return jsonify({"error": "Same-day bookings are not allowed after the day's start time has passed. Please select a future date."}), 400
+
+    date_str = requested_date
+    count = appointments_col.count_documents({"appointment_date": date_str})
+    
+    if count >= max_per_day:
+        return jsonify({"error": "This day is fully booked. Please select another date."}), 400
+        
+    # calculate precise time slot
+    slot_duration = int(settings.get("slot_duration", 30))
+    sh, sm = map(int, start_time_str.split(':'))
+    
+    start_mins = (sh*60 + sm) + (count * slot_duration)
+    end_mins = start_mins + slot_duration
+    
+    def format_time_12hr(total_m):
+        h = int(total_m // 60)
+        m = int(total_m % 60)
+        ampm = "AM" if h < 12 else "PM"
+        dh = h if h <= 12 else h - 12
+        if dh == 0: dh = 12
+        return f"{dh:02d}:{m:02d} {ampm}"
+        
+    assigned_time = f"{format_time_12hr(start_mins)} - {format_time_12hr(end_mins)}"
+    assigned_date = date_str
+        
     appointment = {
         "name": name,
         "email": email,
-        "service": service,
-        "request_date": datetime.now().strftime("%d %b %Y"),
-        "status": "Pending",
-        "appointment_date": "",
-        "appointment_time": ""
+        "subject": subject,
+        "request_date": datetime.now().strftime("%Y-%m-%d"),
+        "status": "Approved",
+        "appointment_date": assigned_date,
+        "appointment_time": assigned_time
     }
     result = appointments_col.insert_one(appointment)
-    send_appointment_received_email(email, name)
-    return jsonify({"message": "Appointment created successfully", "id": str(result.inserted_id)}), 201
+    
+    # Generate PDF
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # Add Logo
+    try:
+        pdf.image('assets/images/advocate_logo.jpg', x=85, y=10, w=40)
+    except:
+        pass
+        
+    pdf.set_font("Arial", 'B', 16)
+    pdf.ln(40)
+    pdf.cell(200, 10, txt="JSM Chambers - Official Appointment Confirmation", ln=1, align='C')
+    
+    pdf.set_font("Arial", size=12)
+    pdf.ln(10)
+    
+    details = [
+        f"Client Name: {name}",
+        f"Email Address: {email}",
+        f"Subject / Reason: {subject}",
+        f"Assigned Date: {assigned_date}",
+        f"Assigned Time: {assigned_time}",
+        f"Appointment ID: {str(result.inserted_id)}"
+    ]
+    
+    for d in details:
+        pdf.cell(200, 10, txt=d, ln=1, align='L')
+        
+    pdf.ln(10)
+    pdf.set_font("Arial", 'I', 10)
+    pdf.cell(200, 10, txt="Please arrive 10 minutes prior to your assigned time.", ln=1, align='L')
+    
+    pdf_bytes = pdf.output(dest='S').encode('latin1')
+    
+    # Send Email with Attachment
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_USER
+        msg['To'] = email
+        msg['Subject'] = "Appointment Confirmed - JSM Chambers"
+        
+        body_html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #D4AF37;">Appointment Confirmed</h2>
+                <p>Dear <strong>{name}</strong>,</p>
+                <p>Your appointment has been successfully scheduled. Below are your confirmed details:</p>
+                
+                <table style="width: 100%; margin-top: 15px; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;"><strong>Date:</strong></td>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">{assigned_date}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;"><strong>Time:</strong></td>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">{assigned_time}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;"><strong>Subject/Reason:</strong></td>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">{subject}</td>
+                    </tr>
+                </table>
+                
+                <p style="margin-top: 20px;">Please find your official PDF appointment slip attached to this email. You may be asked to present this upon arrival.</p>
+                <p>Regards,<br><strong>JSM Chambers</strong></p>
+            </div>
+        </body>
+        </html>
+        """
+        msg.attach(MIMEText(body_html, 'html'))
+        
+        part = MIMEBase('application', 'pdf')
+        part.set_payload(pdf_bytes)
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', f'attachment; filename="Appointment_{assigned_date}.pdf"')
+        msg.attach(part)
+        
+        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASSWORD)
+        server.send_message(msg)
+        server.quit()
+        log_email(email, "Appointment Confirmed - JSM Chambers", "Sent", "250 OK")
+    except Exception as e:
+        log_email(email, "Appointment Confirmed - JSM Chambers", "Failed", str(e))
+        logging.error(f"Error sending email: {e}")
+
+    return jsonify({"message": "Appointment created and assigned successfully", "id": str(result.inserted_id), "date": assigned_date, "time": assigned_time}), 201
 
 @app.route('/api/appointments', methods=['GET'])
 def get_appointments():
@@ -919,9 +1166,22 @@ def staff_verify_code():
 
 
 
+
+@app.route('/api/system-config/appointments', methods=['POST'])
+def save_appointment_settings():
+    data = request.json
+    config_col.update_one(
+        {"_id": "global_config"},
+        {"$set": {"appointment_settings": data}},
+        upsert=True
+    )
+    return jsonify({"message": "Settings saved"}), 200
+
 @app.route('/api/system-config', methods=['GET'])
 def get_system_config():
     config = ensure_daily_passwords()
+    global_config = config_col.find_one({"_id": "global_config"}) or {}
+    config['appointment_settings'] = global_config.get('appointment_settings', {})
     config['_id'] = str(config['_id']) if '_id' in config else None
     return jsonify(config), 200
 
@@ -1083,6 +1343,161 @@ def add_header(response):
     response.headers["Expires"] = "-1"
     return response
 
+
+
+
+
+@app.route('/api/ai/parse-command', methods=['POST'])
+def parse_ai_command():
+    # Only allow admins (in real production, add @login_required decorator equivalent)
+    data = request.json
+    transcript = data.get('transcript', '')
+    
+    if not transcript:
+        return jsonify({"error": "No transcript provided"}), 400
+        
+    try:
+        # Prompt the Gemini model using direct REST API to avoid SDK version issues
+        prompt = f'''
+        You are a Legal Case Management AI Assistant. Your job is to extract database query criteria and intended updates from a natural language transcript.
+        
+        Transcript: "{transcript}"
+        
+        Extract the case search criteria (e.g., case_number, client_name, court) and the proposed changes (e.g., status, next_hearing, notes).
+        
+        Supported Fields:
+        - status (e.g., "Under Review", "Finished & Archived", "Active")
+        - next_hearing (Date string)
+        - notes (String)
+        - client_name (String)
+        - chamber_case_number (String)
+        - court_case_number (String)
+        
+        Return ONLY a JSON object in this exact format:
+        {{
+            "search_criteria": {{
+                "case_number": "...",
+                "client_name": "..."
+            }},
+            "proposed_changes": {{
+                "status": "...",
+                "next_hearing": "...",
+                "notes": "..."
+            }}
+        }}
+        Do not wrap the JSON in Markdown or backticks. Return the raw JSON string. If a field is not mentioned, omit it.
+        '''
+        
+        import requests
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={GEMINI_API_KEY}"
+        headers = {'Content-Type': 'application/json'}
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}]
+        }
+        resp = requests.post(url, headers=headers, json=payload)
+        
+        if resp.status_code != 200:
+            return jsonify({"status": "error", "message": f"Gemini API Error: {resp.text}"}), 500
+            
+        data = resp.json()
+        try:
+            response_text = data['candidates'][0]['content']['parts'][0]['text'].strip()
+        except KeyError:
+            return jsonify({"status": "error", "message": "Unexpected response from Gemini API"}), 500
+        
+        # Clean markdown if present
+        if response_text.startswith('```json'):
+            response_text = response_text[7:-3].strip()
+        elif response_text.startswith('```'):
+            response_text = response_text[3:-3].strip()
+            
+        ai_payload = json.loads(response_text)
+        search_criteria = ai_payload.get('search_criteria', {})
+        proposed_changes = ai_payload.get('proposed_changes', {})
+        
+        if not search_criteria and not proposed_changes:
+             return jsonify({"status": "error", "message": "Could not understand the command."}), 400
+             
+        # Build MongoDB query
+        query = {}
+        if search_criteria.get('case_number'):
+            case_no = search_criteria['case_number']
+            query['$or'] = [
+                {"chamber_case_number": {"$regex": case_no, "$options": "i"}},
+                {"court_case_number": {"$regex": case_no, "$options": "i"}}
+            ]
+        if search_criteria.get('client_name'):
+            query['client_name'] = {"$regex": search_criteria['client_name'], "$options": "i"}
+            
+        if not query:
+            return jsonify({"status": "error", "message": "No case identifiers (Case No, Client) found in command."}), 400
+            
+        matching_cases = list(cases_col.find(query).limit(5))
+        for c in matching_cases:
+            c['_id'] = str(c['_id'])
+            
+        if len(matching_cases) == 0:
+            return jsonify({"status": "not_found", "message": "No cases matched your criteria."})
+        elif len(matching_cases) == 1:
+            return jsonify({
+                "status": "confirm",
+                "case": matching_cases[0],
+                "proposed_changes": proposed_changes
+            })
+        else:
+            return jsonify({
+                "status": "multiple_matches",
+                "cases": matching_cases,
+                "proposed_changes": proposed_changes
+            })
+            
+    except Exception as e:
+        logging.error(f"AI Parse Error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/ai/execute-command', methods=['POST'])
+def execute_ai_command():
+    data = request.json
+    case_id = data.get('case_id')
+    changes = data.get('changes', {})
+    admin_id = data.get('admin_id', 'Unknown Admin')
+    transcript = data.get('transcript', '')
+    
+    if not case_id or not changes:
+        return jsonify({"error": "Invalid payload"}), 400
+        
+    try:
+        # Get old case state
+        old_case = cases_col.find_one({"_id": ObjectId(case_id)})
+        
+        # Apply changes
+        cases_col.update_one({"_id": ObjectId(case_id)}, {"$set": changes})
+        
+        # Audit Log
+        audit_log = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "admin_id": admin_id,
+            "original_transcript": transcript,
+            "interpreted_changes": changes,
+            "target_case_id": case_id,
+            "status": "Success"
+        }
+        ai_audit_logs_col.insert_one(audit_log)
+        
+        return jsonify({"success": True}), 200
+        
+    except Exception as e:
+        logging.error(f"AI Execute Error: {str(e)}")
+        # Log failure
+        ai_audit_logs_col.insert_one({
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "admin_id": admin_id,
+            "original_transcript": transcript,
+            "target_case_id": case_id,
+            "status": f"Error: {str(e)}"
+        })
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == '__main__':
     app.run(debug=False, port=8081, host='0.0.0.0')
-

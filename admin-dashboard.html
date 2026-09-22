@@ -205,7 +205,10 @@
                     <h2>Admin Dashboard</h2>
                     <p style="color: var(--color-text-light);">System Overview</p>
                 </div>
-                <div>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <button id="ai-voice-btn" class="btn btn-primary" onclick="startAiVoice()" style="background: linear-gradient(135deg, #102a43, #D4AF37); color: white; display: flex; align-items: center; gap: 8px; border: none; padding: 0.6rem 1.2rem; border-radius: 8px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);">
+                        <span style="font-size: 1.2rem;">🎙️</span> AI Voice Update
+                    </button>
                 </div>
             </header>
 
@@ -288,6 +291,7 @@
                         <h3>Clients Directory / History</h3>
                         <p style="color: var(--color-text-light); margin-top: 1rem;">Historical archive of finished and closed cases.</p>
                         
+                        
                         <table class="data-table" style="margin-top: 2rem;">
                             <thead>
                                 <tr>
@@ -310,8 +314,73 @@
                                 <h3>Incoming Appointments</h3>
                                 <p style="color: var(--color-text-light); margin-top: 1rem;">Review new legal appointment requests.</p>
                             </div>
-                            <button id="delete-all-appointments-btn" class="btn btn-error" style="background-color: #D32F2F; color: white; border: none; padding: 0.5rem 1rem; cursor: pointer; border-radius: 4px;" onclick="deleteAllAppointments()">Delete All</button>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="date" id="download-appt-date" class="form-control" style="padding: 0.4rem; border-radius: 4px; border: 1px solid #ccc;">
+                                <button onclick="downloadPdfByDate()" class="btn btn-primary" style="background-color: #10b981; color: white; border: none; padding: 0.5rem 1rem; cursor: pointer; border-radius: 4px; text-decoration: none; font-size: 0.9rem;">📥 Download PDF</button>
+                                <button id="delete-all-appointments-btn" class="btn btn-error" style="background-color: #D32F2F; color: white; border: none; padding: 0.5rem 1rem; cursor: pointer; border-radius: 4px;" onclick="deleteAllAppointments()">Delete All</button>
+                            </div>
+                            <script>
+                                // Set today's date as default
+                                document.getElementById('download-appt-date').valueAsDate = new Date();
+                                
+                                function downloadPdfByDate() {
+                                    const date = document.getElementById('download-appt-date').value;
+                                    if(date) {
+                                        window.open(`/api/appointments/download?date=${date}`, '_blank');
+                                    } else {
+                                        alert('Please select a date first.');
+                                    }
+                                }
+                            </script>
                         </div>
+                        
+                        <!-- Availability Settings -->
+                        <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 1.5rem;">
+                            <h4 style="margin-top:0; color: var(--color-primary); display:flex; align-items:center; justify-content:space-between;">
+                                <span>📅 Auto-Assignment Availability Settings</span>
+                                <button onclick="saveAppointmentSettings()" class="btn btn-primary" style="padding: 0.4rem 1rem; font-size: 0.9rem;">Save Settings</button>
+                            </h4>
+                            <p style="font-size: 0.9rem; color: #64748b;">The system will automatically assign dates and times to new client requests based on these limits.</p>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1rem;">
+                                <div>
+                                    <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Available Days</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 15px;" id="available-days-container">
+                                        <label style="cursor: pointer;"><input type="checkbox" value="Monday" class="day-checkbox"> Mon</label>
+                                        <label style="cursor: pointer;"><input type="checkbox" value="Tuesday" class="day-checkbox"> Tue</label>
+                                        <label style="cursor: pointer;"><input type="checkbox" value="Wednesday" class="day-checkbox"> Wed</label>
+                                        <label style="cursor: pointer;"><input type="checkbox" value="Thursday" class="day-checkbox"> Thu</label>
+                                        <label style="cursor: pointer;"><input type="checkbox" value="Friday" class="day-checkbox"> Fri</label>
+                                        <label style="cursor: pointer;"><input type="checkbox" value="Saturday" class="day-checkbox"> Sat</label>
+                                        <label style="cursor: pointer;"><input type="checkbox" value="Sunday" class="day-checkbox"> Sun</label>
+                                    </div>
+                                </div>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem;">
+                                    <div>
+                                        <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Start Time</label>
+                                        <input type="time" id="appt-start-time" class="form-control" value="10:00">
+                                    </div>
+                                    <div>
+                                        <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">End Time</label>
+                                        <input type="time" id="appt-end-time" class="form-control" value="17:00">
+                                    </div>
+                                    <div>
+                                        <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Max per Day</label>
+                                        <input type="number" id="appt-max-day" class="form-control" value="5" min="1" max="50">
+                                    </div>
+                                    <div>
+                                        <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Slot Duration</label>
+                                        <select id="appt-slot-duration" class="form-control">
+                                            <option value="15">15 mins</option>
+                                            <option value="30" selected>30 mins</option>
+                                            <option value="45">45 mins</option>
+                                            <option value="60">1 Hour</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <table class="data-table" style="margin-top: 2rem;">
                             <thead>
                                 <tr>
@@ -567,7 +636,7 @@
     </main>
     </div>
 
-    <script src="js/admin.js?v=17"></script>
+    <script src="js/admin.js?v=18"></script>
 
     <!-- Edit Advocate Modal -->
     <div id="edit-advocate-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
@@ -669,5 +738,46 @@
     </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<!-- AI Voice Overlays -->
+<div id="ai-listening-overlay" style="display: none; position: fixed; inset: 0; background: rgba(16, 42, 67, 0.9); z-index: 10000; align-items: center; justify-content: center; flex-direction: column;">
+    <div style="width: 100px; height: 100px; border-radius: 50%; background: #D4AF37; display: flex; align-items: center; justify-content: center; font-size: 3rem; animation: pulse-ai 1.5s infinite; box-shadow: 0 0 30px rgba(212, 175, 55, 0.6);">🎙️</div>
+    <h2 style="color: white; margin-top: 2rem; font-family: 'Poppins', sans-serif;">Listening...</h2>
+    <p id="ai-transcript-preview" style="color: #cbd5e1; font-size: 1.1rem; margin-top: 1rem; max-width: 600px; text-align: center; font-style: italic;"></p>
+</div>
+
+<div id="ai-confirm-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 2.5rem; border-radius: 12px; max-width: 500px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+        <h2 style="color: var(--color-primary); margin-top: 0; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">🤖 AI Action Confirmation</h2>
+        <p style="color: #64748b; font-size: 0.9rem;">Please confirm the changes the AI intends to make.</p>
+        
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0;">
+            <h4 style="margin: 0 0 10px 0; color: #334155;">Target Case:</h4>
+            <p id="ai-confirm-case-title" style="margin: 0; font-weight: bold; color: #0f172a;"></p>
+            <p id="ai-confirm-case-subtitle" style="margin: 5px 0 0 0; font-size: 0.85rem; color: #64748b;"></p>
+            
+            <h4 style="margin: 15px 0 10px 0; color: #334155; border-top: 1px solid #e2e8f0; padding-top: 15px;">Proposed Changes:</h4>
+            <ul id="ai-confirm-changes-list" style="margin: 0; padding-left: 20px; color: #0f172a;"></ul>
+        </div>
+        
+        <div id="ai-voice-prompt" style="text-align: center; margin-bottom: 15px; color: #e11d48; font-weight: bold; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <span style="display: inline-block; width: 10px; height: 10px; background: #e11d48; border-radius: 50%; animation: pulse-ai 1s infinite;"></span> Listening for "Confirm" or "Cancel"...
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button class="btn btn-outline" onclick="cancelAiAction()">Cancel</button>
+            <button class="btn btn-primary" onclick="confirmAiAction()">Confirm Update</button>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes pulse-ai {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.7); }
+    70% { transform: scale(1.1); box-shadow: 0 0 0 20px rgba(212, 175, 55, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+}
+</style>
+
 </body>
 </html>

@@ -3066,6 +3066,54 @@ Our team will contact you for confirmation.
 <input id="app-email" type="email" placeholder="you@example.com" required>
 </div>
 
+<div class="form-group">
+<label>Subject / Reason to meet</label>
+<input id="app-subject" type="text" placeholder="e.g. Legal Consultation, Property Dispute" required>
+</div>
+
+<div class="form-group">
+<label>Preferred Date</label>
+<input id="app-date" type="date" required style="width: 100%; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit;" onchange="checkVacancy()">
+<div id="vacancy-status" style="margin-top: 8px; font-size: 0.9rem; font-weight: bold;"></div>
+</div>
+<script>
+    const today = new Date();
+    // Allow same-day bookings if before start time
+    document.getElementById('app-date').min = today.toISOString().split('T')[0];
+    
+    async function checkVacancy() {
+        const dateVal = document.getElementById('app-date').value;
+        const statusEl = document.getElementById('vacancy-status');
+        const btn = document.getElementById('appointmentBtn');
+        if(!dateVal) {
+            statusEl.innerText = '';
+            return;
+        }
+        
+        statusEl.style.color = '#64748b';
+        statusEl.innerText = 'Checking availability...';
+        btn.disabled = true;
+        
+        try {
+            const res = await fetch(`/api/appointments/vacancy?date=${dateVal}`);
+            const data = await res.json();
+            
+            if(data.available) {
+                statusEl.style.color = '#10b981';
+                statusEl.innerText = `✅ Available (${data.remaining} slots left)`;
+                btn.disabled = false;
+            } else {
+                statusEl.style.color = '#ef4444';
+                statusEl.innerText = `❌ ${data.message || 'Fully booked'}`;
+                btn.disabled = true;
+            }
+        } catch(e) {
+            statusEl.innerText = '';
+            btn.disabled = false;
+        }
+    }
+</script>
+
 
 
 
@@ -3172,7 +3220,8 @@ async function submitAppointment(event){
     
     const name = document.getElementById("app-name").value.trim();
     const email = document.getElementById("app-email").value.trim();
-    
+    const subject = document.getElementById("app-subject").value;
+    const date = document.getElementById("app-date").value;
 
     const button = document.getElementById("appointmentBtn");
     const processing = document.getElementById("processing");
@@ -3187,14 +3236,16 @@ async function submitAppointment(event){
         const response = await fetch('/api/appointments', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email })
+            body: JSON.stringify({ name, email, subject, date })
         });
+        
+        const data = await response.json();
         
         if (response.ok) {
             processing.style.display = "none";
             success.style.display = "block";
         } else {
-            alert('Failed to submit request.');
+            alert(data.error || 'Failed to submit request.');
             form.style.display = "block";
             processing.style.display = "none";
         }
