@@ -685,8 +685,8 @@ def delete_staff_email_logs(email):
 @app.route('/api/admin-login', methods=['POST'])
 def admin_login():
     data = request.get_json(force=True, silent=True) or {}
-    password = data.get('password')
-    if password == 'admin123':
+    password = data.get('password', '')
+    if password and password.strip() == 'admin123':
         return jsonify({"success": True}), 200
     return jsonify({"error": "Invalid credentials"}), 401
 
