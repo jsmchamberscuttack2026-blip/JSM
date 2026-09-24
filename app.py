@@ -36,7 +36,14 @@ else:
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    logging.error(f"Global Exception: {str(e)}")
+    return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
+
 app = Flask(__name__, static_folder='.', static_url_path='')
+
 app.config['SECRET_KEY'] = 'secret!'
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB
 
