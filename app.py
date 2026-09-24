@@ -37,12 +37,12 @@ else:
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
+app = Flask(__name__, static_folder='.', static_url_path='')
+
 @app.errorhandler(Exception)
 def handle_exception(e):
     logging.error(f"Global Exception: {str(e)}")
     return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
-
-app = Flask(__name__, static_folder='.', static_url_path='')
 
 app.config['SECRET_KEY'] = 'secret!'
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB
@@ -692,9 +692,13 @@ def delete_staff_email_logs(email):
 @app.route('/api/admin-login', methods=['POST'])
 def admin_login():
     data = request.get_json(force=True, silent=True) or {}
-    password = data.get('password', '')
-    if password and password.strip() == 'admin123':
+    user_id = data.get('email', '').strip()
+    password = data.get('password', '').strip()
+    
+    # Check both the User ID (which frontend sends as 'email') and the Password
+    if user_id == 'JSM' and password == 'JAYA@CDA11':
         return jsonify({"success": True}), 200
+    
     return jsonify({"error": "Invalid credentials"}), 401
 
 @app.route('/api/cases', methods=['POST'])
