@@ -1492,7 +1492,7 @@ async function processAiTranscript(transcript) {
         document.getElementById('ai-listening-overlay').style.display = 'none';
         
         if (data.status === 'confirm') {
-            showAiConfirmModal(data.case, data.proposed_changes, transcript);
+            showAiConfirmModal(data.case, data.proposed_changes, transcript, data.email_draft);
         } else if (data.status === 'multiple_matches') {
             // Future enhancement: show disambiguation UI
             alert("Found multiple cases matching your voice request. Please be more specific with the Case Number.");
@@ -1507,7 +1507,7 @@ async function processAiTranscript(transcript) {
     }
 }
 
-function showAiConfirmModal(targetCase, changes, originalTranscript) {
+function showAiConfirmModal(targetCase, changes, originalTranscript, emailDraft = null) {
     const modal = document.getElementById('ai-confirm-modal');
     document.getElementById('ai-confirm-case-title').innerText = `${targetCase.client_name} (Case: ${targetCase.chamber_case_number || '-'})`;
     document.getElementById('ai-confirm-case-subtitle').innerText = `Court No: ${targetCase.court_case_number || '-'} | Type: ${targetCase.case_type || '-'}`;
@@ -1519,11 +1519,20 @@ function showAiConfirmModal(targetCase, changes, originalTranscript) {
         list.innerHTML += `<li><strong>${key.replace('_', ' ').toUpperCase()}:</strong> ${value}</li>`;
     }
     
+    if (emailDraft && emailDraft.subject) {
+        list.innerHTML += `<li style="background: #eef2ff; border-left: 3px solid #6366f1; padding: 10px; margin-top: 10px;">
+            <strong style="color: #4f46e5;">✉️ AUTOMATED EMAIL TO CLIENT</strong><br>
+            <strong>Subject:</strong> ${emailDraft.subject}<br>
+            <div style="font-size: 0.9em; margin-top: 5px; color: #333;">${emailDraft.body}</div>
+        </li>`;
+    }
+    
     currentAiPayload = {
         case_id: targetCase._id,
         changes: changes,
         transcript: originalTranscript,
-        admin_id: window.globalAdminId || 'Admin'
+        admin_id: window.globalAdminId || 'Admin',
+        email_draft: emailDraft
     };
     
     modal.style.display = 'flex';

@@ -21,12 +21,18 @@ import socket
 import random
 import string
 import json
-import google.generativeai as genai
+from dotenv import load_dotenv
+from groq import Groq
 
-# Setup Gemini API
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-genai.configure(api_key=GEMINI_API_KEY)
+# Load environment variables from .env
+load_dotenv()
 
+# Setup Groq API
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+if GROQ_API_KEY:
+    groq_client = Groq(api_key=GROQ_API_KEY)
+else:
+    groq_client = None
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -1347,6 +1353,33 @@ def add_header(response):
 
 
 
+@app.route('/api/ai/transcribe', methods=['POST'])
+def transcribe_audio():
+    if not groq_client:
+        return jsonify({"error": "Groq client not initialized"}), 500
+        
+    if 'audio' not in request.files:
+        return jsonify({"error": "No audio file provided"}), 400
+        
+    audio_file = request.files['audio']
+    if audio_file.filename == '':
+        return jsonify({"error": "Empty audio file"}), 400
+        
+    try:
+        # Read the file directly into memory and send to Groq Whisper
+        file_bytes = audio_file.read()
+        filename = audio_file.filename or "recording.webm"
+        
+        transcription = groq_client.audio.transcriptions.create(
+            file=(filename, file_bytes),
+            model="whisper-large-v3",
+            response_format="json"
+        )
+        return jsonify({"transcript": transcription.text}), 200
+    except Exception as e:
+        logging.error(f"Groq Transcribe Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/ai/parse-command', methods=['POST'])
 def parse_ai_command():
     # Only allow admins (in real production, add @login_required decorator equivalent)
@@ -1373,6 +1406,11 @@ def parse_ai_command():
         - chamber_case_number (String)
         - court_case_number (String)
         
+        CRITICAL RULES FOR EMAILS: 
+        If the admin requests to "send an email" or "notify the client", you MUST create an "email_draft" object. 
+        DO NOT put email messages into the "notes" field. The "notes" field is ONLY for internal admin notes, not emails.
+        Do NOT include greetings or signatures (like "Dear Client" or "Regards") in the email body, just the core message.
+        
         Return ONLY a JSON object in this exact format:
         {{
             "search_criteria": {{
@@ -1383,30 +1421,35 @@ def parse_ai_command():
                 "status": "...",
                 "next_hearing": "...",
                 "notes": "..."
+            }},
+            "email_draft": {{
+                "subject": "...",
+                "body": "..."
             }}
         }}
         Do not wrap the JSON in Markdown or backticks. Return the raw JSON string. If a field is not mentioned, omit it.
         '''
         
-        import requests
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent"
-        headers = {
-            'Content-Type': 'application/json',
-            'X-goog-api-key': GEMINI_API_KEY
-        }
-        payload = {
-            "contents": [{"parts": [{"text": prompt}]}]
-        }
-        resp = requests.post(url, headers=headers, json=payload)
         
-        if resp.status_code != 200:
-            return jsonify({"status": "error", "message": f"Gemini API Error: {resp.text}"}), 500
+        if not groq_client:
+            return jsonify({"status": "error", "message": "Groq API not configured."}), 500
             
-        data = resp.json()
-        try:
-            response_text = data['candidates'][0]['content']['parts'][0]['text'].strip()
-        except KeyError:
-            return jsonify({"status": "error", "message": "Unexpected response from Gemini API"}), 500
+        completion = groq_client.chat.completions.create(
+            model="openai/gpt-oss-20b",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a Legal Case Management AI Assistant."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0.1,
+            response_format={"type": "json_object"}
+        )
+        response_text = completion.choices[0].message.content
         
         # Clean markdown if present
         if response_text.startswith('```json'):
@@ -1415,6 +1458,7 @@ def parse_ai_command():
             response_text = response_text[3:-3].strip()
             
         ai_payload = json.loads(response_text)
+        print("GEMINI PAYLOAD:", json.dumps(ai_payload, indent=2))
         search_criteria = ai_payload.get('search_criteria', {})
         proposed_changes = ai_payload.get('proposed_changes', {})
         
@@ -1439,19 +1483,23 @@ def parse_ai_command():
         for c in matching_cases:
             c['_id'] = str(c['_id'])
             
+        email_draft = ai_payload.get('email_draft')
+        
         if len(matching_cases) == 0:
             return jsonify({"status": "not_found", "message": "No cases matched your criteria."})
         elif len(matching_cases) == 1:
             return jsonify({
                 "status": "confirm",
                 "case": matching_cases[0],
-                "proposed_changes": proposed_changes
+                "proposed_changes": proposed_changes,
+                "email_draft": email_draft
             })
         else:
             return jsonify({
                 "status": "multiple_matches",
                 "cases": matching_cases,
-                "proposed_changes": proposed_changes
+                "proposed_changes": proposed_changes,
+                "email_draft": email_draft
             })
             
     except Exception as e:
@@ -1466,15 +1514,45 @@ def execute_ai_command():
     admin_id = data.get('admin_id', 'Unknown Admin')
     transcript = data.get('transcript', '')
     
-    if not case_id or not changes:
-        return jsonify({"error": "Invalid payload"}), 400
+    email_draft = data.get('email_draft')
+    if not case_id or (not changes and not email_draft):
+        return jsonify({"error": "Invalid payload. No changes or email draft provided."}), 400
         
     try:
         # Get old case state
         old_case = cases_col.find_one({"_id": ObjectId(case_id)})
         
-        # Apply changes
-        cases_col.update_one({"_id": ObjectId(case_id)}, {"$set": changes})
+        # Apply changes only if there are any
+        if changes:
+            update_query = {"$set": changes}
+            if "next_hearing" in changes:
+                update_query["$addToSet"] = {"hearing_history": changes["next_hearing"]}
+            cases_col.update_one({"_id": ObjectId(case_id)}, update_query)
+        
+        email_draft = data.get('email_draft')
+        if email_draft and email_draft.get('subject') and old_case.get('email'):
+            import concurrent.futures
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.text import MIMEText
+            
+            msg = MIMEMultipart()
+            msg['From'] = SMTP_USER
+            msg['To'] = old_case['email']
+            msg['Subject'] = email_draft.get('subject', 'Update regarding your case')
+            
+            body = email_draft.get('body', '')
+            html_body = f'''
+            <div style="font-family: Arial, sans-serif; color: #333;">
+                <p>Dear {old_case.get('client_name', 'Client')},</p>
+                <p>{body.replace(chr(10), '<br>')}</p>
+                <br><br>
+                <p>Best Regards,<br><strong>JSM Chambers</strong></p>
+            </div>
+            '''
+            msg.attach(MIMEText(html_body, 'html', 'utf-8'))
+            
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                executor.submit(send_email_core, old_case['email'], msg, msg['Subject'])
         
         # Audit Log
         audit_log = {
