@@ -215,6 +215,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 casesGrid.innerHTML = '';
                 cases.forEach(c => {
                     const card = document.createElement('div');
+                    card.className = 'admin-case-card-item';
+                    card.setAttribute('data-chamber', (c.chamber_case_number || '').toLowerCase());
+                    card.setAttribute('data-court', (c.court_case_number || '').toLowerCase());
+                    card.setAttribute('data-name', (c.client_name || '').toLowerCase());
                     card.style.cssText = "background: #f8fafc; border: 1px solid #e7ebf0; border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between;";
                     let statusColor = c.status === "Under Review" ? "#b7791f" : "#2e7d32";
                     card.innerHTML = `
@@ -225,10 +229,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                             <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #667085;">🏷️ Chamber: ${c.chamber_case_number || '-'} | Court: ${c.court_case_number || '-'}</p>
                             <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #667085;">💼 ${c.case_type}</p>
-                            <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #667085;">👤 ${c.assigned_staff_email || 'Unassigned Staff'}</p>
+                            
                             <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: #667085;">📅 ${c.next_hearing}</p>
                         </div>
-                        <button class="btn btn-outline" style="width: 100%; border-color: #0b1f33; color: #0b1f33;" onclick="openCaseModal('${c._id}')">Open File</button>
+                        <div style="display: flex; gap: 8px; margin-top: 10px;">
+                            <button class="btn btn-outline" style="flex: 1; border-color: #0b1f33; color: #0b1f33; padding: 0.5rem;" onclick="openCaseModal('${c._id}')">Open File</button>
+                            <button class="btn btn-primary" style="flex: 1; padding: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 5px;" onclick="printCaseDetails('${c._id}')">
+                                ⬇️ Report
+                            </button>
+                        </div>
                     `;
                     casesGrid.appendChild(card);
                 });
@@ -241,12 +250,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         const statusClass = c.status === "Under Review" ? "pending" : "active";
                         tr.innerHTML = `
                             <td>C: ${c.chamber_case_number || '-'} <br> Ct: ${c.court_case_number || '-'}</td>
-                            <td><a href="#" onclick="printCaseDetails('${c._id}'); return false;" style="color: #0A192F; font-weight: bold; text-decoration: underline;">${c.client_name} 📄</a></td>
+                            <td style="font-weight: bold; color: #0A192F;">${c.client_name}</td>
                             <td>${c.case_type}</td>
-                            <td>${c.assigned_staff_email || 'Unassigned'}</td>
+                            
                             <td>${c.next_hearing || 'To Be Decided'}</td>
                             <td><span class="badge ${statusClass}">${c.status}</span></td>
-                            <td><button class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="document.getElementById('nav-cases').click()">View</button></td>
+                            <td>
+                                <button class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="showSection('cases-manage')">View</button>
+                                <button class="btn btn-primary" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; margin-left: 5px;" onclick="printCaseDetails('${c._id}')">⬇️ Report</button>
+                            </td>
                         `;
                         recentCasesTbody.appendChild(tr);
                     });
@@ -308,13 +320,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('modal-client-name').innerText = c.client_name;
         document.getElementById('modal-case-type').innerText = c.case_type;
         document.getElementById('modal-email').innerText = c.email;
-        document.getElementById('modal-password').innerText = c.password || "N/A (Archived)";
+        if(document.getElementById('modal-password')) document.getElementById('modal-password').innerText = c.password || "N/A (Archived)";
         document.getElementById('modal-status').value = c.status;
         document.getElementById('modal-hearing').value = c.next_hearing;
         document.getElementById('modal-notes').value = c.notes || "";
         document.getElementById('modal-chamber-case-number').value = c.chamber_case_number || "";
         document.getElementById('modal-court-case-number').value = c.court_case_number || "";
-        populateStaffDropdown(c.assigned_staff_email || "");
+        if(typeof populateStaffDropdown === 'function') populateStaffDropdown(c.assigned_staff_email || '');
+        
         
         // Load Message History
         const histBox = document.getElementById('modal-admin-msg-history');
@@ -456,7 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cases.forEach(c => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td><a href="#" onclick="printCaseDetails('${c._id}'); return false;" style="color: #0A192F; font-weight: bold; text-decoration: underline;">${c.client_name} 📄</a></td>
+                        <td><a href="#" onclick="printCaseDetails('${c._id}'); return false;" style="color: #0A192F; font-weight: bold; text-decoration: underline; cursor: pointer;">${c.client_name}</a></td>
                         <td>${c.email}</td>
                         <td>${c.case_type}</td>
                         <td><span class="badge" style="background: #e0e0e0; color: #555;">${c.status}</span></td>
@@ -478,7 +491,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Email Logs Auto-Refresh
-    if (document.getElementById('nav-emails')) {
+    if (document.getElementById('section-emails')) {
+        window.loadEmailLogs(); // Initial load
         setInterval(() => {
             if (document.getElementById('section-emails').classList.contains('active')) {
                 window.loadEmailLogs();
@@ -500,36 +514,55 @@ async function loadAdvocates() {
         const tbody = document.getElementById('admin-advocates-list');
         if (!tbody) return;
         tbody.innerHTML = '';
-        advocates.forEach(adv => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${adv.imageUrl ? '<img src="'+adv.imageUrl+'" width="50" style="border-radius:4px">' : 'No Image'}</td>
-                <td>${adv.name}</td>
-                <td>${adv.email || 'N/A'}</td>
-                <td>${adv.specialty}</td>
-                <td>
-                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                        <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 5px;">
-                            <input type="checkbox" ${adv.access_appointments ? 'checked' : ''} onchange="updateAccess('${adv._id}', this.checked, ${adv.access_clients ? 'true' : 'false'}, ${adv.access_add_case ? 'true' : 'false'})">
-                            Appointments Access
+        
+        const gradients = ['color-gradient-1', 'color-gradient-2', 'color-gradient-3', 'color-gradient-4'];
+        
+        advocates.forEach((adv, index) => {
+            const card = document.createElement('div');
+            const colorClass = gradients[index % gradients.length];
+            card.className = `advocate-card ${colorClass}`;
+            
+            card.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 1rem;">
+                    ${adv.imageUrl ? '<img src="'+adv.imageUrl+'" style="width: 70px; height: 70px; object-fit: cover; border-radius: 50%; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border: 2px solid white;">' : '<div style="width: 70px; height: 70px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 4px 8px rgba(0,0,0,0.1); font-weight: bold; color: var(--primary);">' + adv.name.charAt(0) + '</div>'}
+                    <div>
+                        <h4 style="margin: 0; font-size: 1.2rem; color: #1e293b;">${adv.name}</h4>
+                        <p style="margin: 0; font-size: 0.9rem; color: #475569; font-weight: 500;">${adv.specialty}</p>
+                        <p style="margin: 0; font-size: 0.8rem; color: #64748b;">📧 ${adv.email || 'N/A'}</p>
+                    </div>
+                </div>
+                
+                <div style="flex-grow: 1; margin-top: 1rem;">
+                    <h5 style="margin: 0 0 0.8rem 0; font-size: 0.9rem; color: #334155;">Access Controls</h5>
+                    <div style="display: flex; flex-direction: column; gap: 0.6rem; background: rgba(255,255,255,0.6); padding: 1rem; border-radius: 8px;">
+                        <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #1e293b; font-weight: 500;">
+                            <input type="checkbox" style="width: 16px; height: 16px; accent-color: var(--accent);" ${adv.access_appointments ? 'checked' : ''} onchange="updateAccess('${adv._id}', this.checked, ${adv.access_clients ? 'true' : 'false'}, ${adv.access_add_case ? 'true' : 'false'}, ${adv.access_voice ? 'true' : 'false'})">
+                            📅 Appointments Access
                         </label>
-                        <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 5px;">
-                            <input type="checkbox" ${adv.access_clients ? 'checked' : ''} onchange="updateAccess('${adv._id}', ${adv.access_appointments ? 'true' : 'false'}, this.checked, ${adv.access_add_case ? 'true' : 'false'})">
-                            Clients Directory Access
+                        <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #1e293b; font-weight: 500;">
+                            <input type="checkbox" style="width: 16px; height: 16px; accent-color: var(--accent);" ${adv.access_clients ? 'checked' : ''} onchange="updateAccess('${adv._id}', ${adv.access_appointments ? 'true' : 'false'}, this.checked, ${adv.access_add_case ? 'true' : 'false'}, ${adv.access_voice ? 'true' : 'false'})">
+                            👥 Clients Directory Access
                         </label>
-                        <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 5px;">
-                            <input type="checkbox" ${adv.access_add_case ? 'checked' : ''} onchange="updateAccess('${adv._id}', ${adv.access_appointments ? 'true' : 'false'}, ${adv.access_clients ? 'true' : 'false'}, this.checked)">
-                            Add New Case Access
+                        <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #1e293b; font-weight: 500;">
+                            <input type="checkbox" style="width: 16px; height: 16px; accent-color: var(--accent);" ${adv.access_add_case ? 'checked' : ''} onchange="updateAccess('${adv._id}', ${adv.access_appointments ? 'true' : 'false'}, ${adv.access_clients ? 'true' : 'false'}, this.checked, ${adv.access_voice ? 'true' : 'false'})">
+                            ➕ Add New Case Access
+                        </label>
+                        <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #1e293b; font-weight: 500; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 0.6rem;">
+                            <input type="checkbox" style="width: 16px; height: 16px; accent-color: var(--accent);" ${adv.access_voice ? 'checked' : ''} onchange="updateAccess('${adv._id}', ${adv.access_appointments ? 'true' : 'false'}, ${adv.access_clients ? 'true' : 'false'}, ${adv.access_add_case ? 'true' : 'false'}, this.checked)">
+                            🎙️ AI Voice Update
                         </label>
                     </div>
-                </td>
-                <td>
-                    <button class="btn" style="background:var(--color-secondary); color:white; padding: 4px 8px; margin-right: 5px;" onclick="openEditAdvocateModal('${adv._id}')">Edit</button>
-                    <button class="btn" style="background:#9b59b6; color:white; padding: 4px 8px; margin-right: 5px;" onclick="showIdCard('${adv._id}')">ID Card</button>
-                    <button class="btn" style="background:#e74c3c; color:white; padding: 4px 8px;" onclick="deleteAdvocate('${adv._id}')">Delete</button>
-                </td>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: auto; padding-top: 1rem;">
+                    <button class="btn" style="width: 100%; background: #D4AF37; color: #0A1628; font-weight: bold; border: none; padding: 0.5rem;" onclick="showIdCard('${adv._id}')">🪪 Show & Email ID Card</button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn" style="flex: 1; background: var(--primary); color: white; border: none;" onclick="openEditAdvocateModal('${adv._id}')">✏️ Edit</button>
+                        <button class="btn btn-error" style="flex: 1; border: none;" onclick="deleteAdvocate('${adv._id}')">🗑️ Delete</button>
+                    </div>
+                </div>
             `;
-            tbody.appendChild(tr);
+            tbody.appendChild(card);
         });
     } catch(err) {
         console.error(err);
@@ -622,6 +655,40 @@ if (officeInfoForm) {
             if (data.appointments_open !== undefined) {
                 document.getElementById('admin-appointments-open').checked = data.appointments_open;
             }
+    const toggleAppts = document.getElementById('admin-appointments-open');
+    
+    const toggleCommonPwd = document.getElementById('admin-allow-common-pwd');
+    if (toggleCommonPwd) {
+        toggleCommonPwd.addEventListener('change', async (e) => {
+            const allow_common_password = e.target.checked;
+            try {
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ allow_common_password })
+                });
+            } catch(err) {
+                console.error('Error saving common password setting', err);
+            }
+        });
+    }
+
+    if (toggleAppts) {
+        toggleAppts.addEventListener('change', async (e) => {
+            const appointments_open = e.target.checked;
+            try {
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ appointments_open })
+                });
+                // Optional: show a quick toast or alert, but silent is fine for a modern toggle
+            } catch(err) {
+                console.error('Error saving appointment setting', err);
+            }
+        });
+    }
+            if (data.allow_common_password !== undefined) document.getElementById('admin-allow-common-pwd').checked = data.allow_common_password;
             if (data.chamber_name) document.getElementById('admin-chamber-name').value = data.chamber_name;
             if (data.address) document.getElementById('admin-address').value = data.address;
             if (data.phone) document.getElementById('admin-phone').value = data.phone;
@@ -639,7 +706,7 @@ if (officeInfoForm) {
     
     officeInfoForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const appointments_open = document.getElementById('admin-appointments-open').checked;
+        const allow_common_password = document.getElementById('admin-allow-common-pwd').checked;
         const chamber_name = document.getElementById('admin-chamber-name').value;
         const address = document.getElementById('admin-address').value;
         const phone = document.getElementById('admin-phone').value;
@@ -652,7 +719,7 @@ if (officeInfoForm) {
             await fetch('/api/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ appointments_open, chamber_name, address, phone, email, footer_alert, logoUrl: globalLogoUrl })
+                body: JSON.stringify({ allow_common_password, chamber_name, address, phone, email, footer_alert, logoUrl: globalLogoUrl })
             });
             alert('Settings Saved Successfully');
         } catch(err) {
@@ -760,21 +827,36 @@ if (officeInfoForm) {
     // Add logic to populate the staff dropdown
     async function populateStaffDropdown(selectedEmail) {
         const select = document.getElementById('modal-assigned-staff');
-        select.innerHTML = '<option value="">Unassigned</option>';
+        const selectAdd = document.getElementById('case-assigned-staff');
+        if(select) select.innerHTML = '<option value="">Unassigned</option>';
+        if(selectAdd) selectAdd.innerHTML = '<option value="">Unassigned</option>';
+        
         try {
             const res = await fetch('/api/advocates');
             const data = await res.json();
             data.forEach(adv => {
-                const opt = document.createElement('option');
-                opt.value = adv.email;
-                opt.innerText = `${adv.name} (${adv.specialty})`;
-                if (adv.email === selectedEmail) opt.selected = true;
-                select.appendChild(opt);
+                if(select) {
+                    const opt = document.createElement('option');
+                    opt.value = adv.email;
+                    opt.innerText = `${adv.name} (${adv.specialty})`;
+                    if (adv.email === selectedEmail) opt.selected = true;
+                    select.appendChild(opt);
+                }
+                if(selectAdd) {
+                    const opt = document.createElement('option');
+                    opt.value = adv.email;
+                    opt.innerText = `${adv.name} (${adv.specialty})`;
+                    selectAdd.appendChild(opt);
+                }
             });
         } catch(e) {
             console.error(e);
         }
     }
+    
+    // Call it immediately once to populate the Add Case form
+    populateStaffDropdown();
+
 
     window.deleteArchivedCase = async function(id) {
         if (!confirm('Are you sure you want to permanently delete this archived case?')) return;
@@ -807,213 +889,16 @@ if (officeInfoForm) {
     }
     loadSystemConfig();
 
-    window.updateAccess = async function(id, access_appointments, access_clients, access_add_case) {
+    window.updateAccess = async function(id, access_appointments, access_clients, access_add_case, access_voice) {
         try {
             await fetch(`/api/advocates/${id}/access`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({access_appointments, access_clients, access_add_case})
+                body: JSON.stringify({access_appointments, access_clients, access_add_case, access_voice})
             });
-            advocatesCache = "";
-            loadAdvocates();
+            // Don't reload Advocates automatically here, it breaks the UI focus for checkboxes
         } catch (e) {
             console.error(e);
-        }
-    }
-
-    window.printCaseDetails = async function(id) {
-        // Open window synchronously to avoid popup blockers on mobile
-        const printWindow = window.open('', '', 'width=800,height=900');
-        if (!printWindow) {
-            alert("Popup blocked! Please allow popups for this site.");
-            return;
-        }
-        printWindow.document.write('<html><head><title>Loading...</title></head><body style="font-family:sans-serif; padding:40px;"><h2>Generating Report...</h2></body></html>');
-        
-        try {
-            const res = await fetch(`/api/cases/${id}`);
-            const c = await res.json();
-            
-            let chamberAddress = 'Cuttack, Odisha';
-            try {
-                const setRes = await fetch('/api/settings');
-                const settings = await setRes.json();
-                if (settings.address) chamberAddress = settings.address;
-            } catch(e) {}
-            
-            let hearingHtml = `
-            <style>
-            .timeline { display: flex; align-items: flex-start; overflow-x: auto; padding: 20px 0; margin-bottom: 20px; font-family: sans-serif; }
-            .timeline-item { position: relative; text-align: center; min-width: 120px; flex: 1; }
-            .timeline { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .timeline-item::after { content: ''; position: absolute; top: 12px; left: 50%; width: 100%; border-top: 3px solid #e2e8f0; z-index: 1; }
-            .timeline-item:last-child::after { display: none; }
-            .timeline-dot { width: 14px; height: 14px; background: #173650; border-radius: 50%; margin: 0 auto 10px auto; position: relative; z-index: 2; border: 4px solid #173650; }
-            .timeline-date { font-size: 0.85rem; color: #333; font-weight: bold; padding: 0 10px; }
-            .timeline-finished .timeline-dot { background: #2e7d32; border-color: #2e7d32; }
-            .timeline-finished .timeline-date { color: #2e7d32; }
-            </style>
-            <div class="timeline">
-            `;
-            
-            let dates = [];
-            if(c.hearing_history && c.hearing_history.length > 0) {
-                dates = [...c.hearing_history];
-            } else if (c.next_hearing && c.next_hearing !== 'To Be Decided') {
-                dates.push(c.next_hearing);
-            }
-            
-            if (dates.length === 0) {
-                hearingHtml += `<div style="color: #666; font-style: italic; padding: 10px;">No hearings recorded</div>`;
-            } else {
-                dates.forEach(date => { 
-                    hearingHtml += `<div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-date">${date}</div></div>`; 
-                });
-                
-                if (c.status && c.status.toLowerCase().includes('finished')) {
-                    hearingHtml += `<div class="timeline-item timeline-finished"><div class="timeline-dot"></div><div class="timeline-date">Finished</div></div>`;
-                }
-            }
-            hearingHtml += '</div>';
-
-            let emailsHtml = '<ul>';
-            if(c.email_logs && c.email_logs.length > 0) {
-                c.email_logs.forEach(log => { 
-                    emailsHtml += `<li><strong>${log.timestamp || 'Unknown Date'}:</strong> ${log.subject} <em>(${log.status})</em></li>` 
-                });
-            } else {
-                emailsHtml += `<li>No emails sent to this client.</li>`;
-            }
-            emailsHtml += '</ul>';
-            
-            const totalEmails = c.email_logs ? c.email_logs.length : 0;
-
-            printWindow.document.open();
-            printWindow.document.write(`
-                <html>
-                <head>
-                    <title>Case Details - ${c.client_name}</title>
-                    <style>
-                        body { 
-                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-                            padding: 40px; 
-                            line-height: 1.6; 
-                            background-color: #f0f4f8; 
-                            color: #2c3e50; 
-                            -webkit-print-color-adjust: exact; 
-                            print-color-adjust: exact; 
-                        }
-                        .report-container { 
-                            background: #ffffff; 
-                            padding: 40px; 
-                            border-radius: 12px; 
-                            box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
-                            border-top: 10px solid #2980b9; 
-                        }
-                        .header { 
-                            text-align: center; 
-                            margin-bottom: 30px; 
-                            padding-bottom: 20px; 
-                            border-bottom: 2px dashed #3498db; 
-                        }
-                        .header h1 { margin: 0; color: #2c3e50; font-family: 'Playfair Display', serif; font-size: 2.8rem; letter-spacing: 1px; }
-                        .header p { margin: 5px 0 0; color: #7f8c8d; font-size: 1.1rem; }
-                        .details { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
-                        .details div { 
-                            padding: 20px; 
-                            background: #e8f4f8; 
-                            border-left: 6px solid #3498db; 
-                            border-radius: 0 8px 8px 0; 
-                            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-                        }
-                        .details div:nth-child(2) { background: #fdf5e6; border-left-color: #f39c12; }
-                        .details div:nth-child(3) { background: #eafaf1; border-left-color: #2ecc71; }
-                        .details div:nth-child(4) { background: #f9ebea; border-left-color: #e74c3c; }
-                        .section { 
-                            margin-bottom: 30px; 
-                            padding: 25px; 
-                            background: #ffffff; 
-                            border: 1px solid #e1e8ed; 
-                            border-radius: 8px; 
-                            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-                        }
-                        .section h3 { 
-                            border-bottom: 3px solid #9b59b6; 
-                            padding-bottom: 10px; 
-                            color: #8e44ad; 
-                            margin-top: 0; 
-                            font-size: 1.4rem; 
-                            text-transform: uppercase;
-                            letter-spacing: 1px;
-                        }
-                        .section:nth-of-type(2) h3 { border-bottom-color: #e67e22; color: #d35400; }
-                        .section:nth-of-type(3) h3 { border-bottom-color: #16a085; color: #117a65; }
-                        @media print {
-                            body { padding: 0; background: white; }
-                            .report-container { box-shadow: none; padding: 0; border: none; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="report-container">
-                        <div class="header">
-                        <h1>JSM. Chambers</h1>
-                        <p style="font-size: 0.9rem; color: #444;">${chamberAddress}</p>
-                        <p style="margin-top: 15px; font-weight: bold;">Case Information Report</p>
-                    </div>
-                    
-                    <div class="details">
-                        <div>
-                            <strong>Client Name:</strong><br> ${c.client_name}
-                        </div>
-                        <div>
-                            <strong>Email Address:</strong><br> ${c.email}
-                        </div>
-                        <div>
-                            <strong>Chamber Case Number:</strong><br> ${c.chamber_case_number || 'Not Assigned'}<br><strong>Court Case Number:</strong><br> ${c.court_case_number || 'Not Assigned'}
-                        </div>
-                        <div>
-                            <strong>Case Type / Subject:</strong><br> ${c.case_type}
-                        </div>
-                        <div>
-                            <strong>Status:</strong><br> ${c.status}
-                        </div>
-                        <div>
-                            <strong>Assigned Advocate:</strong><br> ${c.assigned_staff_email || 'Unassigned'}
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <h3>Hearing History</h3>
-                        ${hearingHtml}
-                    </div>
-
-                    <div class="section">
-                        <h3>Email Communication History (Total Sent: ${totalEmails})</h3>
-                        ${emailsHtml}
-                    </div>
-
-                    <div class="section">
-                        <h3>Administrative Notes</h3>
-                        <p>${c.notes ? c.notes.replace(/\\n/g, '<br>') : 'No notes recorded.'}</p>
-                    </div>
-                    
-                    <div style="text-align: center; margin-top: 50px; font-size: 0.8em; color: #888;">
-                        Generated on ${new Date().toLocaleString()} by JSM. Chambers Case Management System
-                    </div>
-                    </div>
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
-            printWindow.focus();
-            setTimeout(() => {
-                printWindow.print();
-            }, 500);
-        } catch(e) {
-            console.error(e);
-            printWindow.document.write('<h2>Error generating report.</h2>');
-            alert('Failed to fetch case details for printing.');
         }
     };
 
@@ -1297,7 +1182,7 @@ if (officeInfoForm) {
 
 let currentIdCardAdvocate = null;
 
-function showIdCard(id) {
+window.showIdCard = function(id) {
     const adv = window.globalAdvocatesData.find(a => a._id === id);
     if (!adv) return;
 
@@ -1634,6 +1519,8 @@ async function loadAppointmentSettings() {
             const s = config.appointment_settings;
             document.getElementById('appt-start-time').value = s.start_time || '10:00';
             document.getElementById('appt-end-time').value = s.end_time || '17:00';
+            if (document.getElementById('appt-booking-start')) document.getElementById('appt-booking-start').value = s.booking_start || '09:00';
+            if (document.getElementById('appt-booking-end')) document.getElementById('appt-booking-end').value = s.booking_end || '12:00';
             document.getElementById('appt-max-day').value = s.max_per_day || 5;
             document.getElementById('appt-slot-duration').value = s.slot_duration || 30;
             
@@ -1650,6 +1537,8 @@ async function loadAppointmentSettings() {
 window.saveAppointmentSettings = async function() {
     const start_time = document.getElementById('appt-start-time').value;
     const end_time = document.getElementById('appt-end-time').value;
+    const booking_start = document.getElementById('appt-booking-start') ? document.getElementById('appt-booking-start').value : '09:00';
+    const booking_end = document.getElementById('appt-booking-end') ? document.getElementById('appt-booking-end').value : '12:00';
     const max_per_day = parseInt(document.getElementById('appt-max-day').value);
     const slot_duration = parseInt(document.getElementById('appt-slot-duration').value);
     
@@ -1665,7 +1554,7 @@ window.saveAppointmentSettings = async function() {
         const res = await fetch('/api/system-config/appointments', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ start_time, end_time, max_per_day, slot_duration, available_days })
+            body: JSON.stringify({ start_time, end_time, booking_start, booking_end, max_per_day, slot_duration, available_days })
         });
         if(res.ok) {
             alert('Availability Settings Saved!');
@@ -1682,3 +1571,246 @@ window.saveAppointmentSettings = async function() {
 document.addEventListener('DOMContentLoaded', () => {
     loadAppointmentSettings();
 });
+
+// Added for grid menu navigation
+window.showSection = function(sectionId) {
+    // Hide all sections
+    document.querySelectorAll('.admin-section').forEach(sec => sec.classList.remove('active'));
+    
+    // Show target section
+    const targetSection = document.getElementById('section-' + sectionId);
+    if (targetSection) {
+        targetSection.classList.add('active');
+    }
+    
+    // Toggle back button visibility
+    const backBtn = document.getElementById('back-home-btn');
+    if (backBtn) {
+        if (sectionId === 'dashboard') {
+            backBtn.style.display = 'none';
+        } else {
+            backBtn.style.display = 'flex';
+        }
+    }
+};
+
+window.executeEmergencyShift = async function() {
+    const old_date = document.getElementById('shift-old-date').value;
+    const new_date = document.getElementById('shift-new-date').value;
+    const start_time = document.getElementById('shift-start-time').value;
+    const end_time = document.getElementById('shift-end-time').value;
+    const password = document.getElementById('shift-admin-pwd').value;
+    
+    if (!old_date || !new_date || !start_time || !end_time || !password) {
+        alert("Please fill in all fields.");
+        return;
+    }
+    
+    if(!confirm(`Are you sure you want to shift ALL appointments from ${old_date} to ${new_date}? This will block ${old_date} and send emails to all affected clients.`)) return;
+    
+    try {
+        const btn = document.querySelector('#emergency-shift-modal .btn-primary');
+        const origText = btn.innerText;
+        btn.innerText = 'Processing...';
+        btn.disabled = true;
+        
+        const response = await fetch('/api/appointments/shift', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ old_date, new_date, start_time, end_time, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert(data.message);
+            document.getElementById('emergency-shift-modal').style.display = 'none';
+            document.getElementById('shift-admin-pwd').value = '';
+            if (window.loadAdminConsultations) loadAdminConsultations();
+        } else {
+            alert(data.error || 'Failed to shift appointments.');
+        }
+        
+        btn.innerText = origText;
+        btn.disabled = false;
+    } catch(err) {
+        console.error(err);
+        alert('Server error while shifting appointments.');
+    }
+};
+
+window.printCaseDetails = async function(id) {
+    const printWindow = window.open('', '', 'width=800,height=900');
+    if (!printWindow) {
+        alert("Popup blocked! Please allow popups for this site.");
+        return;
+    }
+    printWindow.document.write(`<html><head><title>Loading...</title></head><body style="font-family:sans-serif; padding:40px;"><h2>Generating Report...</h2></body></html>`);
+    
+    try {
+        const res = await fetch(`/api/cases/${id}`);
+        const c = await res.json();
+        
+        let chamberAddress = 'Cuttack, Odisha';
+        try {
+            const setRes = await fetch('/api/settings');
+            const settings = await setRes.json();
+            if (settings.address) chamberAddress = settings.address;
+        } catch(e) {}
+        
+        let statusHistoryHtml = '<ul>';
+        if(c.status_history && c.status_history.length > 0) {
+            c.status_history.forEach(hist => { 
+                statusHistoryHtml += `<li><strong>${hist.date}:</strong> ${hist.status}</li>`;
+            });
+        } else if (c.status_updated_at) {
+            statusHistoryHtml += `<li><strong>${c.status_updated_at}:</strong> ${c.status} (Latest Update)</li>`;
+        } else {
+            statusHistoryHtml += `<li>No status history recorded.</li>`;
+        }
+        statusHistoryHtml += '</ul>';
+
+        let hearingHtml = `
+        <style>
+        .timeline { display: flex; align-items: flex-start; overflow-x: auto; padding: 20px 0; margin-bottom: 20px; font-family: sans-serif; }
+        .timeline-item { position: relative; text-align: center; min-width: 120px; flex: 1; }
+        .timeline { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .timeline-item::after { content: ''; position: absolute; top: 12px; left: 50%; width: 100%; border-top: 3px solid #e2e8f0; z-index: 1; }
+        .timeline-item:last-child::after { display: none; }
+        .timeline-dot { width: 14px; height: 14px; background: #173650; border-radius: 50%; margin: 0 auto 10px auto; position: relative; z-index: 2; border: 4px solid #173650; }
+        .timeline-date { font-size: 0.85rem; color: #333; font-weight: bold; padding: 0 10px; }
+        .timeline-finished .timeline-dot { background: #2e7d32; border-color: #2e7d32; }
+        .timeline-finished .timeline-date { color: #2e7d32; }
+        </style>
+        <div class="timeline">
+        `;
+        
+        let dates = [];
+        if(c.hearing_history && c.hearing_history.length > 0) {
+            dates = [...c.hearing_history];
+        } else if (c.next_hearing && c.next_hearing !== 'To Be Decided') {
+            dates.push(c.next_hearing);
+        }
+        
+        if (dates.length === 0) {
+            hearingHtml += `<div style="color: #666; font-style: italic; padding: 10px;">No hearings recorded</div>`;
+        } else {
+            dates.forEach(date => { 
+                hearingHtml += `<div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-date">${date}</div></div>`; 
+            });
+            
+            if (c.status && c.status.toLowerCase().includes('finished')) {
+                hearingHtml += `<div class="timeline-item timeline-finished"><div class="timeline-dot"></div><div class="timeline-date">Finished</div></div>`;
+            }
+        }
+        hearingHtml += '</div>';
+
+        let emailsHtml = '<ul>';
+        if(c.email_logs && c.email_logs.length > 0) {
+            c.email_logs.forEach(log => { 
+                emailsHtml += `<li><strong>${log.timestamp || 'Unknown Date'}:</strong> ${log.subject} <em>(${log.status})</em></li>` 
+            });
+        } else {
+            emailsHtml += `<li>No emails sent to this client.</li>`;
+        }
+        emailsHtml += '</ul>';
+        
+        const totalEmails = c.email_logs ? c.email_logs.length : 0;
+
+        printWindow.document.open();
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Case Details - ${c.client_name}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; padding: 40px; line-height: 1.6; }
+                    .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #0A192F; padding-bottom: 20px; }
+                    .header h1 { margin: 0; color: #0A192F; font-family: 'Playfair Display', serif; }
+                    .header p { margin: 5px 0 0; color: #666; }
+                    .details { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+                    .details div { padding: 15px; border: 1px solid #eee; background: #fafafa; border-radius: 8px; }
+                    .section { margin-bottom: 30px; }
+                    .section h3 { border-bottom: 1px solid #ccc; padding-bottom: 10px; color: #333; }
+                    @media print {
+                        body { padding: 0; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="report-container">
+                    <div class="header">
+                    <h1>JSM. Chambers</h1>
+                    <p style="font-size: 0.9rem; color: #444;">${chamberAddress}</p>
+                    <p style="margin-top: 15px; font-weight: bold;">Case Information Report</p>
+                </div>
+                
+                <div class="details">
+                    <div>
+                        <strong>Client Name:</strong><br> ${c.client_name}
+                    </div>
+                    <div>
+                        <strong>Email Address:</strong><br> ${c.email}
+                    </div>
+                    <div>
+                        <strong>Chamber Case No:</strong><br> ${c.chamber_case_number || 'Not Assigned'}<br><strong>Court Case No:</strong><br> ${c.court_case_number || 'Not Assigned'}
+                    </div>
+                    <div>
+                        <strong>Case Type / Subject:</strong><br> ${c.case_type}
+                    </div>
+                    <div>
+                        <strong>Status:</strong><br> ${c.status}
+                        
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>Status History</h3>
+                    ${statusHistoryHtml}
+                </div>
+
+                <div class="section">
+                    <h3>Hearing History</h3>
+                    ${hearingHtml}
+                </div>
+
+                <div class="section">
+                    <h3>Email Communication History (Total Sent: ${totalEmails})</h3>
+                    ${emailsHtml}
+                </div>
+
+                <div class="section">
+                    <h3>Administrative Notes</h3>
+                    <p>${c.notes ? c.notes.replace(/\n/g, '<br>') : 'No notes recorded.'}</p>
+                </div>
+                
+                <div style="text-align: center; margin-top: 50px;">
+                    <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background: #0A192F; color: white; border: none; border-radius: 4px;">Print Report</button>
+                </div>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    } catch(err) {
+        console.error(err);
+        printWindow.document.body.innerHTML = `<h2>Error loading case details.</h2>`;
+    }
+};
+
+    window.filterActiveCases = function() {
+        const type = document.getElementById('case-search-type').value;
+        const query = document.getElementById('case-search-input').value.toLowerCase().trim();
+        const cards = document.querySelectorAll('#cases-grid .admin-case-card-item');
+        
+        cards.forEach(card => {
+            if (!query) {
+                card.style.display = 'flex';
+                return;
+            }
+            const matchVal = card.getAttribute('data-' + type) || '';
+            if (matchVal.includes(query)) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    };

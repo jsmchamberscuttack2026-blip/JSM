@@ -312,6 +312,25 @@
             try {
                 const setRes = await fetch('/api/settings');
                 const settings = await setRes.json();
+                
+                // Block Appointments if Admin Locked Them
+                if (settings.appointments_open === false) {
+                    const formView = document.getElementById('app-form-view');
+                    if (formView) {
+                        formView.innerHTML = `
+                        <div class="app-header">
+                            <h3><i data-lucide="lock"></i> Appointments Closed</h3>
+                            <button class="app-close" onclick="closeAppointmentModal()"><i data-lucide="x"></i></button>
+                        </div>
+                        <div class="app-body" style="text-align: center; padding: 40px 20px;">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div>
+                            <h3 style="color: var(--navy); margin-bottom: 10px;">Currently Unavailable</h3>
+                            <p style="color: var(--text-muted); font-size: 14px; line-height: 1.5;">The administrator has temporarily closed the appointment gateway. Please check back later.</p>
+                        </div>
+                        `;
+                    }
+                }
+                
                 if (settings.logoUrl) {
                     const l1 = document.getElementById('loading-logo');
                     const l2 = document.getElementById('sidebar-logo');

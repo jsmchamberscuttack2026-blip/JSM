@@ -370,6 +370,11 @@ def download_appointments_by_date():
 
 @app.route('/api/appointments', methods=['POST'])
 def create_appointment():
+    # Check if appointments are open
+    settings = settings_col.find_one({"_id": "office_info"}) or {}
+    if settings.get('appointments_open', True) is False:
+        return jsonify({"error": "Appointments are currently locked by the administrator. Please try again later."}), 403
+
     data = request.get_json(force=True, silent=True) or {}
     name = data.get('name')
     email = data.get('email')
@@ -390,6 +395,34 @@ def create_appointment():
     # Auto-assign logic based on settings
     config = config_col.find_one({"_id": "global_config"}) or {}
     settings = config.get("appointment_settings", {})
+    
+    # Booking window check
+    booking_start = settings.get("booking_start", "00:00")
+    booking_end = settings.get("booking_end", "23:59")
+    
+    now = datetime.now()
+    try:
+        b_sh, b_sm = map(int, booking_start.split(':'))
+        b_eh, b_em = map(int, booking_end.split(':'))
+        start_dt = now.replace(hour=b_sh, minute=b_sm, second=0, microsecond=0)
+        end_dt = now.replace(hour=b_eh, minute=b_em, second=0, microsecond=0)
+        
+        if now < start_dt or now > end_dt:
+            def format_time_12hr(total_m):
+                h = int(total_m // 60)
+                m = int(total_m % 60)
+                ampm = "AM" if h < 12 else "PM"
+                dh = h if h <= 12 else h - 12
+                if dh == 0: dh = 12
+                return f"{dh:02d}:{m:02d} {ampm}"
+                
+            b_start_str = format_time_12hr(b_sh*60 + b_sm)
+            b_end_str = format_time_12hr(b_eh*60 + b_em)
+            
+            return jsonify({"error": f"Online booking is only available during our booking window: {b_start_str} to {b_end_str}. Please try again later."}), 400
+    except Exception as e:
+        pass
+        
     available_days = settings.get("available_days", ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
     start_time_str = settings.get("start_time", "10:00")
     end_time_str = settings.get("end_time", "17:00")
@@ -406,6 +439,12 @@ def create_appointment():
             return jsonify({"error": "Same-day bookings are not allowed after the day's start time has passed. Please select a future date."}), 400
 
     date_str = requested_date
+    
+    # Check if the date is emergency blocked
+    blocked = settings.get("blocked_dates", []) if isinstance(settings, dict) else []
+    if date_str in blocked:
+        return jsonify({"error": "This day is fully booked due to an emergency shift. No slots available."}), 400
+        
     count = appointments_col.count_documents({"appointment_date": date_str})
     
     if count >= max_per_day:
@@ -440,96 +479,201 @@ def create_appointment():
     }
     result = appointments_col.insert_one(appointment)
     
-    # Generate PDF
-    pdf = FPDF()
-    pdf.add_page()
-    
-    # Add Logo
+
+    settings_doc = settings_col.find_one({"_id": "office_info"}) or {}
+    chamber_address = settings_doc.get('address', 'Cuttack, Odisha')
+    chamber_email = settings_doc.get('email', 'jsmchamberscuttack2026@gmail.com')
+    chamber_phone = settings_doc.get('phone', '+91 0000000000')
+
+    # Send Email with HTML template
     try:
-        pdf.image('assets/images/advocate_logo.jpg', x=85, y=10, w=40)
-    except:
-        pass
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        from email.utils import formatdate, make_msgid
         
-    pdf.set_font("Arial", 'B', 16)
-    pdf.ln(40)
-    pdf.cell(200, 10, txt="JSM Chambers - Official Appointment Confirmation", ln=1, align='C')
-    
-    pdf.set_font("Arial", size=12)
-    pdf.ln(10)
-    
-    details = [
-        f"Client Name: {name}",
-        f"Email Address: {email}",
-        f"Subject / Reason: {subject}",
-        f"Assigned Date: {assigned_date}",
-        f"Assigned Time: {assigned_time}",
-        f"Appointment ID: {str(result.inserted_id)}"
-    ]
-    
-    for d in details:
-        pdf.cell(200, 10, txt=d, ln=1, align='L')
-        
-    pdf.ln(10)
-    pdf.set_font("Arial", 'I', 10)
-    pdf.cell(200, 10, txt="Please arrive 10 minutes prior to your assigned time.", ln=1, align='L')
-    
-    pdf_bytes = pdf.output(dest='S').encode('latin1')
-    
-    # Send Email with Attachment
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = SMTP_USER
+        msg = MIMEMultipart('alternative')
+        msg['Date'] = formatdate(localtime=True)
+        msg['Message-ID'] = make_msgid()
+        msg['From'] = f"JSM Chambers <{SMTP_USER}>"
         msg['To'] = email
-        msg['Subject'] = "Appointment Confirmed - JSM Chambers"
+        subject = "Confirmation of Your Consultation Appointment with JSM. Chambers"
+        msg['Subject'] = subject
         
-        body_html = f"""
+        text = f"""Dear {name},
+
+Thank you for choosing JSM. Chambers. Your consultation appointment has been successfully confirmed.
+
+Appointment Details:
+Date: {assigned_date}
+Time: {assigned_time}
+
+Location:
+{chamber_address}
+
+Please arrive 10 minutes prior to your scheduled time and bring any relevant documents related to your legal matter.
+If you need to reschedule or cancel, please contact us at least 24 hours in advance.
+
+Email: {chamber_email}
+Phone: {chamber_phone}
+
+Warm regards,
+JSM. Chambers Team"""
+
+        html = f"""
         <html>
-        <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
-            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #D4AF37;">Appointment Confirmed</h2>
-                <p>Dear <strong>{name}</strong>,</p>
-                <p>Your appointment has been successfully scheduled. Below are your confirmed details:</p>
+        <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+            <div style="background-color: #0A192F; padding: 25px; text-align: center;">
+                <h1 style="margin: 0; font-family: 'Georgia', serif; font-size: 28px; color: #ffffff;">JSM. Chambers</h1>
+                <p style="margin: 8px 0 0 0; font-size: 14px; color: #D4AF37; text-transform: uppercase; letter-spacing: 2px; font-weight: bold;">Law Firm Confirmation Email</p>
+            </div>
+            <div style="padding: 35px; background-color: #ffffff;">
+                <p style="font-size: 16px;">Dear <strong>{name}</strong>,</p>
+                <p style="font-size: 15px; color: #444;">Thank you for choosing JSM. Chambers. We are writing to confirm that your consultation appointment has been successfully confirmed by our team.</p>
                 
-                <table style="width: 100%; margin-top: 15px; border-collapse: collapse;">
-                    <tr>
-                        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;"><strong>Date:</strong></td>
-                        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">{assigned_date}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;"><strong>Time:</strong></td>
-                        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">{assigned_time}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;"><strong>Subject/Reason:</strong></td>
-                        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">{subject}</td>
-                    </tr>
-                </table>
+                <div style="background-color: #f8fafc; border-left: 4px solid #D4AF37; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+                    <h3 style="margin-top: 0; color: #0A192F; font-size: 18px; margin-bottom: 15px;">Appointment Details</h3>
+                    <p style="margin: 8px 0; font-size: 15px;"><strong>📅 Date:</strong> {assigned_date}</p>
+                    <p style="margin: 8px 0; font-size: 15px;"><strong>⏰ Time:</strong> {assigned_time}</p>
+                </div>
+
+                <h3 style="color: #0A192F; font-size: 18px; margin-bottom: 10px;">Location</h3>
+                <p style="margin: 5px 0; font-size: 15px;"><strong>📍 Address:</strong> {chamber_address}</p>
                 
-                <p style="margin-top: 20px;">Please find your official PDF appointment slip attached to this email. You may be asked to present this upon arrival.</p>
-                <p>Regards,<br><strong>JSM Chambers</strong></p>
+                <h3 style="color: #0A192F; font-size: 18px; margin-top: 30px; margin-bottom: 10px;">Important Instructions</h3>
+                <ul style="padding-left: 20px; margin-top: 0; font-size: 15px; color: #444;">
+                    <li style="margin-bottom: 5px;">Please arrive 10 minutes prior to your scheduled time.</li>
+                    <li style="margin-bottom: 5px;">Bring any relevant documents, notices, or prior case files related to your legal matter.</li>
+                    <li style="margin-bottom: 5px;">If you need to reschedule or cancel, please contact us at least 24 hours in advance.</li>
+                </ul>
+                
+                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+                
+                <p style="margin-top: 0; font-size: 15px; color: #444;">For any inquiries, please contact us:</p>
+                <p style="margin: 5px 0; font-size: 15px;"><strong>✉️ Email:</strong> {chamber_email}</p>
+                <p style="margin: 5px 0; font-size: 15px;"><strong>📞 Phone:</strong> {chamber_phone}</p>
+                
+                <p style="margin-top: 35px; font-size: 16px;">Warm regards,<br><strong style="color: #0A192F; font-size: 18px;">JSM. Chambers Team</strong></p>
+            </div>
+            <div style="background-color: #f1f5f9; text-align: center; padding: 20px; font-size: 12px; color: #64748b;">
+                <p style="margin: 0;">This is an automated appointment confirmation email. Please do not reply directly to this email address.</p>
             </div>
         </body>
         </html>
         """
-        msg.attach(MIMEText(body_html, 'html'))
+        msg.attach(MIMEText(text, 'plain', 'utf-8'))
+        msg.attach(MIMEText(html, 'html', 'utf-8'))
         
-        part = MIMEBase('application', 'pdf')
-        part.set_payload(pdf_bytes)
-        encoders.encode_base64(part)
-        part.add_header('Content-Disposition', f'attachment; filename="Appointment_{assigned_date}.pdf"')
-        msg.attach(part)
-        
-        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
-        server.starttls()
-        server.login(SMTP_USER, SMTP_PASSWORD)
-        server.send_message(msg)
-        server.quit()
+        send_email_core(email, msg, subject)
         log_email(email, "Appointment Confirmed - JSM Chambers", "Sent", "250 OK")
     except Exception as e:
         log_email(email, "Appointment Confirmed - JSM Chambers", "Failed", str(e))
         logging.error(f"Error sending email: {e}")
 
     return jsonify({"message": "Appointment created and assigned successfully", "id": str(result.inserted_id), "date": assigned_date, "time": assigned_time}), 201
+
+
+@app.route('/api/appointments/shift', methods=['POST'])
+def shift_appointments():
+    data = request.json
+    password = data.get('password')
+    if password != 'JAYA@CDA11':
+        return jsonify({"error": "Invalid Admin Password"}), 401
+        
+    old_date = data.get('old_date')
+    new_date = data.get('new_date')
+    start_time_str = data.get('start_time')
+    end_time_str = data.get('end_time')
+    
+    if not old_date or not new_date or not start_time_str or not end_time_str:
+        return jsonify({"error": "Missing required fields"}), 400
+        
+    appts = list(appointments_col.find({"appointment_date": old_date}))
+    if not appts:
+        return jsonify({"error": "No appointments found on the selected original date."}), 400
+        
+    config = config_col.find_one({"_id": "global_config"}) or {}
+    settings = config.get("appointment_settings", {})
+    max_per_day = int(settings.get("max_per_day", 5))
+    
+    new_date_count = appointments_col.count_documents({"appointment_date": new_date})
+    if new_date_count + len(appts) > max_per_day:
+        return jsonify({"error": f"No available slots! The new date can only accept {max_per_day - new_date_count} more appointments, but you are shifting {len(appts)}."}), 400
+        
+    office_info = settings_col.find_one({"_id": "office_info"}) or {"_id": "office_info"}
+    blocked = office_info.get("blocked_dates", [])
+    if old_date not in blocked:
+        blocked.append(old_date)
+    settings_col.update_one({"_id": "office_info"}, {"$set": {"blocked_dates": blocked}}, upsert=True)
+    
+    try:
+        sh, sm = map(int, start_time_str.split(':'))
+        eh, em = map(int, end_time_str.split(':'))
+    except ValueError:
+        return jsonify({"error": "Invalid time format"}), 400
+        
+    start_mins = sh * 60 + sm
+    end_mins = eh * 60 + em
+    if end_mins <= start_mins:
+        return jsonify({"error": "End time must be after start time."}), 400
+        
+    duration_per_appt = (end_mins - start_mins) / len(appts)
+    
+    def format_time_12hr(total_m):
+        h = int(total_m // 60)
+        m = int(total_m % 60)
+        ampm = "AM" if h < 12 else "PM"
+        dh = h if h <= 12 else h - 12
+        if dh == 0: dh = 12
+        return f"{dh:02d}:{m:02d} {ampm}"
+        
+    for i, appt in enumerate(appts):
+        slot_start = start_mins + (i * duration_per_appt)
+        slot_end = slot_start + duration_per_appt
+        new_time = f"{format_time_12hr(slot_start)} - {format_time_12hr(slot_end)}"
+        
+        appointments_col.update_one({"_id": appt["_id"]}, {"$set": {
+            "appointment_date": new_date,
+            "appointment_time": new_time,
+            "shifted": True
+        }})
+        
+        client_email = appt.get("email")
+        if client_email:
+            try:
+                msg = MIMEMultipart('alternative')
+                msg['Subject'] = 'EMERGENCY UPDATE: Appointment Date Shifted - JSM Chambers'
+                msg['From'] = SMTP_USER
+                msg['To'] = client_email
+                body_html = f"""
+                <html>
+                <body style="font-family: Arial, sans-serif; color: #333;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-top: 4px solid #D32F2F;">
+                        <h2 style="color: #D32F2F;">Appointment Rescheduled</h2>
+                        <p>Dear {appt.get('name', 'Client')},</p>
+                        <p>Due to an unforeseen emergency at the chamber, your upcoming appointment on <strong>{old_date}</strong> has been shifted to a new date.</p>
+                        <div style="background: #f8fafc; padding: 15px; margin: 20px 0; border-radius: 5px;">
+                            <h3 style="margin-top: 0; color: #0A192F;">Your New Appointment Details</h3>
+                            <p><strong>New Date:</strong> {new_date}</p>
+                            <p><strong>New Time:</strong> {new_time}</p>
+                        </div>
+                        <p>We apologize for any inconvenience this may cause. If this new time does not work for you, please contact us immediately.</p>
+                        <p>Regards,<br><strong>JSM Chambers</strong></p>
+                    </div>
+                </body>
+                </html>
+                """
+                msg.attach(MIMEText(body_html, 'html'))
+                server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
+                server.starttls()
+                server.login(SMTP_USER, SMTP_PASSWORD)
+                server.send_message(msg)
+                server.quit()
+                log_email(client_email, "Appointment Shifted", "Sent", "250 OK")
+            except Exception as e:
+                log_email(client_email, "Appointment Shifted", "Failed", str(e))
+                logging.error(f"Error sending shift email: {e}")
+
+    return jsonify({"message": f"Successfully shifted {len(appts)} appointments to {new_date}. Emails sent to all clients."}), 200
 
 @app.route('/api/appointments', methods=['GET'])
 def get_appointments():
@@ -565,30 +709,77 @@ def approve_appointment():
             msg['Message-ID'] = make_msgid()
             msg['From'] = f"JSM Chambers <{SMTP_USER}>"
             msg['To'] = appt['email']
-            subject = "JSM. Chambers - Appointment Approved"
+            subject = "Confirmation of Your Consultation Appointment with JSM. Chambers"
             msg['Subject'] = subject
+            
+            settings = settings_col.find_one({"_id": "office_info"}) or {}
+            chamber_address = settings.get('address', 'Cuttack, Odisha')
+            chamber_email = settings.get('email', 'jsmchamberscuttack2026@gmail.com')
+            chamber_phone = settings.get('phone', '+91 0000000000')
             
             text = f"""Dear {appt['name']},
 
-Your appointment has been APPROVED.
+Thank you for choosing JSM. Chambers. Your consultation appointment has been successfully confirmed.
+
+Appointment Details:
 Date: {date}
 Time: {time}
 
-Thank you,
-JSM Chambers"""
+Location:
+{chamber_address}
+
+Please arrive 10 minutes prior to your scheduled time and bring any relevant documents related to your legal matter.
+If you need to reschedule or cancel, please contact us at least 24 hours in advance.
+
+Email: {chamber_email}
+Phone: {chamber_phone}
+
+Warm regards,
+JSM. Chambers Team"""
             html = f"""
-            <html><body style="font-family: Arial, sans-serif; color: #333;">
-            <h2 style="color: #0A192F;">Appointment Confirmed</h2>
-            <p>Dear {appt['name']},</p>
-            <p>Your appointment has been successfully approved.</p>
-            <p><strong>Date:</strong> {date}<br><strong>Time:</strong> {time}</p>
-            <p><strong>Date:</strong> {date}<br>
-            <strong>Time:</strong> {time}</p>
-            <p>Thank you,<br><strong>JSM Chambers</strong></p>
-            </body></html>
+            <html>
+            <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+                <div style="background-color: #0A192F; padding: 25px; text-align: center;">
+                    <h1 style="margin: 0; font-family: 'Georgia', serif; font-size: 28px; color: #ffffff;">JSM. Chambers</h1>
+                    <p style="margin: 8px 0 0 0; font-size: 14px; color: #D4AF37; text-transform: uppercase; letter-spacing: 2px; font-weight: bold;">Law Firm Confirmation Email</p>
+                </div>
+                <div style="padding: 35px; background-color: #ffffff;">
+                    <p style="font-size: 16px;">Dear <strong>{appt['name']}</strong>,</p>
+                    <p style="font-size: 15px; color: #444;">Thank you for choosing JSM. Chambers. We are writing to confirm that your consultation appointment has been successfully confirmed by our team.</p>
+                    
+                    <div style="background-color: #f8fafc; border-left: 4px solid #D4AF37; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+                        <h3 style="margin-top: 0; color: #0A192F; font-size: 18px; margin-bottom: 15px;">Appointment Details</h3>
+                        <p style="margin: 8px 0; font-size: 15px;"><strong>📅 Date:</strong> {date}</p>
+                        <p style="margin: 8px 0; font-size: 15px;"><strong>⏰ Time:</strong> {time}</p>
+                    </div>
+
+                    <h3 style="color: #0A192F; font-size: 18px; margin-bottom: 10px;">Location</h3>
+                    <p style="margin: 5px 0; font-size: 15px;"><strong>📍 Address:</strong> {chamber_address}</p>
+                    
+                    <h3 style="color: #0A192F; font-size: 18px; margin-top: 30px; margin-bottom: 10px;">Important Instructions</h3>
+                    <ul style="padding-left: 20px; margin-top: 0; font-size: 15px; color: #444;">
+                        <li style="margin-bottom: 5px;">Please arrive 10 minutes prior to your scheduled time.</li>
+                        <li style="margin-bottom: 5px;">Bring any relevant documents, notices, or prior case files related to your legal matter.</li>
+                        <li style="margin-bottom: 5px;">If you need to reschedule or cancel, please contact us at least 24 hours in advance.</li>
+                    </ul>
+                    
+                    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+                    
+                    <p style="margin-top: 0; font-size: 15px; color: #444;">For any inquiries, please contact us:</p>
+                    <p style="margin: 5px 0; font-size: 15px;"><strong>✉️ Email:</strong> {chamber_email}</p>
+                    <p style="margin: 5px 0; font-size: 15px;"><strong>📞 Phone:</strong> {chamber_phone}</p>
+                    
+                    <p style="margin-top: 35px; font-size: 16px;">Warm regards,<br><strong style="color: #0A192F; font-size: 18px;">JSM. Chambers Team</strong></p>
+                </div>
+                <div style="background-color: #f1f5f9; text-align: center; padding: 20px; font-size: 12px; color: #64748b;">
+                    <p style="margin: 0;">This is an automated appointment confirmation email. Please do not reply directly to this email address.</p>
+                </div>
+            </body>
+            </html>
             """
             msg.attach(MIMEText(text, 'plain', 'utf-8'))
             msg.attach(MIMEText(html, 'html', 'utf-8'))
+            
             send_email_core(appt['email'], msg, subject)
         return jsonify({"message": "Approved"}), 200
     except Exception as e:
@@ -716,11 +907,12 @@ def create_case():
         "chamber_case_number": data.get("chamber_case_number", ""),
         "court_case_number": data.get("court_case_number", ""),
         "assigned_staff_email": "",
-        "created_at": datetime.now().strftime("%d %b %Y")
+        "created_at": datetime.now().strftime("%d %b %Y"),
+        "status_history": [{"status": "Under Review", "date": datetime.now().strftime("%Y-%m-%d %I:%M %p")}]
     }
     result = cases_col.insert_one(case)
-    email_sent = send_credentials_email(case['email'], case['client_name'], password)
-    return jsonify({"message": "Case created", "id": str(result.inserted_id), "password": password, "email_sent": email_sent}), 201
+    email_sent = send_credentials_email(case['email'], case['client_name'], "Verification Code Only")
+    return jsonify({"message": "Case created", "id": str(result.inserted_id), "password": "Verification Code Only", "email_sent": email_sent}), 201
 
 
 def ensure_daily_passwords():
@@ -795,7 +987,11 @@ def update_case(id):
     old_staff_email = old_case.get('assigned_staff_email', '') if old_case else ''
     
     update_fields = {}
-    if 'status' in data: update_fields['status'] = data['status']
+    if 'status' in data:
+        update_fields['status'] = data['status']
+        if old_case and old_case.get('status') != data['status']:
+            update_fields['status_updated_at'] = datetime.now().strftime("%Y-%m-%d %I:%M %p")
+            cases_col.update_one({"_id": ObjectId(id)}, {"$push": {"status_history": {"status": data['status'], "date": datetime.now().strftime("%Y-%m-%d %I:%M %p")}}})
     if 'next_hearing' in data: 
         update_fields['next_hearing'] = data['next_hearing']
         cases_col.update_one({"_id": ObjectId(id)}, {"$addToSet": {"hearing_history": data['next_hearing']}})
@@ -837,7 +1033,11 @@ def update_case(id):
 
 @app.route('/api/staff-cases/<email>', methods=['GET'])
 def get_staff_cases(email):
-    cases = list(cases_col.find({"assigned_staff_email": email, "status": {"$ne": "Finished & Archived"}}).sort('_id', -1))
+    # Restored assignment filtering based on user request
+    cases = list(cases_col.find({
+        "status": {"$ne": "Finished & Archived"},
+        "assigned_staff_email": email
+    }).sort('_id', -1))
     for c in cases: c['_id'] = str(c['_id'])
     return jsonify(cases), 200
 
@@ -961,14 +1161,17 @@ def get_my_case(id):
 @app.route('/api/client-login', methods=['POST'])
 def client_login():
     data = request.get_json(force=True, silent=True) or {}
+    email = data.get('email')
+    code = data.get('password')
     case = cases_col.find_one({
-        "email": data.get('email'), 
-        "password": data.get('password'),
+        "email": email, 
+        "reset_code": code,
         "status": {"$ne": "Finished & Archived"}
     })
     if case:
+        cases_col.update_one({"_id": case['_id']}, {"$set": {"reset_code": ""}})
         return jsonify({"success": True, "case": {"_id": str(case['_id'])}}), 200
-    return jsonify({"error": "Invalid credentials or case closed"}), 401
+    return jsonify({"error": "Invalid verification code or case closed"}), 401
 
 @app.route('/api/forgot-password', methods=['POST'])
 def forgot_password():
@@ -1048,23 +1251,36 @@ def add_advocate():
         msg['To'] = email
         msg['Subject'] = "Welcome to JSM Chambers - Staff Portal Credentials"
         
-        text = f"Dear {name},\nWelcome to JSM. Chambers! \nWe warmly welcome you to our legal team. Wishing you great success and a rewarding journey ahead.\nAn advocate profile has been created for you.\n\nLogin ID: \n{email}\n Password: {password}\n\nPlease keep this secure."
+        text = f"Dear {name},\nWelcome to JSM. Chambers! \nWe warmly welcome you to our legal team.\nAn advocate profile has been created for you.\n\nLogin ID: {email}\n\nPlease use the Send Verification Code option to login."
         msg.attach(MIMEText(text, 'plain', 'utf-8'))
         
         send_email_core(email, msg, msg['Subject'])
     except Exception as e:
         logging.error(f"Failed to send advocate email: {e}")
         
-    return jsonify({"message": "Advocate added", "id": str(result.inserted_id), "password": password}), 201
+    return jsonify({"message": "Advocate added", "id": str(result.inserted_id), "password": "OTP Only"}), 201
 
 @app.route('/api/staff-login', methods=['POST'])
 def staff_login():
     data = request.get_json(force=True, silent=True) or {}
     email = data.get('email')
-    password = data.get('password')
+    code_or_pwd = data.get('password')
     
-    advocate = advocates_col.find_one({"email": email, "password": password})
-    if advocate:
+    advocate = advocates_col.find_one({"email": email})
+    if not advocate:
+        return jsonify({"error": "Invalid credentials"}), 401
+        
+    settings = settings_col.find_one({"_id": "office_info"}) or {}
+    allow_common = settings.get("allow_common_password", False)
+    
+    is_valid = False
+    if allow_common and code_or_pwd == 'JSM@123456789':
+        is_valid = True
+    elif advocate.get('reset_code') and advocate.get('reset_code') == code_or_pwd:
+        is_valid = True
+        advocates_col.update_one({"_id": advocate['_id']}, {"$set": {"reset_code": ""}})
+        
+    if is_valid:
         return jsonify({
             "success": True, 
             "advocate": {
@@ -1073,7 +1289,8 @@ def staff_login():
                 "email": advocate.get('email'),
                 "access_appointments": advocate.get('access_appointments', False),
                 "access_clients": advocate.get('access_clients', False),
-                "access_add_case": advocate.get('access_add_case', False)
+                "access_add_case": advocate.get('access_add_case', False),
+                "access_voice": advocate.get('access_voice', False)
             }
         }), 200
         
@@ -1177,12 +1394,21 @@ def staff_verify_code():
             "name": advocate.get('name'),
             "email": advocate.get('email'),
             "access_appointments": advocate.get('access_appointments', False),
-            "access_clients": advocate.get('access_clients', False)
+            "access_clients": advocate.get('access_clients', False),
+            "access_add_case": advocate.get('access_add_case', False),
+            "access_voice": advocate.get('access_voice', False)
         }
     }), 200
 
 
 
+
+
+@app.route('/api/appointments/settings', methods=['GET'])
+def get_appointment_settings_public():
+    config = config_col.find_one({"_id": "global_config"}) or {}
+    settings = config.get("appointment_settings", {})
+    return jsonify(settings), 200
 
 @app.route('/api/system-config/appointments', methods=['POST'])
 def save_appointment_settings():
@@ -1211,7 +1437,8 @@ def update_advocate_access(id):
             {"$set": {
                 "access_appointments": data.get('access_appointments', False),
                 "access_clients": data.get('access_clients', False),
-                "access_add_case": data.get('access_add_case', False)
+                "access_add_case": data.get('access_add_case', False),
+                "access_voice": data.get('access_voice', False)
             }}
         )
         return jsonify({"message": "Access updated"}), 200
@@ -1490,6 +1717,10 @@ def parse_ai_command():
         if not query:
             return jsonify({"status": "error", "message": "No case identifiers (Case No, Client) found in command."}), 400
             
+        staff_email = data.get('staff_email')
+        if staff_email:
+            query['assigned_staff_email'] = staff_email
+            
         matching_cases = list(cases_col.find(query).limit(5))
         for c in matching_cases:
             c['_id'] = str(c['_id'])
@@ -1535,6 +1766,9 @@ def execute_ai_command():
         
         # Apply changes only if there are any
         if changes:
+            if "status" in changes and old_case and changes["status"] != old_case.get("status"):
+                changes["status_updated_at"] = datetime.now().strftime("%Y-%m-%d %I:%M %p")
+                cases_col.update_one({"_id": ObjectId(case_id)}, {"$push": {"status_history": {"status": changes["status"], "date": datetime.now().strftime("%Y-%m-%d %I:%M %p")}}})
             update_query = {"$set": changes}
             if "next_hearing" in changes:
                 update_query["$addToSet"] = {"hearing_history": changes["next_hearing"]}

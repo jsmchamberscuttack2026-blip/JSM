@@ -177,29 +177,10 @@ input:focus{
 
 <h1>Client Portal</h1>
 
-<!-- STANDARD LOGIN FORM -->
-<form id="login-form">
-    <div class="subtitle">Access your case files securely.</div>
-    
-    <label>Registered Email ID</label>
-    <input type="email" id="email" placeholder="client@example.com" autocomplete="email" required>
-    
-    <label>Password</label>
-    <div class="field">
-        <input type="password" id="password" placeholder="Enter your password" required>
-        <button type="button" class="toggle" onclick="togglePassword()">👁</button>
-    </div>
-    
-    <button type="submit" class="login" id="login-btn">Login to Portal</button>
-    
-    <div class="divider"></div>
-    <div class="links">
-        <a href="#" id="show-forgot-btn">Forgot Password? Log in with code</a>
-    </div>
-</form>
+
 
 <!-- FORGOT PASSWORD FORM -->
-<form id="forgot-form" style="display: none;">
+<form id="forgot-form">
     <div class="subtitle">Enter your registered email and we will send you a 6-digit verification code to log in.</div>
     
     <label>Registered Email ID</label>
@@ -209,7 +190,7 @@ input:focus{
     
     <div class="divider"></div>
     <div class="links">
-        <a href="#" id="back-to-login-btn">&larr; Back to Password Login</a>
+        
     </div>
 </form>
 
@@ -224,7 +205,7 @@ input:focus{
     
     <div class="divider"></div>
     <div class="links">
-        <a href="#" id="cancel-verify-btn">Cancel</a>
+        <a href="#" id="cancel-verify-btn">&larr; Back to Email Login</a>
     </div>
 </form>
 
@@ -249,60 +230,16 @@ input:focus{
     const errorMsg = document.getElementById('error-msg');
     let tempEmail = "";
 
-    // Toggles
-    document.getElementById('show-forgot-btn').addEventListener('click', (e) => {
-        e.preventDefault();
-        errorMsg.style.display = 'none';
-        loginForm.style.display = 'none';
-        forgotForm.style.display = 'block';
-    });
 
-    document.getElementById('back-to-login-btn').addEventListener('click', (e) => {
-        e.preventDefault();
-        errorMsg.style.display = 'none';
-        forgotForm.style.display = 'none';
-        loginForm.style.display = 'block';
-    });
 
     document.getElementById('cancel-verify-btn').addEventListener('click', (e) => {
         e.preventDefault();
         errorMsg.style.display = 'none';
         verifyForm.style.display = 'none';
-        loginForm.style.display = 'block';
+        forgotForm.style.display = 'block';
     });
 
-    // 1. Standard Login
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const btn = document.getElementById('login-btn');
-        btn.innerText = 'Logging in...';
-        btn.disabled = true;
-        errorMsg.style.display = 'none';
-        
-        try {
-            const response = await fetch('/api/client-login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-            const data = await response.json();
-            
-            if (response.ok) {
-                localStorage.setItem('clientCaseId', data.case._id);
-                window.location.href = 'client-dashboard.html';
-            } else {
-                errorMsg.style.display = 'block';
-                errorMsg.innerText = data.error || 'Invalid credentials';
-            }
-        } catch (err) {
-            errorMsg.style.display = 'block';
-            errorMsg.innerText = 'Server error. Please try again.';
-        }
-        btn.innerText = 'Login to Portal';
-        btn.disabled = false;
-    });
+
 
     // 2. Request Verification Code
     forgotForm.addEventListener('submit', async (e) => {

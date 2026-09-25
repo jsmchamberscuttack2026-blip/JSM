@@ -3314,5 +3314,65 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1500); // Run slightly after main.js to override it
 });
 </script>
+
+<div id="booking-hours-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div style="background: white; border-radius: 12px; width: 90%; max-width: 400px; padding: 30px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: slideIn 0.3s ease-out; position: relative;">
+        <span onclick="document.getElementById('booking-hours-modal').style.display='none'" style="position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #64748b;">&times;</span>
+        <div style="font-size: 40px; margin-bottom: 15px;">🕒</div>
+        <h3 style="color: #0A192F; margin-top: 0; margin-bottom: 15px;">Booking Window Hours</h3>
+        <p style="color: #475569; font-size: 15px; margin-bottom: 20px;">Please note our official booking hours before scheduling your consultation.</p>
+        <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 25px;">
+            <p style="margin: 5px 0; color: #0f172a; font-weight: bold; font-size: 15px;">Days: <span id="popup-days" style="font-weight: normal; color: #334155;">...</span></p>
+            <p style="margin: 5px 0; color: #0f172a; font-weight: bold; font-size: 15px;">Time: <span id="popup-time" style="font-weight: normal; color: #334155;">...</span></p>
+        </div>
+        <button onclick="document.getElementById('booking-hours-modal').style.display='none'" style="background: #D4AF37; color: #0A192F; border: none; padding: 12px 30px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 16px; width: 100%;">Continue to Website</button>
+    </div>
+</div>
+<style>
+@keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(async () => {
+        try {
+            if (sessionStorage.getItem('bookingHoursSeen')) return;
+            const res = await fetch('/api/appointments/settings');
+            if(!res.ok) return;
+            const data = await res.json();
+            
+            if (data && data.available_days && data.available_days.length > 0) {
+                const days = data.available_days;
+                
+                // Formulate days string
+                const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+                let sortedDays = days.sort((a, b) => daysOfWeek.indexOf(a) - daysOfWeek.indexOf(b));
+                let daysText = sortedDays.length > 2 ? `${sortedDays[0]} to ${sortedDays[sortedDays.length - 1]}` : sortedDays.join(' and ');
+                
+                function formatTime(t) {
+                    if(!t) return '';
+                    let [h, m] = t.split(':');
+                    h = parseInt(h);
+                    let ampm = h >= 12 ? 'PM' : 'AM';
+                    h = h % 12;
+                    if (h === 0) h = 12;
+                    return `${h}:${m} ${ampm}`;
+                }
+                
+                let bStart = data.booking_start || data.start_time;
+                let bEnd = data.booking_end || data.end_time;
+                let timeText = `${formatTime(bStart)} - ${formatTime(bEnd)}`;
+                
+                document.getElementById('popup-days').innerText = daysText;
+                document.getElementById('popup-time').innerText = timeText;
+                
+                document.getElementById('booking-hours-modal').style.display = 'flex';
+                sessionStorage.setItem('bookingHoursSeen', 'true');
+            }
+        } catch (e) { console.error('Error fetching appointment hours', e); }
+    }, 1000);
+});
+</script>
 </body>
+
 </html>
