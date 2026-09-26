@@ -174,6 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       // Privacy & Terms logic
+      window.siteLegalData = { privacy: info.privacy_policy || '', terms: info.terms_conditions || '' };
       if (info.privacy_policy && info.privacy_policy.trim().length > 0) {
           const pBtn = document.getElementById('footer-privacy-btn');
           if(pBtn) pBtn.style.display = 'block';
@@ -383,3 +384,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // Poll every 5 seconds
     setInterval(loadFooterAlert, 5000);
 });
+
+window.openLegalModal = function(type) {
+    const modal = document.getElementById('legalModal');
+    const title = document.getElementById('legal-modal-title');
+    const content = document.getElementById('legal-modal-content');
+    
+    if (!modal || !title || !content) return;
+    
+    if (type === 'privacy') {
+        title.innerText = 'Privacy Policy';
+        content.innerText = window.siteLegalData?.privacy || 'No Privacy Policy available.';
+    } else if (type === 'terms') {
+        title.innerText = 'Terms & Conditions';
+        content.innerText = window.siteLegalData?.terms || 'No Terms & Conditions available.';
+    }
+    
+    modal.classList.add("active");
+    document.body.style.overflow = "hidden";
+};
