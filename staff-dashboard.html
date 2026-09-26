@@ -121,6 +121,8 @@
         }
         .sidebar-header { display: block; padding: 2rem 1.5rem; }
         
+        .header { flex-direction: column; align-items: flex-start; gap: 15px; padding: 1.5rem; }
+        #staff-nav { width: 100%; justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 10px; }
         .header h2 { font-size: 1.3rem; }
         .header p { font-size: 0.85rem; }
         .admin-section { padding: 1rem; }
@@ -154,6 +156,34 @@
 
 </style>
     <meta name="google-site-verification" content="Cb6ak0wetmxY9fGq95lyGFJI2XIfWpdpoZRLJ_e-4RY" />
+
+    <style>
+        #global-toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 16px 28px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            font-size: 15px;
+            z-index: 999999;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        #global-toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+
 </head>
 <body>
     <div id="login-loading-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f8f9fa; z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s ease;">
@@ -207,10 +237,13 @@
     <main class="main-content">
         
         
-        <header class="header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-            <div>
-                <h2>Welcome, <span id="staff-name-display">Advocate</span></h2>
-                <p style="color: var(--color-text-light);">Legal Professional Dashboard</p>
+        <header class="header">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <img id="portal-logo" src="" alt="Chamber Logo" style="height: 45px; display: none; border-radius: 4px; object-fit: contain;">
+                <div>
+                    <h2 style="margin: 0; display: flex; align-items: center; gap: 10px;">Welcome, <span id="staff-name-display">Advocate</span></h2>
+                <p style="margin: 0; color: var(--color-text-light);">Legal Professional Dashboard</p>
+                </div>
             </div>
             <nav id="staff-nav" style="display: flex; gap: 10px; align-items: center; overflow-x: auto; padding-bottom: 5px;">
                 <a class="nav-btn" id="nav-dashboard" onclick="showSection('dashboard')">📁 Cases</a>
@@ -402,11 +435,12 @@
                 <label class="form-label">Attachment (Optional)</label>
                 <input type="file" id="modal-msg-file" class="form-control">
             </div>
+            
+            <button class="btn btn-outline" style="width: 100%; border-color: var(--color-primary); color: var(--color-primary); margin-bottom: 2rem;" id="btn-send-msg" onclick="sendMessageToClient()">✉️ Send Email & Message to Client</button>
 
-            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-                <button class="btn btn-outline" style="position: absolute; left: 50%; transform: translateX(-50%);" id="btn-send-msg" onclick="sendMessageToClient()">Send Message to Client</button>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end; border-top: 1px solid var(--border); padding-top: 1.5rem;">
                 <button class="btn btn-outline" onclick="closeCaseModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="saveCaseModal()">Save Changes</button>
+                <button class="btn btn-primary" onclick="saveCaseModal()">Save Case Details</button>
             </div>
         </div>
     </div>
@@ -439,7 +473,8 @@
         // Show Big Logo Popup if logo exists
         const popup = document.getElementById('logo-popup-screen');
         const bigLogo = document.getElementById('big-popup-logo');
-        if (popup && bigLogo && !sessionStorage.getItem('logoPopupShown')) {
+        if (advocateLogoUrl && popup && bigLogo && !sessionStorage.getItem('logoPopupShown')) {
+            bigLogo.src = advocateLogoUrl;
             sessionStorage.setItem('logoPopupShown', 'true');
             popup.style.display = 'flex';
             setTimeout(() => {
@@ -719,17 +754,17 @@
                 });
                 
                 if (res.ok) {
-                    alert('Case created and email sent successfully!');
+                    showToast('Saved');
                     e.target.reset();
                     // Reload my cases to show the new one
                     myCasesCache = "";
                     loadStaffDashboard();
                 } else {
-                    alert('Failed to create case.');
+                    showToast('Error', 'error');
                 }
             } catch (err) {
                 console.error(err);
-                alert('Error creating case.');
+                showToast('Error', 'error');
             } finally {
                 btn.innerText = originalText;
                 btn.disabled = false;
@@ -750,11 +785,11 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status, next_hearing, notes, chamber_case_number, court_case_number })
                 });
-                alert('Case details updated successfully!');
+                showToast('Changed');
                 closeCaseModal();
                 loadMyCases();
             } catch(e) {
-                alert('Error updating case');
+                showToast('Error', 'error');
             }
         }
                 
@@ -765,7 +800,7 @@
             const fileInput = document.getElementById('modal-msg-file');
             
             if (!subject || !message) {
-                alert('Please enter a subject and a message.');
+                showToast('Enter Subject', 'error');
                 return;
             }
             
@@ -787,15 +822,15 @@
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    alert('Message sent successfully!');
+                    showToast('Sent');
                     document.getElementById('modal-msg-subject').value = '';
                     document.getElementById('modal-msg-body').value = '';
                     if (fileInput) fileInput.value = '';
                 } else {
-                    alert(data.error || 'Failed to send message.');
+                    showToast(data.error || 'Failed', 'error');
                 }
             } catch (err) {
-                alert('Server error.');
+                showToast('Server Error', 'error');
             }
             
             btn.innerText = 'Send Message to Client';
@@ -832,7 +867,7 @@
             if (isCodeMode[section]) {
                 // Verify Email Code
                 const code = document.getElementById(`code-input-${section}`).value;
-                if (!code) return alert("Enter code");
+                if (!code) return showToast("Enter code", 'error')
                 
                 try {
                     const res = await fetch('/api/staff/verify-section-code', {
@@ -851,14 +886,14 @@
                         if (section === 'clients') loadStaffClients();
                         // No specific load function for addcase needed since it's just a form
                     } else {
-                        alert(result.error);
+                        showToast(result.error, 'error')
                     }
                 } catch(e) { console.error(e); }
                 
             } else {
                 // Verify Daily Password
                 const pwd = document.getElementById(`pwd-input-${section}`).value;
-                if (!pwd) return alert("Enter password");
+                if (!pwd) return showToast("Enter password", 'error')
                 
                 try {
                     const res = await fetch('/api/staff/verify-section', {
@@ -877,7 +912,7 @@
                         if (section === 'clients') loadStaffClients();
                         // No specific load function for addcase needed since it's just a form
                     } else {
-                        alert(result.error);
+                        showToast(result.error, 'error')
                     }
                 } catch (e) { console.error(e); }
             }
@@ -894,8 +929,8 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ email: staffData.email })
                 });
-                if (res.ok) alert("Verification code sent to your email. You have 30 seconds to enter it.");
-                else alert("Failed to send code.");
+                if (res.ok) showToast('Code Sent', 'info');
+                else showToast('Failed', 'error');
             } catch (e) { console.error(e); }
         }
         
@@ -950,7 +985,7 @@
         window.approveStaffAppointment = async function(id) {
             const date = document.getElementById(`date-${id}`).value;
             const time = document.getElementById(`time-${id}`).value;
-            if(!date || !time) return alert('Please select a date and time.');
+            if(!date || !time) return showToast('Select Date & Time', 'error');
             try {
                 const response = await fetch('/api/appointments/approve', {
                     method: 'POST',
@@ -958,10 +993,10 @@
                     body: JSON.stringify({ id, date, time })
                 });
                 if(response.ok) {
-                    alert('Appointment approved!');
+                    showToast('Booked');
                     staffApptCache = "";
                     loadStaffAppointments();
-                } else alert('Failed to approve');
+                } else showToast('Error', 'error');
             } catch(err) { console.error(err); }
         }
 
@@ -1000,7 +1035,7 @@
         window.printCaseDetails = async function(id) {
     const printWindow = window.open('', '', 'width=800,height=900');
     if (!printWindow) {
-        alert("Popup blocked! Please allow popups for this site.");
+        showToast("Popup blocked! Please allow popups for this site.");
         return;
     }
     printWindow.document.write(`<html><head><title>Loading...</title></head><body style="font-family:sans-serif; padding:40px;"><h2>Generating Report...</h2></body></html>`);
@@ -1009,11 +1044,19 @@
         const res = await fetch(`/api/cases/${id}`);
         const c = await res.json();
         
+        let chamberName = 'JSM. Chambers';
         let chamberAddress = 'Cuttack, Odisha';
+        let chamberPhone = '';
+        let chamberEmail = '';
+        let printLogoUrl = '';
         try {
             const setRes = await fetch('/api/settings');
             const settings = await setRes.json();
+            if (settings.chamber_name) chamberName = settings.chamber_name;
             if (settings.address) chamberAddress = settings.address;
+            if (settings.phone) chamberPhone = settings.phone;
+            if (settings.email) chamberEmail = settings.email;
+            if (settings.logoUrl) printLogoUrl = settings.logoUrl;
         } catch(e) {}
         
         let statusHistoryHtml = '<ul>';
@@ -1097,9 +1140,14 @@
             <body>
                 <div class="report-container">
                     <div class="header">
-                    <h1>JSM. Chambers</h1>
-                    <p style="font-size: 0.9rem; color: #444;">${chamberAddress}</p>
-                    <p style="margin-top: 15px; font-weight: bold;">Case Information Report</p>
+                    ${printLogoUrl ? `<img src="${printLogoUrl}" style="max-height: 80px; width: auto; object-fit: contain; margin-bottom: 15px;" alt="Chamber Logo">` : ''}
+                    <h1>${chamberName}</h1>
+                    <p style="font-size: 0.95rem; color: #444; margin-bottom: 4px;"><strong>Address:</strong> ${chamberAddress}</p>
+                    ${chamberPhone ? `<p style="font-size: 0.95rem; color: #444; margin-bottom: 4px;"><strong>Phone:</strong> ${chamberPhone}</p>` : ''}
+                    ${chamberEmail ? `<p style="font-size: 0.95rem; color: #444; margin-bottom: 4px;"><strong>Email:</strong> ${chamberEmail}</p>` : ''}
+                    <div style="margin-top: 20px; border-top: 1px dashed #ccc; padding-top: 15px;">
+                        <h2 style="margin: 0; font-size: 1.3rem; color: #0A192F;">CASE INFORMATION REPORT</h2>
+                    </div>
                 </div>
                 
                 <div class="details">
@@ -1117,7 +1165,6 @@
                     </div>
                     <div>
                         <strong>Status:</strong><br> ${c.status}
-                        
                     </div>
                 </div>
 
@@ -1138,7 +1185,7 @@
 
                 <div class="section">
                     <h3>Administrative Notes</h3>
-                    <p>${c.notes ? c.notes.replace(/\\n/g, '<br>') : 'No notes recorded.'}</p>
+                    <p>${c.notes ? c.notes.replace(/\n/g, '<br>') : 'No notes recorded.'}</p>
                 </div>
                 
                 <div style="text-align: center; margin-top: 50px;">
@@ -1152,7 +1199,7 @@
         console.error(err);
         printWindow.document.body.innerHTML = `<h2>Error loading case details.</h2>`;
     }
-};
+}
 
         setInterval(() => {
             if (unlockedSections['appointments']) loadStaffAppointments();
@@ -1171,7 +1218,7 @@
             if(dateStr) {
                 window.open(`/api/appointments/download?date=${dateStr}`, '_blank');
             } else {
-                alert('Please select a date first.');
+                showToast('Select Date', 'error');
             }
         };
 
@@ -1187,7 +1234,7 @@
         function initSpeechRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
-                alert("Your browser does not support Voice Recognition.");
+                showToast('Not Supported', 'error');
                 return null;
             }
             const recognition = new SpeechRecognition();
@@ -1221,7 +1268,7 @@
             
             aiRecognition.onerror = function(event) {
                 if (event.error !== 'no-speech') {
-                    alert("Microphone error: " + event.error);
+                    showToast("Microphone error: " + event.error, 'error')
                     overlay.style.display = 'none';
                     isAiListening = false;
                 }
@@ -1259,13 +1306,13 @@
                 if (data.status === 'confirm') {
                     showAiConfirmModal(data.case, data.proposed_changes, transcript, data.email_draft);
                 } else if (data.status === 'multiple_matches') {
-                    alert("Found multiple cases. Please specify the case number.");
+                    showToast('Be Specific', 'error');
                 } else {
-                    alert(data.message || "Could not process request.");
+                    showToast('Error', 'error');
                 }
             } catch (err) {
                 document.getElementById('ai-listening-overlay').style.display = 'none';
-                alert("Server error.");
+                showToast("Server error.", 'error')
             }
         }
 
@@ -1324,12 +1371,12 @@
                     body: JSON.stringify(currentAiPayload)
                 });
                 if(res.ok) {
-                    alert('Case updated successfully via AI Voice!');
+                    showToast('Changed');
                     loadMyCases();
                 } else {
-                    alert('Failed to update case.');
+                    showToast('Error', 'error');
                 }
-            } catch(e) { alert('Server error.'); }
+            } catch(e) { showToast('Server Error', 'error'); }
             currentAiPayload = null;
         };
 
@@ -1372,6 +1419,39 @@
             </div>
         </div>
     </div>
+
+
+
+<script>
+window.showToast = function(message, type = 'success') {
+    let toast = document.getElementById('global-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'global-toast';
+        document.body.appendChild(toast);
+    }
+    
+    let icon = '✅';
+    if (type === 'error') {
+        toast.style.background = '#ef4444';
+        icon = '❌';
+    } else if (type === 'info') {
+        toast.style.background = '#3b82f6';
+        icon = 'ℹ️';
+    } else {
+        toast.style.background = '#10b981';
+        icon = '✅';
+    }
+    
+    toast.innerHTML = `<span>${icon}</span> <span>${message.replace(/\n/g, '<br>')}</span>`;
+    toast.classList.add('show');
+    
+    if (window.toastTimeout) clearTimeout(window.toastTimeout);
+    window.toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+    }, 4000);
+};
+</script>
 
 </body>
 </html>

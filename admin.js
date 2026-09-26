@@ -1,4 +1,65 @@
 // Helper: compress an image File to a small base64 JPEG
+
+// ==========================================
+// TOAST NOTIFICATIONS
+// ==========================================
+window.showToast = function(message, type = 'success') {;
+    let toast = document.getElementById('admin-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'admin-toast';
+        document.body.appendChild(toast);
+        
+        const style = document.createElement('style');
+        style.innerHTML = `
+            #admin-toast {
+                position: fixed;
+                bottom: 30px;
+                right: 30px;
+                padding: 16px 28px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 600;
+                font-size: 15px;
+                z-index: 999999;
+                opacity: 0;
+                transform: translateY(20px);
+                transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                pointer-events: none;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            #admin-toast.show {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    let icon = '✅';
+    if (type === 'error') {
+        toast.style.background = '#ef4444';
+        icon = '❌';
+    } else if (type === 'info') {
+        toast.style.background = '#3b82f6';
+        icon = 'ℹ️';
+    } else {
+        toast.style.background = '#10b981';
+        icon = '✅';
+    }
+    
+    toast.innerHTML = `<span>${icon}</span> <span>${message.replace(/\n/g, '<br>')}</span>`;
+    toast.classList.add('show');
+    
+    if (window.toastTimeout) clearTimeout(window.toastTimeout);
+    window.toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+    }, 4000);
+};
+
 window.compressImage = function(file, maxSize = 300) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -55,11 +116,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // Appointments Management
     // ==========================================
-    const consultationsTbody = document.getElementById('consultations-tbody');
-    let apptCache = "";
+        let apptCache = "";
+
+    window.toggleDateFolder = function(dateId) {
+        const content = document.getElementById('folder-content-' + dateId);
+        const icon = document.getElementById('folder-icon-' + dateId);
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            icon.innerText = '📂';
+        } else {
+            content.style.display = 'none';
+            icon.innerText = '📁';
+        }
+    };
 
     async function loadAppointments() {
-        if (!consultationsTbody) return;
+        const container = document.getElementById('appointments-accordion-container');
+        if (!container) return;
         try {
             const response = await fetch('/api/appointments', { cache: 'no-store' });
             const data = await response.json();
@@ -73,43 +146,108 @@ document.addEventListener('DOMContentLoaded', () => {
             if (statAppts) statAppts.innerText = data.length;
 
             if (data.length > 0) {
-                consultationsTbody.innerHTML = '';
+                container.innerHTML = '';
+                
+                // Group by date
+                const grouped = {};
                 data.forEach(appt => {
-                    const status = appt.status || 'Pending';
-                    const isApproved = status === 'Approved';
-                    const dateVal = appt.appointment_date || '';
-                    const timeVal = appt.appointment_time || '';
-
-                    const statusBadge = isApproved 
-                        ? `<span style="background: #388E3C; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">Approved</span>`
-                        : `<span style="background: #F57C00; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">Pending</span>`;
-
-                    const dateInput = isApproved ? dateVal : `<input type="date" id="date-${appt._id}" class="form-control" style="width:130px; display:inline-block; margin-bottom:5px;">`;
-                    const timeInput = isApproved ? timeVal : `<input type="time" id="time-${appt._id}" class="form-control" style="width:110px; display:inline-block;">`;
+                    const date = appt.appointment_date || 'Unassigned/Pending';
+                    if (!grouped[date]) grouped[date] = [];
+                    grouped[date].push(appt);
+                });
+                
+                // Sort dates (descending)
+                const sortedDates = Object.keys(grouped).sort((a,b) => {
+                    if(a === 'Unassigned/Pending') return -1;
+                    if(b === 'Unassigned/Pending') return 1;
+                    return new Date(b) - new Date(a);
+                });
+                
+                sortedDates.forEach((date, idx) => {
+                    const appts = grouped[date];
+                    let dateDisplay = date;
+                    if(date !== 'Unassigned/Pending') {
+                        try {
+                            const d = new Date(date);
+                            dateDisplay = d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+                        } catch(e) {}
+                    }
                     
-                    const approveBtn = isApproved 
-                        ? '' 
-                        : `<button class="btn btn-primary" style="margin-right: 5px; padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="approveAppt('${appt._id}')">Approve</button>`;
-
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${appt.name}</td>
-                        <td>${appt.email}</td>
-                        <td>${statusBadge}</td>
-                        <td>
-                            ${dateInput}
-                            <br>
-                            ${timeInput}
-                        </td>
-                        <td>
-                            ${approveBtn}
-                            <button class="btn btn-error" style="background-color: #D32F2F; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;" onclick="deleteAppointment('${appt._id}')">Delete</button>
-                        </td>
+                    const folderDiv = document.createElement('div');
+                    folderDiv.style.border = '1px solid #e2e8f0';
+                    folderDiv.style.borderRadius = '8px';
+                    folderDiv.style.overflow = 'hidden';
+                    folderDiv.style.background = '#f8fafc';
+                    folderDiv.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+                    
+                    const headerHtml = `
+                        <div onclick="toggleDateFolder('${idx}')" style="padding: 15px 20px; background: #0A192F; color: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s;">
+                            <div style="font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; gap: 10px;">
+                                <span id="folder-icon-${idx}" style="font-size: 1.4rem;">📁</span> ${dateDisplay}
+                            </div>
+                            <span style="background: #D4AF37; color: #0A192F; padding: 4px 12px; border-radius: 12px; font-weight: bold; font-size: 0.9rem;">${appts.length} Appointment(s)</span>
+                        </div>
                     `;
-                    consultationsTbody.appendChild(tr);
+                    
+                    let tableRows = '';
+                    appts.forEach(appt => {
+                        const status = appt.status || 'Pending';
+                        const isApproved = status === 'Approved';
+                        const dateVal = appt.appointment_date || '';
+                        const timeVal = appt.appointment_time || '';
+
+                        const statusBadge = isApproved 
+                            ? `<span style="background: #10b981; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">Approved</span>`
+                            : `<span style="background: #F57C00; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">Pending</span>`;
+
+                        const dateInput = isApproved ? `<div style="font-weight: bold; color: #334155;">${dateVal}</div>` : `<input type="date" id="date-${appt._id}" class="form-control" style="width:130px; display:inline-block; margin-bottom:5px;">`;
+                        const timeInput = isApproved ? `<div style="color: #64748b;">${timeVal}</div>` : `<input type="time" id="time-${appt._id}" class="form-control" style="width:110px; display:inline-block;">`;
+                        
+                        const approveBtn = isApproved 
+                            ? '' 
+                            : `<button class="btn btn-primary" style="margin-right: 5px; padding: 0.4rem 0.8rem; font-size: 0.85rem; background: #D4AF37; color: #0A192F; border: none; font-weight: bold; cursor: pointer; border-radius: 4px;" onclick="approveAppt('${appt._id}')">Approve</button>`;
+
+                        tableRows += `
+                            <tr style="background: white; border-bottom: 1px solid #e2e8f0; transition: background 0.2s;">
+                                <td style="padding: 15px; text-align: left; font-weight: 500;">${appt.name}</td>
+                                <td style="padding: 15px; text-align: left; color: #64748b;">${appt.email}</td>
+                                <td style="padding: 15px; text-align: left;">${statusBadge}</td>
+                                <td style="padding: 15px; text-align: left;">
+                                    ${dateInput}
+                                    ${timeInput}
+                                </td>
+                                <td style="padding: 15px; text-align: left;">
+                                    ${approveBtn}
+                                    <button class="btn btn-error" style="background-color: #ef4444; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold;" onclick="deleteAppointment('${appt._id}')">Delete</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    const contentHtml = `
+                        <div id="folder-content-${idx}" style="display: none; padding: 0;">
+                            <table style="width: 100%; border-collapse: collapse; margin: 0;">
+                                <thead>
+                                    <tr style="background: #f1f5f9; color: #475569; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">
+                                        <th style="padding: 12px 15px; text-align: left; font-weight: 700;">Name</th>
+                                        <th style="padding: 12px 15px; text-align: left; font-weight: 700;">Email</th>
+                                        <th style="padding: 12px 15px; text-align: left; font-weight: 700;">Status</th>
+                                        <th style="padding: 12px 15px; text-align: left; font-weight: 700;">Set Date & Time</th>
+                                        <th style="padding: 12px 15px; text-align: left; font-weight: 700;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${tableRows}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    
+                    folderDiv.innerHTML = headerHtml + contentHtml;
+                    container.appendChild(folderDiv);
                 });
             } else {
-                consultationsTbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999; padding: 2rem;">No pending appointments found.</td></tr>';
+                container.innerHTML = '<div style="text-align: center; color: #94a3b8; font-size: 1.1rem; padding: 3rem; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">No pending appointments found.</div>';
             }
         } catch (error) {
             console.error('Error loading appointments:', error);
@@ -121,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const date = document.getElementById(`date-${id}`).value;
         const time = document.getElementById(`time-${id}`).value;
         if (!date || !time) {
-            alert('Please select both Date and Time before approving.');
+            showToast('Please select both Date and Time before approving.');
             return;
         }
 
@@ -133,19 +271,19 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (response.ok) {
-                alert('Appointment approved! Confirmation email sent.');
+                showToast('Approved & Email Sent');
                 apptCache = ''; // force reload
                 loadAppointments();
             } else {
-                alert('Failed to approve appointment.');
+                showToast('Failed to approve appointment.', 'error');
             }
         } catch (err) {
             console.error(err);
-            alert('Server error.');
+            showToast('Server error.', 'error');
         }
     };
 
-    if (consultationsTbody) {
+    if (document.getElementById("appointments-accordion-container")) {
         loadAppointments();
         setInterval(loadAppointments, 1000);
     }
@@ -158,11 +296,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 apptCache = "";
                 loadAppointments();
             } else {
-                alert('Failed to delete appointment');
+                showToast('Failed to delete appointment', 'error');
             }
         } catch (err) {
             console.error(err);
-            alert('Error connecting to server');
+            showToast('Error connecting to server', 'error');
         }
     };
 
@@ -174,11 +312,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 apptCache = "";
                 loadAppointments();
             } else {
-                alert('Failed to delete all appointments');
+                showToast('Failed to delete all appointments', 'error');
             }
         } catch (err) {
             console.error(err);
-            alert('Error connecting to server');
+            showToast('Error connecting to server', 'error');
         }
     };
 
@@ -200,6 +338,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (newDataString === casesCache) return;
             casesCache = newDataString;
             globalCasesData = cases;
+            
+
 
             
             // Update Stats
@@ -298,12 +438,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const data = await response.json();
                 if (response.ok) {
-                    alert(`Case Created!\\n\\nAuto-Generated Password: ${data.password}\\nEmail Sent: ${data.email_sent ? 'Yes' : 'No (Give them the password manually)'}`);
+                    showToast(`Case Created!\\n\\nAuto-Generated Password: ${data.password}\\nEmail Sent: ${data.email_sent ? 'Yes' : 'No (Give them the password manually)'}`);
                     addCaseForm.reset();
                     casesCache = "";
                     loadCases();
                 } else {
-                    alert('Error creating case.');
+                    showToast('Error creating case.', 'error');
                 }
             } catch (err) {
                 console.error(err);
@@ -369,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status, next_hearing, notes, chamber_case_number, court_case_number, assigned_staff_email })
             });
-            alert('Case details saved successfully!');
+            showToast('Saved');
             closeCaseModal();
             casesCache = "";
             loadCases();
@@ -404,7 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 casesCache = "";
                 loadCases();
             } else {
-                alert(data.message);
+                showToast(data.message);
                 closeCaseModal();
                 casesCache = "";
                 loadCases();
@@ -412,7 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (err) {
             console.error(err);
-            alert("Error finalizing case.");
+            showToast("Error finalizing case.", 'error');
         }
     };
 
@@ -421,7 +561,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const subject = document.getElementById('modal-email-subject').value;
         const message = document.getElementById('modal-email-msg').value;
         if (!subject || !message) {
-            alert('Please enter a subject and message.');
+            showToast('Please enter a subject and message.');
             return;
         }
         const btn = document.getElementById('btn-send-email');
@@ -435,15 +575,15 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await response.json();
             if (response.ok) {
-                alert('Email sent successfully!');
+                showToast('Email Sent');
                 document.getElementById('modal-email-subject').value = '';
                 document.getElementById('modal-email-msg').value = '';
             } else {
-                alert(data.error || 'Failed to send email.');
+                showToast(data.error || 'Failed to send email.', 'error');
             }
         } catch (err) {
             console.error(err);
-            alert("Error sending email.");
+            showToast("Error sending email.", 'error');
         }
         btn.innerText = 'Send Email';
         btn.disabled = false;
@@ -575,7 +715,7 @@ async function deleteAdvocate(id) {
         await fetch(`/api/advocates/${id}`, { method: 'DELETE' });
         loadAdvocates();
     } catch(err) {
-        alert("Error deleting advocate");
+        showToast("Error deleting advocate", 'error');
     }
 }
 
@@ -606,14 +746,14 @@ if (addAdvocateForm) {
             const data = await response.json();
             
             if (response.ok) {
-                alert(`Advocate Added!\n\nEmail (Login ID): ${email}\nPassword: ${data.password}\n\nAn email has been sent to them with these credentials.`);
+                showToast(`Advocate Added!\n\nEmail (Login ID): ${email}\nPassword: ${data.password}\n\nAn email has been sent to them with these credentials.`);
                 addAdvocateForm.reset();
                 loadAdvocates();
             } else {
-                alert(data.error || 'Failed to add advocate');
+                showToast(data.error || 'Failed to add advocate', 'error');
             }
         } catch(err) {
-            alert('Failed to add advocate');
+            showToast('Failed to add advocate', 'error');
         } finally {
             submitBtn.textContent = 'Add Advocate';
         }
@@ -694,6 +834,13 @@ if (officeInfoForm) {
             if (data.phone) document.getElementById('admin-phone').value = data.phone;
             if (data.email) document.getElementById('admin-email').value = data.email;
             if (data.footer_alert) document.getElementById('admin-footer-alert').value = data.footer_alert;
+            if (data.quick_links) {
+                renderQuickLinks(data.quick_links);
+            } else {
+                renderQuickLinks([]);
+            }
+            if (data.privacy_policy) document.getElementById('admin-privacy-policy').value = data.privacy_policy;
+            if (data.terms_conditions) document.getElementById('admin-terms').value = data.terms_conditions;
             if (data.logoUrl) {
                 globalLogoUrl = data.logoUrl;
                 logoPreview.src = globalLogoUrl;
@@ -712,6 +859,9 @@ if (officeInfoForm) {
         const phone = document.getElementById('admin-phone').value;
         const email = document.getElementById('admin-email').value;
         const footer_alert = document.getElementById('admin-footer-alert').value;
+        const quick_links = getQuickLinksData();
+        const privacy_policy = document.getElementById('admin-privacy-policy').value;
+        const terms_conditions = document.getElementById('admin-terms').value;
         const btn = officeInfoForm.querySelector('button');
         btn.innerText = 'Saving...';
         
@@ -719,11 +869,11 @@ if (officeInfoForm) {
             await fetch('/api/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ allow_common_password, chamber_name, address, phone, email, footer_alert, logoUrl: globalLogoUrl })
+                body: JSON.stringify({ allow_common_password, chamber_name, address, phone, email, footer_alert, quick_links, privacy_policy, terms_conditions, logoUrl: globalLogoUrl })
             });
-            alert('Settings Saved Successfully');
+            showToast('Saved');
         } catch(err) {
-            alert('Error saving settings');
+            showToast('Error saving settings', 'error');
         } finally {
             btn.innerText = 'Save Settings';
         }
@@ -799,7 +949,7 @@ if (officeInfoForm) {
                 await window.loadGallery();
             } catch (err) {
                 console.error(err);
-                alert("Error uploading image");
+                showToast("Error uploading image", 'error');
             }
             
             btn.innerText = 'Upload Image';
@@ -814,7 +964,7 @@ if (officeInfoForm) {
             await window.loadGallery();
         } catch (err) {
             console.error(err);
-            alert("Error deleting image");
+            showToast("Error deleting image", 'error');
         }
     };
     
@@ -863,14 +1013,14 @@ if (officeInfoForm) {
         try {
             const response = await fetch(`/api/cases/${id}`, { method: 'DELETE' });
             if (response.ok) {
-                alert('Case deleted successfully.');
+                showToast('Deleted');
                 loadArchivedCases();
             } else {
-                alert('Failed to delete case.');
+                showToast('Failed to delete case.', 'error');
             }
         } catch(e) {
             console.error(e);
-            alert('Error deleting case.');
+            showToast('Error deleting case.', 'error');
         }
     }
 
@@ -1020,14 +1170,14 @@ if (officeInfoForm) {
         try {
             const response = await fetch(`/api/email-logs/staff/${encodeURIComponent(email)}`, { method: 'DELETE' });
             if (response.ok) {
-                alert('All logs for this staff member have been deleted.');
+                showToast('Deleted');
                 loadEmailLogs(); // reload UI
             } else {
-                alert('Failed to delete logs.');
+                showToast('Failed to delete logs.', 'error');
             }
         } catch (e) {
             console.error(e);
-            alert('Error deleting logs.');
+            showToast('Error deleting logs.', 'error');
         }
     };
 
@@ -1038,11 +1188,11 @@ if (officeInfoForm) {
             if (response.ok) {
                 window.loadEmailLogs();
             } else {
-                alert('Failed to delete email log.');
+                showToast('Failed to delete email log.', 'error');
             }
         } catch (error) {
             console.error(error);
-            alert('Error deleting email log.');
+            showToast('Error deleting email log.', 'error');
         }
     };
 
@@ -1074,13 +1224,13 @@ if (officeInfoForm) {
                     btn.style.cursor = 'pointer';
                 }, 2000);
             } else {
-                alert('Failed to send email.');
+                showToast('Failed to send email.', 'error');
                 btn.innerText = 'Email Password';
                 btn.disabled = false;
             }
         } catch (error) {
             console.error(error);
-            alert('Error sending email.');
+            showToast('Error sending email.', 'error');
             btn.innerText = 'Email Password';
             btn.disabled = false;
         }
@@ -1148,7 +1298,7 @@ if (officeInfoForm) {
         const fileInput = document.getElementById('edit-adv-image');
         
         if(!name || !email || !specialty) {
-            alert('Please fill out all required fields.');
+            showToast('Please fill out all required fields.');
             return;
         }
 
@@ -1168,14 +1318,14 @@ if (officeInfoForm) {
             if (response.ok) {
                 closeEditAdvocateModal();
                 loadAdvocates();
-                alert('Advocate details updated successfully.');
+                showToast('Changed');
             } else {
                 const data = await response.json();
-                alert(data.error || 'Failed to update advocate.');
+                showToast(data.error || 'Failed to update advocate.', 'error');
             }
         } catch(error) {
             console.error(error);
-            alert('Error updating advocate.');
+            showToast('Error updating advocate.', 'error');
         }
     };
 
@@ -1247,7 +1397,7 @@ window.showIdCard = function(id) {
 
 window.sendIdCardEmail = async function() {
     if (!currentIdCardAdvocate || !currentIdCardAdvocate.email) {
-        alert("This staff member does not have a registered email address.");
+        showToast("This staff member does not have a registered email address.");
         return;
     }
     
@@ -1277,14 +1427,14 @@ window.sendIdCardEmail = async function() {
         
         const result = await res.json();
         if (res.ok) {
-            alert("ID Card emailed successfully!");
+            showToast("ID Card emailed successfully!");
             document.getElementById('id-card-modal').style.display = 'none';
         } else {
-            alert(result.error || "Failed to send email");
+            showToast(result.error || "Failed to send email", 'error');
         }
     } catch (e) {
         console.error(e);
-        alert("An error occurred while generating or sending the ID card: " + e.message);
+        showToast("An error occurred while generating or sending the ID card: " + e.message, 'error');
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
@@ -1306,7 +1456,7 @@ let isAiConfirming = false;
 function initSpeechRecognition() {
     window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!window.SpeechRecognition) {
-        alert("Your browser does not support Speech Recognition. Please use Google Chrome or Microsoft Edge.");
+        showToast("Your browser does not support Speech Recognition. Please use Google Chrome or Microsoft Edge.");
         return null;
     }
     const recognition = new window.SpeechRecognition();
@@ -1346,7 +1496,7 @@ window.startAiVoice = function() {
     aiRecognition.onerror = function(event) {
         console.error("Speech Recognition Error", event.error);
         if (event.error !== 'no-speech') {
-            alert("Microphone error: " + event.error);
+            showToast("Microphone error: " + event.error, 'error');
             overlay.style.display = 'none';
             isAiListening = false;
         }
@@ -1380,15 +1530,15 @@ async function processAiTranscript(transcript) {
             showAiConfirmModal(data.case, data.proposed_changes, transcript, data.email_draft);
         } else if (data.status === 'multiple_matches') {
             // Future enhancement: show disambiguation UI
-            alert("Found multiple cases matching your voice request. Please be more specific with the Case Number.");
+            showToast("Found multiple cases matching your voice request. Please be more specific with the Case Number.");
         } else {
-            alert(data.message || "Could not process your request.");
+            showToast(data.message || "Could not process your request.");
         }
         
     } catch (err) {
         console.error(err);
         document.getElementById('ai-listening-overlay').style.display = 'none';
-        alert("Server error processing voice command.");
+        showToast("Server error processing voice command.", 'error');
     }
 }
 
@@ -1487,18 +1637,18 @@ window.confirmAiAction = async function() {
         });
         
         if (res.ok) {
-            alert("Case updated successfully via AI!");
+            showToast("Case updated successfully via AI!");
             document.getElementById('ai-confirm-modal').style.display = 'none';
             // Reload cases UI
-            if (typeof loadAllCases === 'function') loadAllCases();
+            if (typeof loadCases === 'function') casesCache=""; loadCases();
             if (typeof loadRecentCases === 'function') loadRecentCases();
         } else {
             const data = await res.json();
-            alert("Failed to update: " + data.error);
+            showToast("Failed to update: " + data.error, 'error');
         }
     } catch(err) {
         console.error(err);
-        alert("Server error applying changes.");
+        showToast("Server error applying changes.", 'error');
     }
     
     btn.innerText = 'Confirm Update';
@@ -1557,12 +1707,12 @@ window.saveAppointmentSettings = async function() {
             body: JSON.stringify({ start_time, end_time, booking_start, booking_end, max_per_day, slot_duration, available_days })
         });
         if(res.ok) {
-            alert('Availability Settings Saved!');
+            showToast('Saved');
         } else {
-            alert('Failed to save settings.');
+            showToast('Failed to save settings.', 'error');
         }
     } catch(e) {
-        alert('Error saving settings.');
+        showToast('Error saving settings.', 'error');
     }
     btn.innerText = 'Save Settings';
 };
@@ -1602,7 +1752,7 @@ window.executeEmergencyShift = async function() {
     const password = document.getElementById('shift-admin-pwd').value;
     
     if (!old_date || !new_date || !start_time || !end_time || !password) {
-        alert("Please fill in all fields.");
+        showToast("Please fill in all fields.");
         return;
     }
     
@@ -1623,26 +1773,26 @@ window.executeEmergencyShift = async function() {
         const data = await response.json();
         
         if (response.ok) {
-            alert(data.message);
+            showToast(data.message);
             document.getElementById('emergency-shift-modal').style.display = 'none';
             document.getElementById('shift-admin-pwd').value = '';
             if (window.loadAdminConsultations) loadAdminConsultations();
         } else {
-            alert(data.error || 'Failed to shift appointments.');
+            showToast(data.error || 'Failed to shift appointments.', 'error');
         }
         
         btn.innerText = origText;
         btn.disabled = false;
     } catch(err) {
         console.error(err);
-        alert('Server error while shifting appointments.');
+        showToast('Server error while shifting appointments.', 'error');
     }
 };
 
 window.printCaseDetails = async function(id) {
     const printWindow = window.open('', '', 'width=800,height=900');
     if (!printWindow) {
-        alert("Popup blocked! Please allow popups for this site.");
+        showToast("Popup blocked! Please allow popups for this site.");
         return;
     }
     printWindow.document.write(`<html><head><title>Loading...</title></head><body style="font-family:sans-serif; padding:40px;"><h2>Generating Report...</h2></body></html>`);
@@ -1651,11 +1801,17 @@ window.printCaseDetails = async function(id) {
         const res = await fetch(`/api/cases/${id}`);
         const c = await res.json();
         
+        let chamberName = 'JSM. Chambers';
         let chamberAddress = 'Cuttack, Odisha';
+        let chamberPhone = '';
+        let chamberEmail = '';
         try {
             const setRes = await fetch('/api/settings');
             const settings = await setRes.json();
+            if (settings.chamber_name) chamberName = settings.chamber_name;
             if (settings.address) chamberAddress = settings.address;
+            if (settings.phone) chamberPhone = settings.phone;
+            if (settings.email) chamberEmail = settings.email;
         } catch(e) {}
         
         let statusHistoryHtml = '<ul>';
@@ -1739,9 +1895,14 @@ window.printCaseDetails = async function(id) {
             <body>
                 <div class="report-container">
                     <div class="header">
-                    <h1>JSM. Chambers</h1>
-                    <p style="font-size: 0.9rem; color: #444;">${chamberAddress}</p>
-                    <p style="margin-top: 15px; font-weight: bold;">Case Information Report</p>
+                    ${globalLogoUrl ? `<img src="${globalLogoUrl}" style="max-height: 80px; width: auto; object-fit: contain; margin-bottom: 15px;" alt="Chamber Logo">` : ''}
+                    <h1>${chamberName}</h1>
+                    <p style="font-size: 0.95rem; color: #444; margin-bottom: 4px;"><strong>Address:</strong> ${chamberAddress}</p>
+                    ${chamberPhone ? `<p style="font-size: 0.95rem; color: #444; margin-bottom: 4px;"><strong>Phone:</strong> ${chamberPhone}</p>` : ''}
+                    ${chamberEmail ? `<p style="font-size: 0.95rem; color: #444; margin-bottom: 4px;"><strong>Email:</strong> ${chamberEmail}</p>` : ''}
+                    <div style="margin-top: 20px; border-top: 1px dashed #ccc; padding-top: 15px;">
+                        <h2 style="margin: 0; font-size: 1.3rem; color: #0A192F;">CASE INFORMATION REPORT</h2>
+                    </div>
                 </div>
                 
                 <div class="details">
@@ -1814,3 +1975,66 @@ window.printCaseDetails = async function(id) {
             }
         });
     };
+
+
+
+// ==========================================
+// QUICK LINKS BUILDER
+// ==========================================
+window.addQuickLinkRow = function(title = '', url = '') {
+    const container = document.getElementById('quick-links-container');
+    if (!container) return;
+    
+    const row = document.createElement('div');
+    row.className = 'ql-row';
+    row.style.cssText = 'display: flex; gap: 10px; align-items: center; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;';
+    
+    row.innerHTML = `
+        <input type="text" class="form-control ql-title" placeholder="Link Title (e.g. Home)" value="${title.replace(/"/g, '&quot;')}" style="flex: 1; margin: 0;">
+        <input type="text" class="form-control ql-url" placeholder="URL (e.g. https://...)" value="${url.replace(/"/g, '&quot;')}" style="flex: 2; margin: 0;">
+        <button type="button" class="btn" onclick="this.parentElement.remove()" style="background: #ef4444; color: white; border: none; border-radius: 6px; padding: 8px 12px; cursor: pointer;">Delete</button>
+    `;
+    container.appendChild(row);
+};
+
+window.renderQuickLinks = function(linksData) {
+    const container = document.getElementById('quick-links-container');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    let links = [];
+    if (typeof linksData === 'string') {
+        // Legacy text format parser
+        const lines = linksData.split('\n');
+        lines.forEach(line => {
+            let parts = line.split('|');
+            if (parts.length < 2) parts = line.split('-');
+            if (parts.length >= 2) {
+                links.push({ title: parts[0].trim(), url: parts.slice(1).join('|').replace(/^-/,'').trim() });
+            }
+        });
+    } else if (Array.isArray(linksData)) {
+        links = linksData;
+    }
+    
+    if (links.length === 0) {
+        addQuickLinkRow(); // Add an empty row by default
+    } else {
+        links.forEach(l => addQuickLinkRow(l.title, l.url));
+    }
+};
+
+window.getQuickLinksData = function() {
+    const container = document.getElementById('quick-links-container');
+    if (!container) return [];
+    const rows = container.querySelectorAll('.ql-row');
+    const links = [];
+    rows.forEach(row => {
+        const title = row.querySelector('.ql-title').value.trim();
+        const url = row.querySelector('.ql-url').value.trim();
+        if (title && url) {
+            links.push({ title, url });
+        }
+    });
+    return links;
+};

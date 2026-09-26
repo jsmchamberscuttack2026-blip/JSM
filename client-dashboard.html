@@ -154,6 +154,34 @@
         #app-loading { display: none; padding: 40px; text-align: center; flex-direction: column; align-items: center; justify-content: center;}
 
     </style>
+
+    <style>
+        #client-toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 16px 28px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            font-size: 15px;
+            z-index: 999999;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        #client-toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+
 </head>
 <body>
 
@@ -172,10 +200,9 @@
             <div class="sidebar-title">JSM Chambers<br><span style="font-size:12px; color:#94A3B8; font-weight:400;">Client Portal</span></div>
         </div>
         <nav class="nav-links">
-            <a href="#" class="nav-item active"><i data-lucide="layout-dashboard"></i> Dashboard</a>
-            <a href="#" class="nav-item disabled"><i data-lucide="folder-open"></i> My Documents</a>
+            <a href="#" class="nav-item active" id="nav-dashboard" onclick="showClientSection('dashboard')"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+            <a href="#" class="nav-item" id="nav-docs" onclick="showClientSection('docs')"><i data-lucide="folder-open"></i> My Documents</a>
             <a href="#" onclick="openAppointmentModal(event)" class="nav-item"><i data-lucide="calendar"></i> Appointments</a>
-            <a href="#" class="nav-item disabled"><i data-lucide="message-square"></i> Messages</a>
         </nav>
         <div class="sidebar-footer">
             <a href="#" onclick="logout(event)" class="nav-item" style="color: #EF4444;"><i data-lucide="log-out"></i> Sign Out</a>
@@ -205,6 +232,7 @@
         </header>
 
         <!-- Overview Cards -->
+        <div id="section-dashboard" class="client-section" style="display: block;">
         <div class="overview-grid">
             <div class="overview-card">
                 <div class="oc-icon"><i data-lucide="scale"></i></div>
@@ -275,12 +303,57 @@
                 </div>
             </div>
         </div>
+        </div> <!-- end section-dashboard -->
+        
+        <div id="section-docs" class="client-section" style="display: none; max-width: 800px; margin: 0 auto; animation: fadeIn 0.3s;">
+            <div style="background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-top: 20px; border: 1px solid rgba(212,175,55,0.2);">
+                <h2 style="color: var(--navy); margin-bottom: 10px; font-family: 'Playfair Display', serif; font-size: 24px;">My Documents</h2>
+                <p style="color: #64748B; margin-bottom: 30px; line-height: 1.6;">Securely access your officially generated legal documents, case status reports, and administrative files.</p>
+                
+                <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; background: #f8fafc; display: flex; flex-direction: column; gap: 15px;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="width: 50px; height: 50px; background: rgba(212,175,55,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--gold);">
+                            <i data-lucide="file-text"></i>
+                        </div>
+                        <div>
+                            <h3 style="color: var(--navy); margin: 0; font-size: 18px;">Recent Case Data Report</h3>
+                            <p style="color: #64748B; margin: 5px 0 0; font-size: 14px;">Detailed dynamic summary of your active case status and upcoming hearings.</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="openDocAccessModal()" style="align-self: flex-start; margin-top: 10px;">Access Document Details</button>
+                </div>
+            </div>
+        </div>
+        
     </main>
+
+    <!-- Doc Access Modal -->
+    <div id="doc-access-modal" style="display: none; position: fixed; inset: 0; background: rgba(10,25,47,0.7); z-index: 99999; justify-content: center; align-items: center; backdrop-filter: blur(4px);">
+        <div style="background: white; padding: 35px; border-radius: 16px; width: 450px; max-width: 90%; box-shadow: 0 20px 50px rgba(0,0,0,0.3); border-top: 6px solid var(--gold); animation: slideUp 0.3s ease;">
+            <h3 style="color: var(--navy); font-family: 'Playfair Display', serif; font-size: 22px; margin-bottom: 8px;">Security Verification</h3>
+            <p style="color: #64748B; font-size: 14px; margin-bottom: 25px;">Please verify your identity to access this secure legal document.</p>
+            
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label style="display: block; color: var(--navy); font-weight: bold; margin-bottom: 8px; font-size: 14px;">Case Number Record</label>
+                <input type="text" id="doc-case-number" readonly style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f1f5f9; font-weight: bold; color: var(--navy); outline: none;">
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 25px;">
+                <label style="display: block; color: var(--navy); font-weight: bold; margin-bottom: 8px; font-size: 14px;">Security Captcha <span id="captcha-text" style="background: #e2e8f0; color: #334155; padding: 4px 10px; font-weight: 800; letter-spacing: 3px; user-select: none; border-radius: 4px; margin-left: 10px; text-decoration: line-through;"></span></label>
+                <input type="text" id="doc-captcha-input" placeholder="Enter the code above" style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; outline: none; transition: border-color 0.3s; font-size: 16px;">
+            </div>
+            
+            <div style="display: flex; gap: 15px;">
+                <button onclick="document.getElementById('doc-access-modal').style.display='none'" style="flex: 1; padding: 12px; border: 1px solid #cbd5e1; background: transparent; border-radius: 8px; color: #64748b; font-weight: bold; cursor: pointer; transition: 0.2s;">Cancel</button>
+                <button onclick="verifyAndGenerateDoc()" style="flex: 2; padding: 12px; background: var(--navy); border: none; border-radius: 8px; color: var(--gold); font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 12px rgba(10,25,47,0.2);">Access Document</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Mobile Nav -->
     <nav class="mobile-nav">
-        <a href="#" class="mn-item active"><i data-lucide="layout-dashboard"></i>Dashboard</a>
-        <a href="#" class="mn-item disabled"><i data-lucide="folder-open"></i>Docs</a>
+        <a href="#" class="mn-item active" id="mnav-dashboard" onclick="showClientSection('dashboard')"><i data-lucide="layout-dashboard"></i>Dashboard</a>
+        <a href="#" class="mn-item" id="mnav-docs" onclick="showClientSection('docs')"><i data-lucide="folder-open"></i>Docs</a>
         <a href="#" onclick="openAppointmentModal(event)" class="mn-item"><i data-lucide="calendar"></i>Booking</a>
         <a href="#" onclick="logout(event)" class="mn-item" style="color:var(--red)"><i data-lucide="log-out"></i>Logout</a>
     </nav>
@@ -299,6 +372,36 @@
     </div>
 
     <script>
+
+        window.showToast = function(message, type = 'success') {
+            let toast = document.getElementById('client-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'client-toast';
+                document.body.appendChild(toast);
+            }
+            
+            let icon = '✅';
+            if (type === 'error') {
+                toast.style.background = '#ef4444';
+                icon = '❌';
+            } else if (type === 'info') {
+                toast.style.background = '#3b82f6';
+                icon = 'ℹ️';
+            } else {
+                toast.style.background = '#10b981';
+                icon = '✅';
+            }
+            
+            toast.innerHTML = `<span>${icon}</span> <span>${message.replace(/\n/g, '<br>')}</span>`;
+            toast.classList.add('show');
+            
+            if (window.toastTimeout) clearTimeout(window.toastTimeout);
+            window.toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        };
+
         lucide.createIcons();
 
         // Greeting Logic
@@ -312,6 +415,7 @@
             try {
                 const setRes = await fetch('/api/settings');
                 const settings = await setRes.json();
+                window.globalSettings = settings;
                 
                 // Block Appointments if Admin Locked Them
                 if (settings.appointments_open === false) {
@@ -451,12 +555,12 @@
                     document.getElementById('app-success').style.display = 'flex';
                 } else {
                     document.getElementById('app-form-view').style.display = 'block';
-                    alert(data.error || "Failed to book appointment.");
+                    showToast(data.error || "Booking Failed", "error");
                 }
             } catch(err) {
                 document.getElementById('app-loading').style.display = 'none';
                 document.getElementById('app-form-view').style.display = 'block';
-                alert("Server error. Please try again.");
+                showToast("Server Error", "error");
             }
         }
 
@@ -561,6 +665,173 @@
                 console.error(err);
             }
         }
+
+        // Section Switching
+        function showClientSection(sectionId) {
+            document.querySelectorAll('.client-section').forEach(s => s.style.display = 'none');
+            document.getElementById('section-' + sectionId).style.display = 'block';
+            
+            // Desktop Nav
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            const dnav = document.getElementById('nav-' + sectionId);
+            if (dnav) dnav.classList.add('active');
+            
+            // Mobile Nav
+            document.querySelectorAll('.mn-item').forEach(n => n.classList.remove('active'));
+            const mnav = document.getElementById('mnav-' + sectionId);
+            if (mnav) mnav.classList.add('active');
+        }
+
+        let currentCaptcha = "";
+        
+        function openDocAccessModal() {
+            if (!clientProfileData) {
+                showToast("Case data not loaded yet", "error");
+                return;
+            }
+            const modal = document.getElementById('doc-access-modal');
+            const caseNumField = document.getElementById('doc-case-number');
+            const captchaEl = document.getElementById('captcha-text');
+            const captchaInput = document.getElementById('doc-captcha-input');
+            
+            caseNumField.value = clientProfileData.chamber_case_number || clientProfileData.court_case_number || clientProfileData.case_type || "N/A";
+            
+            // Generate 5 char alphanumeric captcha
+            currentCaptcha = Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit number
+            captchaEl.innerText = currentCaptcha;
+            captchaInput.value = '';
+            
+            modal.style.display = 'flex';
+        }
+        
+        function verifyAndGenerateDoc() {
+            const input = document.getElementById('doc-captcha-input').value.toUpperCase().trim();
+            if (input !== currentCaptcha) {
+                showToast("Incorrect Captcha", "error");
+                return;
+            }
+            
+            document.getElementById('doc-access-modal').style.display = 'none';
+            generateCaseReport();
+        }
+        
+        function generateCaseReport() {
+            const c = clientProfileData;
+            const s = window.globalSettings || {};
+            
+            const logoHtml = s.logoUrl ? `<img src="${s.logoUrl}" style="max-height: 85px; width: auto; object-fit: contain; margin-bottom: 15px;" alt="Chamber Logo">` : '';
+            const cName = s.chamber_name || 'JSM. Chambers';
+            const cAddress = s.address || 'Cuttack, Odisha';
+            const cPhone = s.phone || '';
+            const cEmail = s.email || '';
+            
+            const status = c.status || 'Pending Review';
+            const nextHearing = c.next_hearing || 'To Be Decided';
+            const caseType = c.case_type || 'Legal Matter';
+            const chamberNo = c.chamber_case_number || 'Not Assigned';
+            const courtNo = c.court_case_number || 'Not Assigned';
+            
+            let paragraphText = `This document serves as an official status report for the active legal proceedings regarding your <strong>${caseType}</strong> (Chamber Record: #${chamberNo}, Court Record: #${courtNo}). `;
+            paragraphText += `Currently, the administrative and legal standing of your case is formally marked as <strong>"${status}"</strong>. `;
+            
+            if (nextHearing !== 'To Be Decided') {
+                paragraphText += `The honorable court or presiding chamber has scheduled your next hearing or review session for <strong>${nextHearing}</strong>. Please ensure that all requested documentation, evidence, and necessary procedural fees are submitted prior to this date to avoid delays. `;
+            } else {
+                paragraphText += `A formal hearing date has not yet been assigned to this matter. Our legal team is actively monitoring the court dockets and will notify you immediately once a specific date is allocated by the presiding authority. `;
+            }
+            
+            paragraphText += `Your designated legal representatives are continuously reviewing the procedural requirements to ensure full compliance with the latest regulations. Should there be any sudden changes in the active status or hearing schedules, you will be alerted via your registered communication channels.`;
+            
+            const printWindow = window.open('', '', 'width=800,height=900');
+            printWindow.document.open();
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>My Active Case Details - ${c.client_name}</title>
+                    <style>
+                        body { font-family: 'Times New Roman', Times, serif; padding: 50px; line-height: 1.8; color: #111; max-width: 800px; margin: 0 auto; }
+                        .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #0A192F; padding-bottom: 20px; }
+                        .header h1 { margin: 0; color: #0A192F; font-family: 'Playfair Display', Georgia, serif; font-size: 28px; }
+                        .header p { margin: 5px 0 0; color: #333; font-size: 14px; }
+                        .report-title { text-align: center; font-size: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; margin: 30px 0; border: 1px solid #000; padding: 10px; background: #f9f9f9; }
+                        .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; font-size: 15px; }
+                        .meta-grid div { padding: 10px; border-bottom: 1px dashed #ccc; }
+                        .content { font-size: 16px; text-align: justify; margin-top: 30px; }
+                        .footer { margin-top: 60px; text-align: right; font-style: italic; color: #555; border-top: 1px solid #ccc; padding-top: 20px; }
+                        @media print {
+                            body { padding: 0; }
+                            .no-print { display: none; }
+                        }
+                        .print-btn { display: block; width: 200px; margin: 40px auto; padding: 12px 20px; background: #0A192F; color: #fff; text-align: center; text-decoration: none; border-radius: 6px; font-family: Arial, sans-serif; cursor: pointer; font-weight: bold; border: none; }
+                    </style>
+                
+    <style>
+        #client-toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 16px 28px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            font-size: 15px;
+            z-index: 999999;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        #client-toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+
+</head>
+                <body>
+                    <div class="header">
+                        ${logoHtml}
+                        <h1>${cName}</h1>
+                        <p><strong>Address:</strong> ${cAddress}</p>
+                        ${cPhone ? `<p><strong>Phone:</strong> ${cPhone}</p>` : ''}
+                        ${cEmail ? `<p><strong>Email:</strong> ${cEmail}</p>` : ''}
+                    </div>
+                    
+                    <div class="report-title">
+                        My Active Case Details
+                    </div>
+                    
+                    <div class="meta-grid">
+                        <div><strong>Client Name:</strong><br>${c.client_name}</div>
+                        <div><strong>Generated On:</strong><br>${new Date().toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}</div>
+                        <div><strong>Case Type:</strong><br>${c.case_type}</div>
+                        <div><strong>Reference Numbers:</strong><br>
+                        Chamber: ${c.chamber_case_number || 'N/A'}<br>
+                        Court: ${c.court_case_number || 'N/A'}
+                        </div>
+                    </div>
+                    
+                    <div class="content">
+                        <p>${paragraphText}</p>
+                    </div>
+                    
+                    <div class="footer">
+                        Officially Generated by ${cName} Client Portal<br>
+                        System ID: ${c._id.substring(0,8).toUpperCase()}
+                    </div>
+                    
+                    <button class="no-print print-btn" onclick="window.print()">Print Document</button>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+    </script>
     </script>
 
     <!-- Appointment Modal -->

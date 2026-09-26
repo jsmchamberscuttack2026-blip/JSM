@@ -6,6 +6,7 @@
 
 <title>JSM. Chambers | Private Legal Organization</title>
 
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 
 /* =========================================================
@@ -17,21 +18,17 @@
     padding:0;
     box-sizing:border-box;
 }
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+}
 
 html{
     scroll-behavior:smooth;
 }
 
 body{
-    font-family:
-        Inter,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Arial,
-        sans-serif;
-
-    background:#f4f6f8;
+    font-family: var(--font-body);
+    background: var(--cream);
     color:#14202b;
     line-height:1.6;
 }
@@ -63,16 +60,20 @@ button{
 
 :root{
 
-    --navy:#0c1b2a;
-    --navy2:#102b42;
-
-    --gold:#c79a52;
-    --gold-light:#e1bd7b;
+    --navy:#051426;
+    --navy2:#0a213b;
+    
+    --gold:#D4AF37;
+    --gold-light:#ebd076;
+    --gold-hover:#b8952b;
 
     --white:#ffffff;
-    --cream:#f8f6f1;
+    --cream:#fcfbf8;
 
-    --text:#14202b;
+    --text:#1a2b3c;
+    
+    --font-heading: 'Playfair Display', serif;
+    --font-body: 'Plus Jakarta Sans', sans-serif;
     --muted:#687784;
 
     --border:#dfe5e9;
@@ -89,18 +90,13 @@ button{
 ========================================================= */
 
 .disclaimer{
-
-    background:#07131e;
-    color:#dce5eb;
-
-    padding:10px 20px;
-
-    text-align:center;
-
-    font-size:11px;
-
-    letter-spacing:.2px;
-
+    background: #030a13;
+    color: #cbd5e1;
+    padding: 10px 20px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
 }
 
 /* =========================================================
@@ -263,14 +259,18 @@ button{
 
         radial-gradient(
             circle at 75% 15%,
-            rgba(199,154,82,.18),
-            transparent 28%
+            rgba(212, 175, 55, 0.12),
+            transparent 35%
         ),
-
+        radial-gradient(
+            circle at -10% 80%,
+            rgba(5, 20, 38, 0.05),
+            transparent 40%
+        ),
         linear-gradient(
             135deg,
-            #f8fafb,
-            #eef3f6
+            var(--cream),
+            #e8ebf0
         );
 
     min-height:690px;
@@ -371,10 +371,7 @@ button{
 
 .hero h1{
 
-    font-family:
-        Georgia,
-        "Times New Roman",
-        serif;
+    font-family: var(--font-heading);
 
     font-size:
         clamp(48px,6vw,82px);
@@ -769,33 +766,22 @@ section{
 }
 
 .service-card{
-
     background:#fff;
-
-    border:1px solid var(--border);
-
+    border:1px solid rgba(5, 20, 38, 0.08);
     border-radius:18px;
-
-    padding:30px;
-
+    padding:35px 30px;
     min-height:300px;
-
     display:flex;
-
     flex-direction:column;
-
-    transition:.3s;
-
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
 }
 
 .service-card:hover{
-
-    transform:translateY(-8px);
-
-    box-shadow:var(--shadow);
-
-    border-color:#d1b37b;
-
+    transform:translateY(-10px);
+    box-shadow: 0 20px 40px rgba(5, 20, 38, 0.08);
+    border-color: var(--gold);
+    background: linear-gradient(to bottom right, #ffffff, #fafbfd);
 }
 
 .service-number{
@@ -1058,15 +1044,19 @@ section{
 }
 
 .advocate{
-
-    border:1px solid rgba(255,255,255,.12);
-
+    border:1px solid rgba(212, 175, 55, 0.15);
     border-radius:20px;
-
     overflow:hidden;
+    background: linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    backdrop-filter: blur(10px);
+    transition: all 0.4s ease;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
 
-    background:rgba(255,255,255,.045);
-
+.advocate:hover {
+    transform: translateY(-8px);
+    border-color: rgba(212, 175, 55, 0.5);
+    box-shadow: 0 15px 40px rgba(212, 175, 55, 0.15);
 }
 
 .advocate-image{
@@ -1126,13 +1116,11 @@ section{
 }
 
 .advocate-info h3{
-
-    margin:8px 0 5px;
-
-    font-family:Georgia,serif;
-
-    font-size:24px;
-
+    margin: 8px 0 5px;
+    font-family: var(--font-heading);
+    font-size: 24px;
+    color: var(--white);
+    letter-spacing: 0.5px;
 }
 
 .advocate-info p{
@@ -1588,22 +1576,40 @@ footer{
 }
 
 .modal-box{
+    width: min(510px, 100%);
+    background: #fff;
+    border-radius: 22px;
+    padding: 40px;
+    position: relative;
+    box-shadow: 0 40px 100px rgba(5, 20, 38, 0.4);
+    animation: modalOpen .3s cubic-bezier(0.16, 1, 0.3, 1);
+    border-top: 6px solid var(--gold);
+}
 
-    width:min(510px,100%);
+.modal-box h2 {
+    color: var(--navy);
+    font-size: 28px;
+    margin-bottom: 8px;
+}
 
-    background:#fff;
+.modal-box p {
+    color: var(--text);
+    opacity: 0.8;
+    margin-bottom: 24px;
+}
 
-    border-radius:22px;
+.form-control, .modal-box input {
+    border: 1px solid rgba(5, 20, 38, 0.15) !important;
+    border-radius: 10px !important;
+    background: #f8fafc;
+    transition: all 0.3s ease;
+}
 
-    padding:35px;
-
-    position:relative;
-
-    box-shadow:
-        0 30px 90px rgba(0,0,0,.3);
-
-    animation:modalOpen .25s ease;
-
+.form-control:focus, .modal-box input:focus {
+    border-color: var(--gold) !important;
+    box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.1) !important;
+    outline: none;
+    background: #fff;
 }
 
 @keyframes modalOpen{
@@ -2177,6 +2183,34 @@ select:focus-visible{
 
 </style>
     <meta name="google-site-verification" content="Cb6ak0wetmxY9fGq95lyGFJI2XIfWpdpoZRLJ_e-4RY" />
+
+    <style>
+        #global-toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 16px 28px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            font-size: 15px;
+            z-index: 999999;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        #global-toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+
 </head>
 
 
@@ -2184,7 +2218,7 @@ select:focus-visible{
     <!-- Full Page Loading Screen -->
     <div id="public-loading-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s ease;">
         <img id="public-loading-logo" src="" style="max-width: 200px; max-height: 200px; width: 80%; object-fit: contain; display: none; animation: pulse 2s infinite; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
-        <h2 id="public-loading-text" style="margin-top: 30px; color: #173650; font-family: 'Georgia', serif; letter-spacing: 2px; text-align: center;">JSM. Chambers<br><small style="font-size: 14px; font-weight: normal; color: #d3ae68;">Loading.......</small></h2>
+        <h2 id="public-loading-text" style="margin-top: 30px; color: #051426; font-family: 'Playfair Display', serif; letter-spacing: 2px; text-align: center; font-size: 32px;">JSM. Chambers<br><small style="font-size: 15px; font-weight: 500; color: #D4AF37; letter-spacing: 3px; text-transform: uppercase;">Loading...</small></h2>
     </div>
     <style>
         @keyframes pulse {
@@ -2805,9 +2839,32 @@ Book Appointment
 
 
 
+
+<!-- =========================================================
+     3D LOGO SECTION
+========================================================= -->
+<section class="logo-wrapper-section">
+    <div class="logo-container-3d">
+        <!-- Rotating decorative ring -->
+        <div class="logo-ring-3d"></div>
+
+        <!-- Admin uploaded logo -->
+        <div class="logo-3d-model">
+            <img id="chamberLogo3D" src="images/default-logo.png" alt="Chamber Logo" onerror="this.src='images/default-logo.png'">
+        </div>
+
+        <!-- Ground shadow -->
+        <div class="logo-shadow-3d"></div>
+
+        <!-- Chamber name -->
+        <div class="chamber-name-3d">JSM CHAMBERS</div>
+    </div>
+</section>
+
 <!-- =========================================================
      GALLERY
 ========================================================= -->
+
 <style>
 .gallery-section {
     padding: 60px 0;
@@ -2915,7 +2972,7 @@ services.
 </div>
 
 
-<div class="footer-links">
+<div class="footer-links" id="footer-quick-links-container">
 
 <div class="footer-title">
 QUICK LINKS
@@ -2925,13 +2982,8 @@ QUICK LINKS
 Home
 </a>
 
-<a href="#services" style="display: none;">
-Legal Services
-</a>
-
-<a href="#advocates" style="display: none;">
-Advocates
-</a>
+<!-- Dynamic Quick Links will be injected here -->
+<div id="dynamic-quick-links"></div>
 
 </div>
 
@@ -2951,11 +3003,11 @@ onclick="openModal('appointmentModal');return false;">
 Book Appointment
 </a>
 
-<a href="#">
+<a href="#" id="footer-privacy-btn" onclick="openLegalModal('privacy'); return false;" style="display: none;">
 Privacy Policy
 </a>
 
-<a href="#">
+<a href="#" id="footer-terms-btn" onclick="openLegalModal('terms'); return false;" style="display: none;">
 Terms & Conditions
 </a>
 
@@ -3156,10 +3208,13 @@ Our team will contact you for confirmation.
 Appointment Requested!
 </h2>
 
-<p>
-Your Appointment request has been received and is currently pending.
-A confirmation will be sent to your email.
+<p style="margin-bottom: 20px;">
+Your Appointment request has been securely submitted and is currently pending review.
 </p>
+<div style="background: rgba(234, 179, 8, 0.1); border: 1px solid #eab308; padding: 15px; border-radius: 8px; text-align: left; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(234,179,8,0.1);">
+    <strong style="color: #ca8a04; display: block; margin-bottom: 8px; font-size: 16px;">⚠️ Important Email Notice</strong>
+    <span style="color: #444; font-size: 14.5px; line-height: 1.5; display: block;">If the confirmation email is not showing in your primary Inbox, please <strong>check your Spam / Junk folder</strong>.<br><br>If it is there, please mark it as <strong>"Report Not Spam"</strong> so future case updates will safely arrive in your main inbox.</span>
+</div>
 
 <button
 class="btn btn-primary"
@@ -3245,14 +3300,15 @@ async function submitAppointment(event){
         if (response.ok) {
             processing.style.display = "none";
             success.style.display = "block";
+            document.getElementById('spamWarningModal').style.display = 'flex';
         } else {
-            alert(data.error || 'Failed to submit request.');
+            showToast(data.error || 'Failed', 'error');
             form.style.display = "block";
             processing.style.display = "none";
         }
     } catch (err) {
         console.error(err);
-        alert('Server error. Please try again.');
+        showToast('Server Error', 'error');
         form.style.display = "block";
         processing.style.display = "none";
     }
@@ -3281,7 +3337,7 @@ document.querySelectorAll("#navLinks a").forEach(function(link){
 });
 
 </script>
-<script src="js/main.js?v=7"></script>
+<script src="js/main.js?v=9"></script>
 <script>
 // Force-render advocates to bypass any cached main.js issues
 document.addEventListener('DOMContentLoaded', () => {
@@ -3330,7 +3386,134 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 <style>
 @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* =========================================================
+   3D ROTATING LOGO SECTION
+========================================================= */
+.logo-wrapper-section {
+    min-height: 70vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(circle at center, #29210e 0%, #100e09 35%, #050505 75%);
+    overflow: hidden;
+    position: relative;
+    padding: 60px 0;
+}
+
+.logo-container-3d {
+    position: relative;
+    width: 330px;
+    height: 390px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    perspective: 1200px;
+    margin: 0 auto;
+}
+
+.logo-ring-3d {
+    position: absolute;
+    width: 270px;
+    height: 270px;
+    border-radius: 50%;
+    border: 1px solid rgba(212,175,55,0.8);
+    box-shadow: 0 0 15px rgba(212,175,55,0.35), inset 0 0 20px rgba(212,175,55,0.15);
+    animation: ringRotate 12s linear infinite;
+}
+
+.logo-ring-3d::before {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    border-radius: 50%;
+    border: 1px dashed rgba(212,175,55,0.45);
+    animation: reverseRotate 8s linear infinite;
+}
+
+.logo-3d-model {
+    position: relative;
+    width: 190px;
+    height: 190px;
+    transform-style: preserve-3d;
+    animation: logoRotate 7s linear infinite, floating 4s ease-in-out infinite;
+    z-index: 5;
+}
+
+.logo-3d-model img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    backface-visibility: visible;
+    filter: drop-shadow(0 0 8px rgba(212,175,55,0.65)) drop-shadow(0 20px 30px rgba(0,0,0,0.7));
+}
+
+.logo-3d-model::before,
+.logo-3d-model::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid rgba(212,175,55,0.3);
+    transform: translateZ(-8px);
+}
+
+.logo-shadow-3d {
+    position: absolute;
+    bottom: 35px;
+    width: 180px;
+    height: 30px;
+    background: rgba(0,0,0,0.8);
+    border-radius: 50%;
+    filter: blur(14px);
+    animation: shadowMove 4s ease-in-out infinite;
+}
+
+.chamber-name-3d {
+    position: absolute;
+    bottom: 5px;
+    width: 100%;
+    text-align: center;
+    color: #d4af37;
+    letter-spacing: 5px;
+    font-size: 17px;
+    text-transform: uppercase;
+    text-shadow: 0 0 8px rgba(212,175,55,0.4);
+    font-family: var(--font-heading);
+}
+
+@keyframes logoRotate {
+    0% { transform: rotateY(0deg); }
+    100% { transform: rotateY(360deg); }
+}
+
+@keyframes ringRotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes reverseRotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(-360deg); }
+}
+
+@keyframes floating {
+    0%, 100% { translate: 0 0; }
+    50% { translate: 0 -12px; }
+}
+
+@keyframes shadowMove {
+    0%, 100% { transform: scaleX(1); opacity: 0.7; }
+    50% { transform: scaleX(0.75); opacity: 0.4; }
+}
+
+@media (max-width: 600px) {
+    .logo-container-3d { transform: scale(0.8); }
+}
 </style>
+
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -3373,6 +3556,63 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1000);
 });
 </script>
+
+<!-- Legal Modal -->
+<div class="modal" id="legalModal">
+    <div class="modal-box" style="max-width: 800px; text-align: left; padding: 40px;">
+        <button class="close" onclick="closeModal('legalModal')">×</button>
+        <h2 id="legal-modal-title" style="margin-bottom: 20px; font-family: 'Playfair Display', serif; color: var(--navy);">Legal Information</h2>
+        <div id="legal-modal-content" style="white-space: pre-wrap; font-size: 15px; line-height: 1.8; color: #444; max-height: 60vh; overflow-y: auto; padding-right: 15px;"></div>
+    </div>
+</div>
+
+
+<script>
+window.showToast = function(message, type = 'success') {
+    let toast = document.getElementById('global-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'global-toast';
+        document.body.appendChild(toast);
+    }
+    
+    let icon = '✅';
+    if (type === 'error') {
+        toast.style.background = '#ef4444';
+        icon = '❌';
+    } else if (type === 'info') {
+        toast.style.background = '#3b82f6';
+        icon = 'ℹ️';
+    } else {
+        toast.style.background = '#10b981';
+        icon = '✅';
+    }
+    
+    toast.innerHTML = `<span>${icon}</span> <span>${message.replace(/\n/g, '<br>')}</span>`;
+    toast.classList.add('show');
+    
+    if (window.toastTimeout) clearTimeout(window.toastTimeout);
+    window.toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+    }, 4000);
+};
+</script>
+
+
+<!-- Custom Spam Warning Full-Screen Alert -->
+<div id="spamWarningModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); z-index: 999999; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+    <div style="background: #ffffff; width: 90%; max-width: 500px; padding: 40px 30px; border-radius: 16px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.4); animation: successAppear 0.4s ease-out; position: relative;">
+        <div style="width: 70px; height: 70px; background: #fef08a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 35px; margin: 0 auto 20px auto; color: #ca8a04;">
+            ⚠️
+        </div>
+        <h2 style="font-family: 'Playfair Display', serif; color: #0A192F; font-size: 26px; margin-bottom: 15px;">Important Notice</h2>
+        <p style="color: #475569; font-size: 16px; line-height: 1.6; margin-bottom: 30px; font-family: 'Plus Jakarta Sans', sans-serif;">
+            After your appointment is booked, if the confirmation email is not showing in your mail inbox, please check the <strong>Gmail Spam</strong> section and <strong>Report Not Spam</strong>. The email will then safely show in your primary inbox.
+        </p>
+        <button onclick="document.getElementById('spamWarningModal').style.display='none'" style="background: #0A192F; color: #D4AF37; border: none; padding: 14px 35px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.3s; width: 100%; font-family: 'Plus Jakarta Sans', sans-serif;">I Understand</button>
+    </div>
+</div>
+
 </body>
 
 </html>

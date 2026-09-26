@@ -365,7 +365,10 @@
             #archived-cases-tbody td:nth-of-type(4):before, #staff-clients-tbody td:nth-of-type(4):before { content: "Status:"; }
             #archived-cases-tbody td:nth-of-type(5):before { content: "Action:"; }
         }
-    </style>
+    
+
+</style>
+</style>
     <meta name="google-site-verification" content="Cb6ak0wetmxY9fGq95lyGFJI2XIfWpdpoZRLJ_e-4RY" />
 </head>
 <body>
@@ -389,20 +392,7 @@
                 <div id="section-dashboard" class="admin-section active">
                     <!-- Dashboard View -->
 
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h4>Total Active Cases</h4>
-                        <div class="value" id="stat-active-cases">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <h4>Registered Clients</h4>
-                        <div class="value" id="stat-clients">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <h4>New Appointments</h4>
-                        <div class="value" id="stat-appointments">0</div>
-                    </div>
-                </div>
+
 
 
 
@@ -564,20 +554,9 @@
                             </div>
                         </div>
 
-                        <table class="data-table" style="margin-top: 2rem;">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                                                        <th>Status</th>
-                                    <th>Set Date & Time</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="consultations-tbody">
-                                <!-- Populated by JS -->
-                            </tbody>
-                        </table>
+                        <div id="appointments-accordion-container" style="margin-top: 2rem; display: flex; flex-direction: column; gap: 15px;">
+                            <!-- Populated by JS with grouped date folders -->
+                        </div>
                     </div>
                 </div>
                 <div id="section-advocates" class="admin-section">
@@ -791,7 +770,29 @@
                             </div>
                             
                             <div style="grid-column: 1 / -1; text-align: center; margin-top: 1rem;">
-                                <button type="submit" class="btn btn-primary" style="padding: 0.8rem 3rem; font-size: 1.1rem; width: 100%;">Save Settings</button>
+                                
+                            <div class="form-group" style="grid-column: 1 / -1; margin: 0; margin-top: 1rem; border: 1px solid #e2e8f0; padding: 1.5rem; border-radius: 12px; background: #f8fafc;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                    <label class="form-label" style="margin: 0; font-weight: bold; color: var(--navy);">Quick Links</label>
+                                    <button type="button" class="btn btn-primary" onclick="addQuickLinkRow()" style="padding: 0.4rem 1rem; font-size: 0.9rem;">+ Add Link</button>
+                                </div>
+                                <div id="quick-links-container" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <!-- Dynamic rows will be added here -->
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="grid-column: 1 / -1; margin: 0;">
+                                <label class="form-label" for="admin-privacy-policy">Privacy Policy (Optional)</label>
+                                <textarea id="admin-privacy-policy" class="form-control" rows="5" placeholder="Enter privacy policy text here..."></textarea>
+                            </div>
+
+                            <div class="form-group" style="grid-column: 1 / -1; margin: 0;">
+                                <label class="form-label" for="admin-terms">Terms & Conditions (Optional)</label>
+                                <textarea id="admin-terms" class="form-control" rows="5" placeholder="Enter terms & conditions text here..."></textarea>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary" style="padding: 0.8rem 3rem; font-size: 1.1rem; width: 100%;">Save Settings</button>
+
                             </div>
                         </form>
                     </div>
@@ -836,7 +837,7 @@
     </main>
     </div>
 
-    <script src="js/admin.js?v=9"></script>
+    <script src="js/admin.js?v=20"></script>
 
     <!-- Edit Advocate Modal -->
     <div id="edit-advocate-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">

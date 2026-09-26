@@ -144,6 +144,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load Dynamic Office Information & Settings
   fetch('/api/settings').then(res => res.json()).then(info => {
+      window.siteSettingsData = info;
+      
+      // Dynamic Quick Links
+      if (info.quick_links) {
+          let links = [];
+          if (typeof info.quick_links === 'string') {
+              // Legacy fallback
+              const lines = info.quick_links.split('\n');
+              lines.forEach(line => {
+                  let parts = line.split('|');
+                  if (parts.length < 2) parts = line.split('-');
+                  if (parts.length >= 2) {
+                      links.push({ title: parts[0].trim(), url: parts.slice(1).join('|').replace(/^-/,'').trim() });
+                  }
+              });
+          } else if (Array.isArray(info.quick_links)) {
+              links = info.quick_links;
+          }
+          
+          const linksHtml = links.map(l => {
+              let finalUrl = l.url;
+              if (!finalUrl.startsWith('http') && !finalUrl.startsWith('#') && !finalUrl.startsWith('/')) finalUrl = 'https://' + finalUrl;
+              return `<a href="${finalUrl}" target="_blank" style="display:flex; align-items:center; gap:5px;"><span>→</span> ${l.title}</a>`;
+          }).join('');
+          
+          const qlContainer = document.getElementById('dynamic-quick-links');
+          if (qlContainer) qlContainer.innerHTML = linksHtml;
+      }
+      
+      // Privacy & Terms logic
+      if (info.privacy_policy && info.privacy_policy.trim().length > 0) {
+          const pBtn = document.getElementById('footer-privacy-btn');
+          if(pBtn) pBtn.style.display = 'block';
+      }
+      if (info.terms_conditions && info.terms_conditions.trim().length > 0) {
+          const tBtn = document.getElementById('footer-terms-btn');
+          if(tBtn) tBtn.style.display = 'block';
+      }
+
       // 1. Appointments Open/Closed logic
       if (info.appointments_open === false) {
           const appForm = document.getElementById('appointmentForm') || document.getElementById('appointment-form');
@@ -168,6 +207,10 @@ document.addEventListener('DOMContentLoaded', () => {
                   mark.innerHTML = `<img src="${info.logoUrl}" style="width:100%; height:100%; object-fit:contain; border-radius:12px;">`;
                   mark.style.background = 'transparent';
               });
+              const logo3d = document.getElementById('chamberLogo3D');
+              if(logo3d) {
+                  logo3d.src = info.logoUrl;
+              }
               
               const loadLogo = document.getElementById('public-loading-logo');
               const loadText = document.getElementById('public-loading-text');

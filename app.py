@@ -404,10 +404,18 @@ def create_appointment():
     try:
         b_sh, b_sm = map(int, booking_start.split(':'))
         b_eh, b_em = map(int, booking_end.split(':'))
-        start_dt = now.replace(hour=b_sh, minute=b_sm, second=0, microsecond=0)
-        end_dt = now.replace(hour=b_eh, minute=b_em, second=0, microsecond=0)
+        start_m = b_sh * 60 + b_sm
+        end_m = b_eh * 60 + b_em
+        now_m = now.hour * 60 + now.minute
         
-        if now < start_dt or now > end_dt:
+        allowed = False
+        if start_m <= end_m:
+            allowed = start_m <= now_m <= end_m
+        else:
+            # Overnight window (e.g. 09:00 PM to 09:00 AM)
+            allowed = now_m >= start_m or now_m <= end_m
+            
+        if not allowed:
             def format_time_12hr(total_m):
                 h = int(total_m // 60)
                 m = int(total_m % 60)
@@ -416,8 +424,8 @@ def create_appointment():
                 if dh == 0: dh = 12
                 return f"{dh:02d}:{m:02d} {ampm}"
                 
-            b_start_str = format_time_12hr(b_sh*60 + b_sm)
-            b_end_str = format_time_12hr(b_eh*60 + b_em)
+            b_start_str = format_time_12hr(start_m)
+            b_end_str = format_time_12hr(end_m)
             
             return jsonify({"error": f"Online booking is only available during our booking window: {b_start_str} to {b_end_str}. Please try again later."}), 400
     except Exception as e:

@@ -23,8 +23,7 @@
     <nav class="navbar">
         <div class="container">
             <a href="index.html" class="logo" style="display: flex; align-items: center; gap: 10px;">
-                <img id="portal-logo" src="" style="height: 40px; border-radius: 4px; display: none;">
-                <h1 id="portal-title">JSM. <span>Chambers</span></h1>
+                <h1>JSM. <span>Chambers</span></h1>
             </a>
             <a href="index.html" class="btn btn-outline" style="padding: 0.5rem 1rem;">Back to Home</a>
         </div>
@@ -32,36 +31,25 @@
 
     <div class="login-wrapper">
         <div class="login-card">
-            <h2>Staff Portal</h2>
+            
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img id="portal-logo" src="" style="max-height: 80px; max-width: 200px; border-radius: 6px; display: none; margin: 0 auto;">
+                <h2 style="margin-top: 15px; margin-bottom: 0;">Staff Portal</h2>
+            </div>
+
             <div id="error-msg" style="display: none; background: #fee2e2; color: #b91c1c; padding: 10px; border-radius: 4px; margin-bottom: 15px; text-align: center; font-size: 14px;"></div>
             
-            <form id="staff-login-form">
-                <div class="form-group">
-                    <label class="form-label" for="staff-id">Staff Email</label>
-                    <input type="email" id="staff-id" class="form-control" required placeholder="e.g. staff@jsmchambers.com">
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="password">Password</label>
-                    <input type="password" id="password" class="form-control" required placeholder="Enter password">
-                </div>
-                
-                <button type="submit" class="btn btn-primary w-100" style="width: 100%; margin-top: 1rem; background-color: #102a43; transition: 0.3s;">Staff Login</button>
+            
 
-                <div class="login-links">
-                    <a href="index.html">&larr; Back to Home</a>
-                    <a href="#" id="show-forgot-btn">Forgot Password?</a>
-                </div>
-            </form>
-
-            <form id="forgot-form" style="display: none;">
-                <div class="subtitle">Enter your registered email and we will send you a 6-digit verification code to log in.</div>
+            <form id="forgot-form">
+                <div class="subtitle">Enter your registered staff email. We will send you a 6-digit verification code to log in.</div>
                 <div class="form-group">
                     <label class="form-label" for="forgot-email">Registered Email</label>
                     <input type="email" id="forgot-email" class="form-control" placeholder="staff@example.com" required>
                 </div>
                 <button type="submit" class="btn btn-primary w-100" id="request-code-btn" style="width: 100%; background-color: #102a43; transition: 0.3s;">Request Verification Code</button>
                 <div class="login-links" style="justify-content: center;">
-                    <a href="#" id="back-to-login-btn">&larr; Back to Password Login</a>
+                    <a href="index.html">&larr; Back to Home</a>
                 </div>
             </form>
 
@@ -85,69 +73,11 @@
     </div>
 
     <script>
-        const loginForm = document.getElementById('staff-login-form');
         const forgotForm = document.getElementById('forgot-form');
         const verifyForm = document.getElementById('verify-form');
         const errorMsg = document.getElementById('error-msg');
         let tempEmail = "";
         let timerInterval = null;
-
-        document.getElementById('show-forgot-btn').addEventListener('click', (e) => {
-            e.preventDefault();
-            errorMsg.style.display = 'none';
-            loginForm.style.display = 'none';
-            forgotForm.style.display = 'block';
-        });
-
-        document.getElementById('back-to-login-btn').addEventListener('click', (e) => {
-            e.preventDefault();
-            errorMsg.style.display = 'none';
-            forgotForm.style.display = 'none';
-            loginForm.style.display = 'block';
-        });
-
-        document.getElementById('cancel-verify-btn').addEventListener('click', (e) => {
-            e.preventDefault();
-            clearInterval(timerInterval);
-            errorMsg.style.display = 'none';
-            verifyForm.style.display = 'none';
-            loginForm.style.display = 'block';
-        });
-
-        loginForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const email = document.getElementById('staff-id').value;
-            const password = document.getElementById('password').value;
-            
-            const btn = e.target.querySelector('button[type="submit"]');
-            btn.innerText = 'Authenticating...';
-            btn.disabled = true;
-            errorMsg.style.display = 'none';
-
-            try {
-                const response = await fetch('/api/staff-login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-                
-                const data = await response.json();
-                if (response.ok) {
-                    sessionStorage.setItem('staffLoggedIn', 'true');
-                    sessionStorage.setItem('staffData', JSON.stringify(data.advocate));
-                    window.location.href = 'staff-dashboard.html';
-                } else {
-                    errorMsg.style.display = 'block';
-                    errorMsg.innerText = data.error || 'Invalid Staff credentials.';
-                }
-            } catch(error) {
-                errorMsg.style.display = 'block';
-                errorMsg.innerText = 'Server connection error.';
-            }
-            
-            btn.innerText = 'Staff Login';
-            btn.disabled = false;
-        });
 
         forgotForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -234,6 +164,14 @@
                 btn.disabled = false;
             }
         });
+        
+        document.getElementById('cancel-verify-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            clearInterval(timerInterval);
+            verifyForm.style.display = 'none';
+            forgotForm.style.display = 'block';
+            errorMsg.style.display = 'none';
+        });
     </script>
 <script>
     document.addEventListener('DOMContentLoaded', async () => {
@@ -242,9 +180,9 @@
             const settings = await res.json();
             if (settings.logoUrl) {
                 const topLogo = document.getElementById('portal-logo');
-                const portalTitle = document.getElementById('portal-title');
+                
                 if(topLogo) { topLogo.src = settings.logoUrl; topLogo.style.display = 'block'; }
-                if(portalTitle) { portalTitle.style.display = 'none'; }
+                
             }
         } catch(e) {}
     });
