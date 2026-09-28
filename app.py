@@ -1049,6 +1049,262 @@ def get_staff_cases(email):
     for c in cases: c['_id'] = str(c['_id'])
     return jsonify(cases), 200
 
+
+
+def get_premium_email_html(title, client_name, case_number, amount, message, is_verified=False, phase_num='Phase-1'):
+    color = "#10b981" if is_verified else "#D4AF37"
+    icon = "✅" if is_verified else "📄"
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
+            body {{
+                font-family: 'Plus Jakarta Sans', Arial, sans-serif;
+                background-color: #f8fafc;
+                margin: 0;
+                padding: 0;
+            }}
+            .container {{
+                max-width: 600px;
+                margin: 40px auto;
+                background: #ffffff;
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            }}
+            .header {{
+                background-color: #051426;
+                padding: 30px 40px;
+                text-align: center;
+                border-bottom: 4px solid #D4AF37;
+            }}
+            .header h1 {{
+                margin: 0;
+                color: #D4AF37;
+                font-family: 'Playfair Display', serif;
+                font-size: 28px;
+                letter-spacing: 2px;
+            }}
+            .content {{
+                padding: 40px;
+                color: #334155;
+                line-height: 1.6;
+            }}
+            .content h2 {{
+                color: #051426;
+                font-family: 'Playfair Display', serif;
+                margin-top: 0;
+                font-size: 24px;
+            }}
+            .amount-box {{
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-left: 4px solid {color};
+                padding: 20px;
+                margin: 25px 0;
+                border-radius: 6px;
+            }}
+            .amount-box .amount {{
+                font-size: 28px;
+                font-weight: 700;
+                color: {color};
+                margin: 10px 0 0 0;
+            }}
+            .footer {{
+                background: #f1f5f9;
+                padding: 20px 40px;
+                text-align: center;
+                color: #64748b;
+                font-size: 13px;
+                border-top: 1px solid #e2e8f0;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>JSM CHAMBERS</h1>
+            </div>
+            <div class="content">
+                <h2>{title}</h2>
+                <p>Dear <strong>{client_name}</strong>,</p>
+                <p>{message}</p>
+                
+                <div class="amount-box">
+                    <p style="margin:0; color:#64748b; font-size:14px; text-transform:uppercase; letter-spacing:1px;">Total Amount</p>
+                    <p class="amount">{icon} Rs. {amount}</p>
+                    <div style="margin:15px 0 0 0; font-size:14px; color:#475569; display: flex; flex-direction: column; gap: 4px;">
+                        <div>Phase Number: <strong>{phase_num}</strong></div>
+                        <div>Case Ref: <strong>{case_number}</strong></div>
+                    </div>
+                </div>
+                
+                <p>Please log in to your Client Dashboard to view your complete billing history and download official receipts.</p>
+            </div>
+            <div class="footer">
+                <p>&copy; 2026 JSM Chambers. All rights reserved.</p>
+                <p>This is an automated notification. Please do not reply directly to this email.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
+@app.route('/api/cases/<case_id>/bills', methods=['POST'])
+def add_bill(case_id):
+    data = request.get_json(force=True, silent=True) or {}
+    amount = data.get('amount')
+    if not amount:
+        return jsonify({"error": "Amount required"}), 400
+    
+    try:
+        case = cases_col.find_one({"_id": ObjectId(case_id)})
+        if not case: return jsonify({"error": "Case not found"}), 404
+        
+        bill_id = str(ObjectId())
+        phase_num = f"Phase-{len(case.get('bills', [])) + 1}"
+        new_bill = {
+            "id": bill_id,
+            "amount": amount,
+            "date_added": datetime.now().strftime("%d %b %Y"),
+            "status": "unpaid",
+            "verified_date": None,
+            "phase": phase_num
+        }
+        
+        cases_col.update_one(
+            {"_id": ObjectId(case_id)},
+            {
+                "$push": {
+                    "bills": new_bill,
+                    "notifications": {
+                        "date": datetime.now().strftime("%d %b %Y %H:%M"),
+                        "message": f"A new fee payment of Rs. {amount} ({phase_num}) has been added to your case."
+                    }
+                }
+            }
+        )
+        
+        # Send Email
+        recipient = case.get('email', '')
+        if recipient and "@" in recipient:
+            msg = MIMEMultipart()
+            msg['Date'] = formatdate(localtime=True)
+            msg['Message-ID'] = make_msgid()
+            msg['From'] = f"JSM Chambers <{SMTP_USER}>"
+            msg['To'] = recipient
+            case_no = case.get('chamber_case_number', 'N/A')
+            msg['Subject'] = f"Important Update: Case Ledger {phase_num} (Ref: {case_no}) - {datetime.now().strftime('%d %b %H:%M:%S')}"
+            client_name = case.get('client_name', 'Client')
+            message = f"A new fee payment ({phase_num}) has been generated for your legal case. Please review the pending charges at your earliest convenience."
+            html_body = get_premium_email_html(f"New Fee Generated: {phase_num}", client_name, case_no, amount, message, is_verified=False, phase_num=phase_num)
+            text_body = f"{message}\n\nPhase: {phase_num}\nTotal Amount: Rs. {amount}\nCase Ref: {case_no}\n\nPlease log in to your Client Dashboard to view complete details."
+            
+            # Create alternative part for better deliverability
+            alt = MIMEMultipart('alternative')
+            alt.attach(MIMEText(text_body, 'plain'))
+            alt.attach(MIMEText(html_body, 'html'))
+            msg.attach(alt)
+            
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                executor.submit(send_email_core, recipient, msg, "New Case Fee Bill Added")
+            
+        return jsonify({"success": True, "bill": new_bill}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/cases/<case_id>/bills/<bill_id>/verify', methods=['POST'])
+def verify_bill(case_id, bill_id):
+    try:
+        data = request.json or {}
+        case = cases_col.find_one({"_id": ObjectId(case_id)})
+        if not case: return jsonify({"error": "Case not found"}), 404
+        
+        bills = case.get('bills', [])
+        bill = next((b for b in bills if b.get('id') == bill_id), None)
+        if not bill: return jsonify({"error": "Bill not found"}), 404
+        
+        total_amt = float(bill.get('amount', 0))
+        paid_so_far = float(bill.get('paid_amount', 0))
+        if bill.get('status') == 'verified':
+            paid_so_far = total_amt
+            
+        payment_received = float(data.get('amount', total_amt - paid_so_far))
+        new_paid = paid_so_far + payment_received
+        
+        status = 'verified' if new_paid >= total_amt else 'partial'
+        now_str = datetime.now().strftime("%d %b %Y")
+        phase_num = bill.get('phase', 'Phase-1')
+        
+        cases_col.update_one(
+            {"_id": ObjectId(case_id), "bills.id": bill_id},
+            {"$set": {
+                "bills.$.paid_amount": new_paid,
+                "bills.$.status": status,
+                "bills.$.verified_date": now_str if status == 'verified' else bill.get('verified_date')
+            }}
+        )
+        
+        cases_col.update_one(
+            {"_id": ObjectId(case_id)},
+            {"$push": {
+                "notifications": {
+                    "date": datetime.now().strftime("%d %b %Y %H:%M"),
+                    "message": f"Payment of Rs. {payment_received} recorded for {phase_num}." + (f" Phase fully cleared. Receipt available." if status == 'verified' else f" Remaining balance for {phase_num}: Rs. {total_amt - new_paid}.")
+                }
+            }}
+        )
+        
+        # Send Email
+        recipient = case.get('email', '')
+        if recipient and "@" in recipient:
+            msg = MIMEMultipart()
+            msg['Date'] = formatdate(localtime=True)
+            msg['Message-ID'] = make_msgid()
+            msg['From'] = f"JSM Chambers <{SMTP_USER}>"
+            msg['To'] = recipient
+            case_no = case.get('chamber_case_number', 'N/A')
+            client_name = case.get('client_name', 'Client')
+            
+            if status == 'verified':
+                msg['Subject'] = f"Payment Verified: Official Receipt {phase_num} (Ref: {case_no}) - {datetime.now().strftime('%d %b %H:%M:%S')}"
+                message = f"We have successfully received your payment of Rs. {payment_received}. Your {phase_num} bill is now fully cleared, and a printable PDF receipt has been securely generated."
+                html_body = get_premium_email_html(f"Payment Verified - {phase_num}", client_name, case_no, total_amt, message, is_verified=True, phase_num=phase_num)
+                text_body = f"{message}\n\n{phase_num} Amount: Rs. {total_amt}\nFully Paid.\n\nA printable receipt is available in your dashboard."
+            else:
+                remaining = total_amt - new_paid
+                msg['Subject'] = f"Partial Payment Received {phase_num} (Ref: {case_no}) - {datetime.now().strftime('%d %b %H:%M:%S')}"
+                message = f"We have received your custom/partial payment of Rs. {payment_received} for {phase_num}. Please clear the remaining balance of Rs. {remaining} as soon as possible."
+                html_body = get_premium_email_html(f"Partial Payment Logged - {phase_num}", client_name, case_no, payment_received, message, is_verified=False, phase_num=phase_num)
+                text_body = f"{message}\n\nPhase: {phase_num}\nAmount Paid: Rs. {payment_received}\nRemaining Balance: Rs. {remaining}\n\nPlease log in to your dashboard to view the ledger."
+            
+            alt = MIMEMultipart('alternative')
+            alt.attach(MIMEText(text_body, 'plain'))
+            alt.attach(MIMEText(html_body, 'html'))
+            msg.attach(alt)
+            
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                executor.submit(send_email_core, recipient, msg, "Payment Received Successfully")
+            
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+@app.route('/api/cases/<case_id>/bills/<bill_id>', methods=['DELETE'])
+def delete_bill(case_id, bill_id):
+    try:
+        cases_col.update_one(
+            {"_id": ObjectId(case_id)},
+            {"$pull": {"bills": {"id": bill_id}}}
+        )
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/cases/<id>', methods=['DELETE'])
 def delete_case(id):
     cases_col.delete_one({"_id": ObjectId(id)})
@@ -1708,8 +1964,14 @@ def parse_ai_command():
         search_criteria = ai_payload.get('search_criteria', {})
         proposed_changes = ai_payload.get('proposed_changes', {})
         
+        is_general = ai_payload.get('is_general_query', False)
+        general_resp = ai_payload.get('general_response', '')
+        
+        if is_general or (general_resp and not search_criteria):
+            return jsonify({"status": "general_query", "message": general_resp}), 200
+            
         if not search_criteria and not proposed_changes:
-             return jsonify({"status": "error", "message": "Could not understand the command."}), 400
+             return jsonify({"status": "error", "message": "Could not understand the command. Please specify a case."}), 400
              
         # Build MongoDB query
         query = {}

@@ -327,17 +327,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const casesGrid = document.getElementById('cases-grid');
     const recentCasesTbody = document.getElementById('recent-cases-tbody');
     let casesCache = "";
-    let globalCasesData = [];
+    let globalCasesData = []; window.globalCasesData = globalCasesData;
 
     async function loadCases() {
+        window.loadCases = loadCases;
         if (!casesGrid) return;
         try {
             const response = await fetch('/api/cases', { cache: 'no-store' });
             const cases = await response.json();
             const newDataString = JSON.stringify(cases);
-            if (newDataString === casesCache) return;
-            casesCache = newDataString;
-            globalCasesData = cases;
+            if (typeof window.casesCache !== 'undefined' && newDataString === window.casesCache) return;
+            window.casesCache = newDataString;
+
+            globalCasesData = cases; window.globalCasesData = cases;
             
 
 
@@ -353,6 +355,24 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (cases.length > 0) {
                 casesGrid.innerHTML = '';
+            
+            // Populate Payment Datalist
+            try {
+                const paymentDatalist = document.getElementById('payment-case-datalist');
+                if (paymentDatalist) {
+                    paymentDatalist.innerHTML = '';
+                    cases.forEach(c => {
+                        if(c.status !== "Closed") {
+                            const searchStr = `Chamber: ${c.chamber_case_number || '-'} | Court: ${c.court_case_number || '-'} | ${c.client_name}`;
+                            const opt = document.createElement('option');
+                            opt.value = searchStr;
+                            paymentDatalist.appendChild(opt);
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("Error populating payment datalist:", e);
+            }
                 cases.forEach(c => {
                     const card = document.createElement('div');
                     card.className = 'admin-case-card-item';
@@ -1460,11 +1480,26 @@ function initSpeechRecognition() {
         return null;
     }
     const recognition = new window.SpeechRecognition();
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
     return recognition;
 }
+
+window.cancelAiListening = function() {
+    if (aiRecognition) {
+        aiRecognition.abort();
+    }
+    document.getElementById('ai-listening-overlay').style.display = 'none';
+    isAiListening = false;
+    showToast("Voice command cancelled.");
+};
+
+window.stopAiListening = function() {
+    if (aiRecognition) {
+        aiRecognition.stop(); // This triggers onend which processes the transcript
+    }
+};
 
 window.startAiVoice = function() {
     if (isAiListening) return;
@@ -1524,20 +1559,25 @@ async function processAiTranscript(transcript) {
         });
         const data = await res.json();
         
-        document.getElementById('ai-listening-overlay').style.display = 'none';
+        const overlay = document.getElementById('ai-listening-overlay');
+        if(overlay) overlay.style.display = 'none';
         
         if (data.status === 'confirm') {
             showAiConfirmModal(data.case, data.proposed_changes, transcript, data.email_draft);
         } else if (data.status === 'multiple_matches') {
-            // Future enhancement: show disambiguation UI
             showToast("Found multiple cases matching your voice request. Please be more specific with the Case Number.");
+        } else if (data.status === 'general_query') {
+            showToast(data.message, 'success');
+            // If they asked for a count, we can pop an alert or just show the toast
+            alert("AI Response: " + data.message);
         } else {
-            showToast(data.message || "Could not process your request.");
+            showToast(data.message || "Command not recognized. Please mention a case number and action.");
         }
         
     } catch (err) {
         console.error(err);
-        document.getElementById('ai-listening-overlay').style.display = 'none';
+        const overlay = document.getElementById('ai-listening-overlay');
+        if(overlay) overlay.style.display = 'none';
         showToast("Server error processing voice command.", 'error');
     }
 }
@@ -1740,6 +1780,16 @@ window.showSection = function(sectionId) {
             backBtn.style.display = 'none';
         } else {
             backBtn.style.display = 'flex';
+        }
+    }
+    
+    // Toggle AI Voice button visibility
+    const aiBtn = document.getElementById('ai-voice-btn');
+    if (aiBtn) {
+        if (sectionId === 'cases-manage') {
+            aiBtn.style.display = 'flex';
+        } else {
+            aiBtn.style.display = 'none';
         }
     }
 };
@@ -2037,4 +2087,320 @@ window.getQuickLinksData = function() {
         }
     });
     return links;
+};
+
+
+// ==========================================
+// BILLING & PAYMENT LOGIC
+// ==========================================
+
+let currentBillingCaseId = null;
+
+window.executePaymentSearch = function() {
+    const searchType = document.getElementById('payment-search-type').value;
+    const input = document.getElementById('payment-search-input');
+    const searchVal = input.value.trim().toLowerCase();
+    
+    if (!searchVal) {
+        showToast('Please enter a case number to search', 'error');
+        return;
+    }
+
+    const c = window.globalCasesData.find(caseObj => {
+        if (searchType === 'chamber') {
+            return (caseObj.chamber_case_number || '').toLowerCase() === searchVal;
+        } else {
+            return (caseObj.court_case_number || '').toLowerCase() === searchVal;
+        }
+    });
+    
+    if (c) {
+        input.value = ''; // clear input after finding
+        loadCaseBills(c._id);
+        showToast('Case found!', 'success');
+        lucide.createIcons();
+    } else {
+        const area = document.getElementById('billing-area');
+        if (area) area.style.display = 'none';
+        currentBillingCaseId = null;
+        showToast('No case found with that number.', 'error');
+    }
+};
+
+window.loadCaseBills = function(caseId) {
+    currentBillingCaseId = caseId;
+    const area = document.getElementById('billing-area');
+    if (!caseId) {
+        area.style.display = 'none';
+        return;
+    }
+    
+    area.style.display = 'block';
+    renderBillsTable();
+};
+
+function renderBillsTable() {
+    if (!currentBillingCaseId) return;
+    const c = window.globalCasesData.find(x => x._id === currentBillingCaseId);
+    if (!c) return;
+    
+    const tbody = document.getElementById('billing-history-tbody');
+    tbody.innerHTML = '';
+    
+    if (!c.bills || c.bills.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#666;">No bills generated yet.</td></tr>';
+        return;
+    }
+    
+    c.bills.forEach(b => {
+        let amt = parseFloat(b.amount) || 0;
+        let paid = parseFloat(b.paid_amount);
+        if (isNaN(paid)) paid = (b.status === 'verified') ? amt : 0;
+        
+        let statusHtml = '';
+        let actionHtml = '';
+        
+        if (b.status === 'verified') {
+            statusHtml = `<span style="color: #10b981; font-weight:bold; background: #ecfdf5; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">✅ Paid (${b.verified_date})</span>`;
+            actionHtml = `<div style="display:flex; gap:5px;"><button class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="printReceipt('${c._id}', '${b.id}')">🖨️ Print</button>
+                          <button class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; border-color:#ef4444; color:#ef4444;" onclick="deleteBill('${c._id}', '${b.id}')">🗑️ Delete</button></div>`;
+        } else if (b.status === 'partial') {
+            statusHtml = `<span style="color: #f59e0b; font-weight:bold; background: #fffbeb; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">Partial</span>`;
+            actionHtml = `<div style="display:flex; gap:5px;"><button class="btn btn-primary" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; background: #f59e0b; border:none;" onclick="verifyBill('${c._id}', '${b.id}')">Record Pay 💸</button>
+                          <button class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; border-color:#ef4444; color:#ef4444;" onclick="deleteBill('${c._id}', '${b.id}')">🗑️</button></div>`;
+        } else {
+            statusHtml = `<span style="color: #ef4444; font-weight:bold; background: #fef2f2; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">Pending</span>`;
+            actionHtml = `<div style="display:flex; gap:5px;"><button class="btn btn-primary" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; background: var(--success);" onclick="verifyBill('${c._id}', '${b.id}')">Record Pay 💸</button>
+                          <button class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; border-color:#ef4444; color:#ef4444;" onclick="deleteBill('${c._id}', '${b.id}')">🗑️</button></div>`;
+        }
+        
+        const phaseDisplay = b.phase || 'Phase-1';
+        tbody.innerHTML += `
+            <tr>
+                <td><strong style="color:#051426;">${phaseDisplay}</strong><br><span style="font-size:0.75rem; color:#667085;">${b.date_added}</span></td>
+                <td style="font-weight:bold; color:var(--primary);">Rs. ${amt} <br><span style="font-size:0.75rem; color:#666;">(Paid: Rs. ${paid})</span></td>
+                <td>${statusHtml}</td>
+                <td>${actionHtml}</td>
+            </tr>
+        `;
+    });
+}
+
+window.addNewBill = async function() {
+    if (!currentBillingCaseId) return;
+    const amountInput = document.getElementById('new-bill-amount');
+    const amount = amountInput.value.trim();
+    if (!amount) {
+        showToast('Please enter an amount', 'error');
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/cases/${currentBillingCaseId}/bills`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ amount: amount })
+        });
+        
+        if (res.ok) {
+            showToast('Bill saved. Email sent to client.');
+            amountInput.value = '';
+            if (window.loadCases) await window.loadCases();
+            renderBillsTable();
+        } else {
+            showToast('Failed to save bill', 'error');
+        }
+    } catch(e) {
+        console.error(e);
+        showToast('Network error', 'error');
+    }
+};
+
+window.verifyBill = function(caseId, billId) {
+    const c = window.globalCasesData.find(x => x._id === caseId);
+    if (!c) return;
+    const b = c.bills.find(x => x.id === billId);
+    if (!b) return;
+    
+    const amt = parseFloat(b.amount) || 0;
+    let paid = parseFloat(b.paid_amount);
+    if (isNaN(paid)) paid = (b.status === 'verified') ? amt : 0;
+    const remaining = amt - paid;
+
+    showPaymentInputModal("Record Payment", remaining, async function(paidAmt) {
+        try {
+            const res = await fetch(`/api/cases/${caseId}/bills/${billId}/verify`, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: paidAmt })
+            });
+            if (res.ok) {
+                showToast('Payment recorded! Email sent.');
+                if (window.loadCases) await window.loadCases();
+                renderBillsTable();
+            } else {
+                showToast('Failed to record payment', 'error');
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    });
+};
+
+window.printReceipt = function(caseId, billId) {
+    const c = window.globalCasesData.find(x => x._id === caseId);
+    if (!c) return;
+    const b = c.bills.find(x => x.id === billId);
+    if (!b) return;
+    
+    const printWindow = window.open('', '', 'width=800,height=900');
+    if (!printWindow) { showToast("Popup blocked"); return; }
+    
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>Invoice Receipt - ${c.client_name}</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
+                .header { text-align: center; border-bottom: 2px solid #0A192F; padding-bottom: 20px; margin-bottom: 30px; }
+                .header h1 { margin: 0; color: #0A192F; font-family: 'Playfair Display', serif; }
+                .details { display: flex; justify-content: space-between; margin-bottom: 40px; }
+                .box { border: 1px solid #ddd; padding: 15px; border-radius: 8px; width: 45%; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
+                th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                th { background: #f8fafc; color: #0A192F; }
+                .total-row { font-weight: bold; font-size: 1.2rem; }
+                .stamp { position: absolute; right: 50px; top: 150px; font-size: 4rem; color: rgba(16, 185, 129, 0.2); border: 8px solid rgba(16, 185, 129, 0.2); padding: 10px 20px; transform: rotate(-15deg); text-transform: uppercase; border-radius: 12px; pointer-events: none; font-weight: 900;}
+                @media print { body { padding: 0; } .print-btn { display: none; } }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                ${globalLogoUrl ? `<img src="${globalLogoUrl}" style="max-height: 80px; width: auto; object-fit: contain; margin-bottom: 15px;">` : ''}
+                <h1>JSM. Chambers</h1>
+                <p>Invoice Receipt</p>
+            </div>
+            
+            <div class="stamp">PAID</div>
+            
+            <div class="details">
+                <div class="box">
+                    <strong>Billed To:</strong><br>
+                    ${c.client_name}<br>
+                    Email: ${c.email}
+                </div>
+                <div class="box" style="text-align: right;">
+                    <strong>Receipt No:</strong> RCPT-${b.id.substring(0, 8).toUpperCase()}<br>
+                    <strong>Date Paid:</strong> ${b.verified_date || b.date_added}<br>
+                    <strong>Case Ref:</strong> ${c.chamber_case_number || c.court_case_number || 'N/A'}
+                </div>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th style="text-align: right;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Legal Fees / Phase Payment</td>
+                        <td style="text-align: right;">Rs. ${b.amount}</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td style="text-align: right;">Total Paid</td>
+                        <td style="text-align: right;">Rs. ${b.amount}</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <p style="text-align: center; color: #666; font-size: 0.9rem;">This is a computer-generated receipt and requires no physical signature.</p>
+            
+            <div style="text-align: center; margin-top: 50px;" class="print-btn">
+                <button onclick="window.print()" style="padding: 10px 20px; background: #0A192F; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">🖨️ Print Receipt</button>
+            </div>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+};
+
+
+
+window.deleteBill = function(caseId, billId) {
+    showConfirmModal(
+        "Delete Bill",
+        "Are you sure you want to delete this bill? This cannot be undone and it will be removed from the client dashboard.",
+        async function() {
+            try {
+                const res = await fetch(`/api/cases/${caseId}/bills/${billId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast('Bill deleted successfully');
+                    if (window.loadCases) await window.loadCases();
+                    renderBillsTable();
+                } else {
+                    showToast('Failed to delete bill', 'error');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast('Network error', 'error');
+            }
+        }
+    );
+};
+
+
+window.showPaymentInputModal = function(title, maxAmount, callback) {
+    let existing = document.getElementById('custom-payment-modal');
+    if (existing) existing.remove();
+    
+    const modalHtml = `
+    <div id="custom-payment-modal" class="modal" style="display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); z-index: 9999; position: fixed; top: 0; left: 0; width: 100%; height: 100%;">
+        <div class="modal-content" style="background: white; padding: 2rem; border-radius: 8px; max-width: 400px; width: 100%; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+            <h3 style="margin-top: 0; color: #051426; font-family: 'Playfair Display', serif;">${title}</h3>
+            <p style="color: #667085; margin: 15px 0 10px 0; font-family: 'Plus Jakarta Sans', sans-serif;">Enter the custom amount received from the client. <br><b>(Remaining: Rs. ${maxAmount})</b></p>
+            <input type="number" id="custom-payment-amount" class="form-control" value="${maxAmount}" max="${maxAmount}" style="width: 100%; box-sizing: border-box; text-align: center; font-size: 1.2rem; margin-bottom: 20px; padding: 10px;">
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="btn btn-outline" onclick="document.getElementById('custom-payment-modal').remove()" style="padding: 0.5rem 1.5rem;">Cancel</button>
+                <button class="btn btn-primary" id="custom-payment-btn" style="padding: 0.5rem 1.5rem; background: #10b981; border: none;">Record Payment</button>
+            </div>
+        </div>
+    </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    document.getElementById('custom-payment-btn').onclick = function() {
+        let amt = parseFloat(document.getElementById('custom-payment-amount').value);
+        if (isNaN(amt) || amt <= 0 || amt > maxAmount) {
+            showToast('Invalid amount', 'error');
+            return;
+        }
+        document.getElementById('custom-payment-modal').remove();
+        callback(amt);
+    };
+};
+
+window.showConfirmModal = function(title, message, confirmCallback) {
+    let existing = document.getElementById('custom-confirm-modal');
+    if (existing) existing.remove();
+    
+    const modalHtml = `
+    <div id="custom-confirm-modal" class="modal" style="display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); z-index: 9999; position: fixed; top: 0; left: 0; width: 100%; height: 100%;">
+        <div class="modal-content" style="background: white; padding: 2rem; border-radius: 8px; max-width: 400px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+            <h3 style="margin-top: 0; color: #051426; font-family: 'Playfair Display', serif;">${title}</h3>
+            <p style="color: #667085; margin: 15px 0 25px 0; font-family: 'Plus Jakarta Sans', sans-serif;">${message}</p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="btn btn-outline" onclick="document.getElementById('custom-confirm-modal').remove()" style="padding: 0.5rem 1.5rem;">Cancel</button>
+                <button class="btn btn-primary" id="custom-confirm-btn" style="padding: 0.5rem 1.5rem;">Confirm</button>
+            </div>
+        </div>
+    </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    document.getElementById('custom-confirm-btn').onclick = function() {
+        document.getElementById('custom-confirm-modal').remove();
+        confirmCallback();
+    };
 };

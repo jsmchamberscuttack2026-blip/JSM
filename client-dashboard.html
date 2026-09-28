@@ -202,6 +202,7 @@
         <nav class="nav-links">
             <a href="#" class="nav-item active" id="nav-dashboard" onclick="showClientSection('dashboard')"><i data-lucide="layout-dashboard"></i> Dashboard</a>
             <a href="#" class="nav-item" id="nav-docs" onclick="showClientSection('docs')"><i data-lucide="folder-open"></i> My Documents</a>
+            <a href="#" class="nav-item" id="nav-payments" onclick="showClientSection('payments')"><i data-lucide="credit-card"></i> Fee Payments</a>
             <a href="#" onclick="openAppointmentModal(event)" class="nav-item"><i data-lucide="calendar"></i> Appointments</a>
         </nav>
         <div class="sidebar-footer">
@@ -217,7 +218,7 @@
                 <p>Here is the latest overview of your legal case.</p>
             </div>
             <div class="header-actions">
-                <button class="icon-btn" onclick="document.getElementById('notif-modal').style.display='flex'">
+                <button class="icon-btn" onclick="openNotifications()">
                     <i data-lucide="bell"></i>
                     <span class="badge" id="notif-badge" style="display:none;">!</span>
                 </button>
@@ -305,7 +306,50 @@
         </div>
         </div> <!-- end section-dashboard -->
         
+
+        <!-- Payments Section -->
+        <div id="section-payments" class="client-section" style="display: none; animation: fadeIn 0.3s;">
+            <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <h3 style="color: var(--navy); margin-bottom: 1rem; font-family: 'Playfair Display', serif; font-size: 24px;">Payment Overview</h3>
+                <p style="color: var(--text-muted); margin-bottom: 2rem;">Track your phase-wise billing and view your generated receipts.</p>
+                
+                <!-- Summary Boxes -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                    <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border); text-align: center;">
+                        <div style="font-size: 0.9rem; color: #64748b; font-weight: bold; text-transform: uppercase;">Total Billed</div>
+                        <div id="client-total-billed" style="font-size: 1.8rem; font-weight: 900; color: var(--navy); margin-top: 0.5rem;">Rs. 0</div>
+                    </div>
+                    <div style="background: #ecfdf5; padding: 1.5rem; border-radius: 8px; border: 1px solid #a7f3d0; text-align: center;">
+                        <div style="font-size: 0.9rem; color: #065f46; font-weight: bold; text-transform: uppercase;">Total Paid</div>
+                        <div id="client-total-paid" style="font-size: 1.8rem; font-weight: 900; color: #10b981; margin-top: 0.5rem;">Rs. 0</div>
+                    </div>
+                    <div style="background: #fef2f2; padding: 1.5rem; border-radius: 8px; border: 1px solid #fecaca; text-align: center;">
+                        <div style="font-size: 0.9rem; color: #991b1b; font-weight: bold; text-transform: uppercase;">Balance Due</div>
+                        <div id="client-balance-due" style="font-size: 1.8rem; font-weight: 900; color: #ef4444; margin-top: 0.5rem;">Rs. 0</div>
+                    </div>
+                </div>
+
+                <h4 style="margin-bottom: 1rem; color: var(--navy);">Phase-wise Billing Details</h4>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                        <thead>
+                            <tr style="background: #f1f5f9; border-bottom: 2px solid #e2e8f0; text-align: left;">
+                                <th style="padding: 12px; font-weight: 600; color: #475569;">Date</th>
+                                <th style="padding: 12px; font-weight: 600; color: #475569;">Amount</th>
+                                <th style="padding: 12px; font-weight: 600; color: #475569;">Status</th>
+                                <th style="padding: 12px; font-weight: 600; color: #475569;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="client-billing-tbody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <div id="section-docs" class="client-section" style="display: none; max-width: 800px; margin: 0 auto; animation: fadeIn 0.3s;">
+
             <div style="background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-top: 20px; border: 1px solid rgba(212,175,55,0.2);">
                 <h2 style="color: var(--navy); margin-bottom: 10px; font-family: 'Playfair Display', serif; font-size: 24px;">My Documents</h2>
                 <p style="color: #64748B; margin-bottom: 30px; line-height: 1.6;">Securely access your officially generated legal documents, case status reports, and administrative files.</p>
@@ -618,8 +662,13 @@
                 const notifBox = document.getElementById('client-notifications');
                 const badge = document.getElementById('notif-badge');
                 if (data.notifications && data.notifications.length > 0) {
-                    badge.style.display = 'grid';
-                    badge.innerText = data.notifications.length;
+                    let seenCount = parseInt(localStorage.getItem('seenNotifCount_' + data._id) || '0');
+                    if (data.notifications.length > seenCount) {
+                        badge.style.display = 'grid';
+                        badge.innerText = data.notifications.length - seenCount;
+                    } else {
+                        badge.style.display = 'none';
+                    }
                     notifBox.innerHTML = '';
                     [...data.notifications].reverse().forEach(n => {
                         notifBox.innerHTML += `
@@ -661,12 +710,168 @@
                     timelineDiv.innerHTML = '<div style="color: var(--text-muted); font-size: 14px;">No hearing history logged yet. Updates will appear here.</div>';
                 }
 
+
+                // Render Payments
+                const tbody = document.getElementById('client-billing-tbody');
+                if (tbody) {
+                    tbody.innerHTML = '';
+                    let totalBilled = 0;
+                    let totalPaid = 0;
+                    
+                    if (!data.bills || data.bills.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#666;">No payment records found.</td></tr>';
+                    } else {
+                        window.clientCaseData = data; // Save globally for print function
+                        data.bills.forEach(b => {
+                            let amt = parseFloat(b.amount) || 0;
+                            let paid = parseFloat(b.paid_amount);
+                            if (isNaN(paid)) paid = (b.status === 'verified') ? amt : 0;
+                            
+                            totalBilled += amt;
+                            totalPaid += paid;
+                            
+                            let statusHtml = '';
+                            let actionHtml = '';
+                            let amountDisplay = '';
+                            
+                            if (b.status === 'verified') {
+                                statusHtml = `<span style="color: #10b981; font-weight:bold; background: #ecfdf5; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">✅ Paid In Full</span>`;
+                                actionHtml = `<button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border: 1px solid #10b981; color: #10b981; cursor: pointer; border-radius: 4px; background: white;" onclick="printClientReceipt('${b.id}')">🖨️ Print Receipt</button>`;
+                                amountDisplay = `<span style="color: #10b981; font-weight:bold;">( - Rs. ${amt} )</span>`;
+                            } else if (b.status === 'partial') {
+                                statusHtml = `<span style="color: #f59e0b; font-weight:bold; background: #fffbeb; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">Partial</span>`;
+                                actionHtml = `<span style="color:#f59e0b; font-size:0.85rem;">Awaiting Rs. ${amt - paid}</span>`;
+                                amountDisplay = `<span style="color: #f59e0b; font-weight:bold;">Rs. ${amt} <br><span style="font-size:0.75rem;">(Paid: Rs. ${paid})</span></span>`;
+                            } else {
+                                statusHtml = `<span style="color: #ef4444; font-weight:bold; background: #fef2f2; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">Pending</span>`;
+                                actionHtml = `<span style="color:#64748b; font-size:0.85rem;">Awaiting Office Verification</span>`;
+                                amountDisplay = `<span style="color: #ef4444; font-weight:bold;">Rs. ${amt}</span>`;
+                            }
+                            
+                            const phaseDisplay = b.phase || 'Phase-1';
+                            tbody.innerHTML += `
+                                <tr style="border-bottom: 1px solid #e2e8f0;">
+                                    <td style="padding: 12px; color: #334155;"><strong>${phaseDisplay}</strong><br><span style="font-size:0.8rem; color:#64748b;">${b.date_added}</span></td>
+                                    <td style="padding: 12px; font-size: 1.1rem;">${amountDisplay}</td>
+                                    <td style="padding: 12px;">${statusHtml}</td>
+                                    <td style="padding: 12px;">${actionHtml}</td>
+                                </tr>
+                            `;
+                        });
+                    }
+                    
+                    document.getElementById('client-total-billed').innerText = 'Rs. ' + totalBilled;
+                    document.getElementById('client-total-paid').innerText = 'Rs. ' + totalPaid;
+                    document.getElementById('client-balance-due').innerText = 'Rs. ' + (totalBilled - totalPaid);
+                }
             } catch (err) {
                 console.error(err);
             }
         }
 
         // Section Switching
+        
+        
+        window.openNotifications = function() {
+            document.getElementById('notif-modal').style.display = 'flex';
+            document.getElementById('notif-badge').style.display = 'none';
+            if (window.clientCaseData && window.clientCaseData.notifications) {
+                localStorage.setItem('seenNotifCount_' + window.clientCaseData._id, window.clientCaseData.notifications.length);
+            }
+        };
+
+        window.printClientReceipt = function(billId) {
+            const c = window.clientCaseData;
+            if (!c || !c.bills) return;
+            const b = c.bills.find(x => x.id === billId);
+            if (!b) return;
+            
+            const printWindow = window.open('', '', 'width=800,height=900');
+            if (!printWindow) { 
+                if(typeof showToast === 'function') showToast("Popup blocked", "error"); 
+                else alert("Popup blocked. Please allow popups to print receipts.");
+                return; 
+            }
+            
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Invoice Receipt - ${c.client_name}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
+                        .header { text-align: center; border-bottom: 2px solid #0A192F; padding-bottom: 20px; margin-bottom: 30px; }
+                        .header h1 { margin: 0; color: #0A192F; font-family: 'Playfair Display', serif; }
+                        .details { display: flex; justify-content: space-between; margin-bottom: 40px; }
+                        .box { border: 1px solid #ddd; padding: 15px; border-radius: 8px; width: 45%; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
+                        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                        th { background: #f8fafc; color: #0A192F; }
+                        .total-row { font-weight: bold; font-size: 1.2rem; }
+                        .stamp { position: absolute; right: 50px; top: 150px; font-size: 4rem; color: rgba(16, 185, 129, 0.2); border: 8px solid rgba(16, 185, 129, 0.2); padding: 10px 20px; transform: rotate(-15deg); text-transform: uppercase; border-radius: 12px; pointer-events: none; font-weight: 900;}
+                        @media print { body { padding: 0; } .print-btn { display: none; } }
+                    </style>
+                </head>
+                <body>
+                    <div class="stamp">PAID</div>
+                    <div class="header">
+                        <h1>JSM CHAMBERS</h1>
+                        <p style="margin:5px 0 0 0; color:#666;">Official Payment Receipt</p>
+                    </div>
+                    
+                    <div class="details">
+                        <div class="box">
+                            <h3 style="margin-top:0; color:#0A192F;">Billed To:</h3>
+                            <p><strong>Name:</strong> ${c.client_name}</p>
+                            <p><strong>Email:</strong> ${c.email || 'N/A'}</p>
+                            <p><strong>Phone:</strong> ${c.phone || 'N/A'}</p>
+                        </div>
+                        <div class="box">
+                            <h3 style="margin-top:0; color:#0A192F;">Receipt Details:</h3>
+                            <p><strong>Receipt ID:</strong> RCPT-${b.id.substring(0,8).toUpperCase()}</p>
+                            <p><strong>Date Generated:</strong> ${b.date_added}</p>
+                            <p><strong>Payment Status:</strong> <span style="color:#10b981; font-weight:bold;">Verified (${b.verified_date})</span></p>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom:20px;">
+                        <p><strong>Chamber Case Number:</strong> ${c.chamber_case_number || 'N/A'}</p>
+                        <p><strong>Court Case Number:</strong> ${c.court_case_number || 'N/A'}</p>
+                        <p><strong>Case Type:</strong> ${c.case_type || 'N/A'}</p>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>${b.phase || 'Phase-1'} Fee Payment</td>
+                                <td>Rs. ${b.amount}</td>
+                            </tr>
+                            <tr class="total-row">
+                                <td style="text-align:right;">Total Paid:</td>
+                                <td style="color:#10b981;">Rs. ${b.amount}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div style="text-align:center; margin-top:50px; color:#666; font-size:0.9rem;">
+                        <p>Thank you for your payment.</p>
+                        <p>This is a computer generated receipt and requires no physical signature.</p>
+                        <button class="print-btn" onclick="window.print()" style="margin-top:20px; padding:10px 20px; background:#0A192F; color:white; border:none; border-radius:5px; cursor:pointer; font-size:1rem;">🖨️ Print Now</button>
+                    </div>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            setTimeout(() => {
+                printWindow.focus();
+            }, 250);
+        };
+
         function showClientSection(sectionId) {
             document.querySelectorAll('.client-section').forEach(s => s.style.display = 'none');
             document.getElementById('section-' + sectionId).style.display = 'block';
