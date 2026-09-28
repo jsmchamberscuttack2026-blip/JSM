@@ -2135,6 +2135,14 @@ window.loadCaseBills = function(caseId) {
         return;
     }
     
+    // Populate the case header
+    const c = window.globalCasesData.find(x => x._id === caseId);
+    if (c) {
+        document.getElementById('billing-client-name').innerText = c.client_name || 'Unknown Client';
+        document.getElementById('billing-chamber-no').innerText = c.chamber_case_number || 'N/A';
+        document.getElementById('billing-court-no').innerText = c.court_case_number || 'N/A';
+    }
+    
     area.style.display = 'block';
     renderBillsTable();
 };

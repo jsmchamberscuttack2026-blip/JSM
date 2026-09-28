@@ -750,6 +750,14 @@
                         <!-- Bill Management Area (Hidden until case selected) -->
                         <div id="billing-area" style="display: none; margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 2rem;">
                             
+                            <div id="billing-case-header" style="background: linear-gradient(135deg, #051426, #1e293b); color: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                                <h3 id="billing-client-name" style="margin: 0; color: #D4AF37; font-family: 'Playfair Display', serif; font-size: 1.5rem;">Client Name</h3>
+                                <div style="display: flex; gap: 20px; font-size: 0.95rem; color: #cbd5e1;">
+                                    <span>Chamber Case: <strong id="billing-chamber-no" style="color: white;">-</strong></span>
+                                    <span>Court Case: <strong id="billing-court-no" style="color: white;">-</strong></span>
+                                </div>
+                            </div>
+                            
                             <div style="display: flex; gap: 1rem; align-items: flex-end; background: #f8fafc; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
                                 <div class="form-group" style="flex: 1; margin: 0;">
                                     <label class="form-label" style="color: var(--primary);">Add New Phase Bill</label>
@@ -893,7 +901,7 @@
     </main>
     </div>
 
-    <script src="js/admin.js?v=22"></script>
+    <script src="js/admin.js?v=23"></script>
 
     <!-- Edit Advocate Modal -->
     <div id="edit-advocate-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
