@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://jsm-chamber-cuttack-odisha-30.vercel.app/</loc>
+    <lastmod>2026-10-27</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://jsm-chamber-cuttack-odisha-30.vercel.app/chamber-owner.jpg</image:loc>
+      <image:title>Adv. Jayasankar Mishra - Chamber Owner | JSM. Chambers</image:title>
+      <image:caption>Official photograph of Adv. Jayasankar Mishra, Chamber Owner of JSM. Chambers</image:caption>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://jsm-chamber-cuttack-odisha-30.vercel.app/client-portal.html</loc>
+    <lastmod>2026-10-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>
