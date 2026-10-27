@@ -675,20 +675,24 @@ async function loadAdvocates() {
         if (!tbody) return;
         tbody.innerHTML = '';
         
-        const gradients = ['color-gradient-1', 'color-gradient-2', 'color-gradient-3', 'color-gradient-4'];
-        
-        advocates.forEach((adv, index) => {
+        advocates.forEach((adv) => {
             const card = document.createElement('div');
-            const colorClass = gradients[index % gradients.length];
-            card.className = `advocate-card ${colorClass}`;
+            card.className = 'advocate-card';
+            
+            const initial = (adv.name || '⚖').trim().charAt(0).toUpperCase();
+            const photoHtml = adv.imageUrl && adv.imageUrl.length > 20
+                ? `<img src="${adv.imageUrl}" style="width: 70px; height: 70px; object-fit: cover; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.12); border: 2px solid #D4AF37;">`
+                : `<div style="width: 70px; height: 70px; border-radius: 50%; background: #0A1628; color: #D4AF37; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 4px 10px rgba(0,0,0,0.12); font-weight: bold; border: 2px solid #D4AF37;">${initial}</div>`;
             
             card.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 1rem;">
-                    ${adv.imageUrl ? '<img src="'+adv.imageUrl+'" style="width: 70px; height: 70px; object-fit: cover; border-radius: 50%; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border: 2px solid white;">' : '<div style="width: 70px; height: 70px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 4px 8px rgba(0,0,0,0.1); font-weight: bold; color: var(--primary);">' + adv.name.charAt(0) + '</div>'}
-                    <div>
-                        <h4 style="margin: 0; font-size: 1.2rem; color: #1e293b;">${adv.name}</h4>
-                        <p style="margin: 0; font-size: 0.9rem; color: #475569; font-weight: 500;">${adv.specialty}</p>
-                        <p style="margin: 0; font-size: 0.8rem; color: #64748b;">📧 ${adv.email || 'N/A'}</p>
+                <div style="display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 1rem;">
+                    ${photoHtml}
+                    <div style="overflow: hidden; flex: 1;">
+                        <h4 style="margin: 0; font-size: 1.15rem; color: #0f172a; font-weight: 700;">${adv.name}</h4>
+                        <div style="margin: 2px 0; font-size: 0.82rem; color: #b45309; font-weight: 600;">${adv.role || 'Legal Professional'}</div>
+                        <p style="margin: 0; font-size: 0.85rem; color: #475569; font-weight: 500;">${adv.specialty || ''}</p>
+                        <div style="margin-top: 4px; font-size: 0.8rem; color: #64748b;">📧 ${adv.email || 'N/A'}</div>
+                        <div style="margin-top: 2px; font-size: 0.8rem; color: #64748b;">📞 ${adv.phone || 'N/A'}</div>
                     </div>
                 </div>
                 
@@ -745,8 +749,11 @@ if (addAdvocateForm) {
         e.preventDefault();
         const name = document.getElementById('adv-name').value;
         const email = document.getElementById('adv-email').value;
+        const role = (document.getElementById('adv-role') ? document.getElementById('adv-role').value : '').trim() || 'Legal Professional';
         const specialty = document.getElementById('adv-specialty').value;
+        const location = (document.getElementById('adv-location') ? document.getElementById('adv-location').value : '').trim() || 'High Court of Orissa, Cuttack';
         const phone = document.getElementById('adv-phone').value;
+        const linkedin = (document.getElementById('adv-linkedin') ? document.getElementById('adv-linkedin').value : '').trim();
         const fileInput = document.getElementById('adv-image');
         
         const submitBtn = addAdvocateForm.querySelector('button');
@@ -761,7 +768,7 @@ if (addAdvocateForm) {
             const response = await fetch('/api/advocates', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, specialty, phone, role: 'Legal Professional', imageUrl })
+                body: JSON.stringify({ name, email, specialty, phone, role, location, linkedin, imageUrl })
             });
             const data = await response.json();
             
@@ -787,6 +794,57 @@ setTimeout(loadAdvocates, 500);
 // SETTINGS MANAGEMENT
 // ==========================================
 let globalLogoUrl = "";
+let globalHeroBannerUrl = "";
+let globalExpertiseBannerUrl = "";
+let globalStaffBannerUrl = "";
+let globalAboutImg1Url = "";
+let globalAboutImg2Url = "";
+
+window.removeHeroBanner = function() {
+    globalHeroBannerUrl = "";
+    const previewBg = document.getElementById('hero-banner-preview-bg');
+    if (previewBg) previewBg.style.backgroundImage = "url('assets/images/default_chamber_banner.jpg')";
+    const removeBtn = document.getElementById('admin-remove-banner-btn');
+    if (removeBtn) removeBtn.style.display = 'none';
+    const bannerInput = document.getElementById('admin-hero-banner');
+    if (bannerInput) bannerInput.value = '';
+    showToast('Reset to default chamber banner. Click "Save Settings" to publish.', 'info');
+};
+
+window.removeExpertiseBanner = function() {
+    globalExpertiseBannerUrl = "";
+    const previewBg = document.getElementById('expertise-banner-preview-bg');
+    if (previewBg) previewBg.style.backgroundImage = "url('assets/images/default_chamber_banner.jpg')";
+    const removeBtn = document.getElementById('admin-remove-expertise-banner-btn');
+    if (removeBtn) removeBtn.style.display = 'none';
+    const bannerInput = document.getElementById('admin-expertise-banner');
+    if (bannerInput) bannerInput.value = '';
+    showToast('Reset to default expertise banner. Click "Save Settings" to publish.', 'info');
+};
+
+window.removeStaffBanner = function() {
+    globalStaffBannerUrl = "";
+    const previewBg = document.getElementById('staff-banner-preview-bg');
+    if (previewBg) previewBg.style.backgroundImage = "url('assets/images/default_chamber_banner.jpg')";
+    const removeBtn = document.getElementById('admin-remove-staff-banner-btn');
+    if (removeBtn) removeBtn.style.display = 'none';
+    const bannerInput = document.getElementById('admin-staff-banner');
+    if (bannerInput) bannerInput.value = '';
+    showToast('Reset to default staff banner. Click "Save Settings" to publish.', 'info');
+};
+
+window.removeAboutOwnerImage = window.removeAboutImage1 = function() {
+    globalAboutImg1Url = "";
+    const preview = document.getElementById('admin-about-owner-preview') || document.getElementById('admin-about-img1-preview');
+    const placeholder = document.getElementById('admin-about-owner-placeholder') || document.getElementById('admin-about-img1-placeholder');
+    const removeBtn = document.getElementById('admin-remove-about-owner-btn') || document.getElementById('admin-remove-about-img1-btn');
+    const input = document.getElementById('admin-about-owner-img') || document.getElementById('admin-about-img1');
+    if (preview) { preview.src = ''; preview.style.display = 'none'; }
+    if (placeholder) placeholder.style.display = 'block';
+    if (removeBtn) removeBtn.style.display = 'none';
+    if (input) input.value = '';
+    showToast('Removed Owner Photograph. Click "Save Settings" to publish.', 'info');
+};
 
 const officeInfoForm = document.getElementById('office-info-form');
 if (officeInfoForm) {
@@ -804,6 +862,127 @@ if (officeInfoForm) {
                     logoPreview.style.display = 'block';
                 };
                 reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    const heroBannerInput = document.getElementById('admin-hero-banner');
+    const heroBannerPreviewBg = document.getElementById('hero-banner-preview-bg');
+    const heroBannerRemoveBtn = document.getElementById('admin-remove-banner-btn');
+
+    if (heroBannerInput) {
+        heroBannerInput.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                try {
+                    const compressed = await compressImage(file, 1600);
+                    globalHeroBannerUrl = compressed;
+                    if (heroBannerPreviewBg) heroBannerPreviewBg.style.backgroundImage = `url('${globalHeroBannerUrl}')`;
+                    if (heroBannerRemoveBtn) heroBannerRemoveBtn.style.display = 'inline-block';
+                    showToast('Hero banner selected! Click "Save Settings" below to apply.', 'info');
+                } catch(err) {
+                    console.error('Error compressing banner image:', err);
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        globalHeroBannerUrl = event.target.result;
+                        if (heroBannerPreviewBg) heroBannerPreviewBg.style.backgroundImage = `url('${globalHeroBannerUrl}')`;
+                        if (heroBannerRemoveBtn) heroBannerRemoveBtn.style.display = 'inline-block';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+    }
+
+    const expertiseBannerInput = document.getElementById('admin-expertise-banner');
+    const expertiseBannerPreviewBg = document.getElementById('expertise-banner-preview-bg');
+    const expertiseBannerRemoveBtn = document.getElementById('admin-remove-expertise-banner-btn');
+
+    if (expertiseBannerInput) {
+        expertiseBannerInput.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                try {
+                    const compressed = await compressImage(file, 1600);
+                    globalExpertiseBannerUrl = compressed;
+                    if (expertiseBannerPreviewBg) expertiseBannerPreviewBg.style.backgroundImage = `url('${globalExpertiseBannerUrl}')`;
+                    if (expertiseBannerRemoveBtn) expertiseBannerRemoveBtn.style.display = 'inline-block';
+                    showToast('Expertise banner selected! Click "Save Settings" below to apply.', 'info');
+                } catch(err) {
+                    console.error('Error compressing expertise banner:', err);
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        globalExpertiseBannerUrl = event.target.result;
+                        if (expertiseBannerPreviewBg) expertiseBannerPreviewBg.style.backgroundImage = `url('${globalExpertiseBannerUrl}')`;
+                        if (expertiseBannerRemoveBtn) expertiseBannerRemoveBtn.style.display = 'inline-block';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+    }
+
+    const staffBannerInput = document.getElementById('admin-staff-banner');
+    const staffBannerPreviewBg = document.getElementById('staff-banner-preview-bg');
+    const staffBannerRemoveBtn = document.getElementById('admin-remove-staff-banner-btn');
+
+    if (staffBannerInput) {
+        staffBannerInput.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                try {
+                    const compressed = await compressImage(file, 1600);
+                    globalStaffBannerUrl = compressed;
+                    if (staffBannerPreviewBg) staffBannerPreviewBg.style.backgroundImage = `url('${globalStaffBannerUrl}')`;
+                    if (staffBannerRemoveBtn) staffBannerRemoveBtn.style.display = 'inline-block';
+                    showToast('Staffs banner selected! Click "Save Settings" below to apply.', 'info');
+                } catch(err) {
+                    console.error('Error compressing staff banner:', err);
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        globalStaffBannerUrl = event.target.result;
+                        if (staffBannerPreviewBg) staffBannerPreviewBg.style.backgroundImage = `url('${globalStaffBannerUrl}')`;
+                        if (staffBannerRemoveBtn) staffBannerRemoveBtn.style.display = 'inline-block';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+    }
+
+    const aboutOwnerInput = document.getElementById('admin-about-owner-img') || document.getElementById('admin-about-img1');
+    const aboutOwnerPreview = document.getElementById('admin-about-owner-preview') || document.getElementById('admin-about-img1-preview');
+    const aboutOwnerPlaceholder = document.getElementById('admin-about-owner-placeholder') || document.getElementById('admin-about-img1-placeholder');
+    const aboutOwnerRemoveBtn = document.getElementById('admin-remove-about-owner-btn') || document.getElementById('admin-remove-about-img1-btn');
+
+    if (aboutOwnerInput) {
+        aboutOwnerInput.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                try {
+                    const compressed = await compressImage(file, 1600);
+                    globalAboutImg1Url = compressed;
+                    if (aboutOwnerPreview) {
+                        aboutOwnerPreview.src = globalAboutImg1Url;
+                        aboutOwnerPreview.style.display = 'block';
+                    }
+                    if (aboutOwnerPlaceholder) aboutOwnerPlaceholder.style.display = 'none';
+                    if (aboutOwnerRemoveBtn) aboutOwnerRemoveBtn.style.display = 'inline-block';
+                    showToast('Chamber Owner photo selected! Click "Save Settings" below to apply.', 'info');
+                } catch(err) {
+                    console.error('Error compressing owner photo:', err);
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        globalAboutImg1Url = event.target.result;
+                        if (aboutOwnerPreview) {
+                            aboutOwnerPreview.src = globalAboutImg1Url;
+                            aboutOwnerPreview.style.display = 'block';
+                        }
+                        if (aboutOwnerPlaceholder) aboutOwnerPlaceholder.style.display = 'none';
+                        if (aboutOwnerRemoveBtn) aboutOwnerRemoveBtn.style.display = 'inline-block';
+                    };
+                    reader.readAsDataURL(file);
+                }
             }
         });
     }
@@ -866,6 +1045,68 @@ if (officeInfoForm) {
                 logoPreview.src = globalLogoUrl;
                 logoPreview.style.display = 'block';
             }
+            if (data.hero_banner_image) {
+                globalHeroBannerUrl = data.hero_banner_image;
+                if (heroBannerPreviewBg) heroBannerPreviewBg.style.backgroundImage = `url('${globalHeroBannerUrl}')`;
+                if (heroBannerRemoveBtn) heroBannerRemoveBtn.style.display = 'inline-block';
+            } else {
+                if (heroBannerPreviewBg) heroBannerPreviewBg.style.backgroundImage = "url('assets/images/default_chamber_banner.jpg')";
+                if (heroBannerRemoveBtn) heroBannerRemoveBtn.style.display = 'none';
+            }
+            if (data.expertise_banner_image) {
+                globalExpertiseBannerUrl = data.expertise_banner_image;
+                if (expertiseBannerPreviewBg) expertiseBannerPreviewBg.style.backgroundImage = `url('${globalExpertiseBannerUrl}')`;
+                if (expertiseBannerRemoveBtn) expertiseBannerRemoveBtn.style.display = 'inline-block';
+            } else {
+                if (expertiseBannerPreviewBg) expertiseBannerPreviewBg.style.backgroundImage = "url('assets/images/default_chamber_banner.jpg')";
+                if (expertiseBannerRemoveBtn) expertiseBannerRemoveBtn.style.display = 'none';
+            }
+            if (data.staff_banner_image) {
+                globalStaffBannerUrl = data.staff_banner_image;
+                if (staffBannerPreviewBg) staffBannerPreviewBg.style.backgroundImage = `url('${globalStaffBannerUrl}')`;
+                if (staffBannerRemoveBtn) staffBannerRemoveBtn.style.display = 'inline-block';
+            } else {
+                if (staffBannerPreviewBg) staffBannerPreviewBg.style.backgroundImage = "url('assets/images/default_chamber_banner.jpg')";
+                if (staffBannerRemoveBtn) staffBannerRemoveBtn.style.display = 'none';
+            }
+
+            if (data.about_chamber_owner_name !== undefined) {
+                const el = document.getElementById('admin-about-owner-name');
+                if (el) el.value = data.about_chamber_owner_name;
+            }
+            if (data.about_chamber_founder !== undefined) {
+                const el = document.getElementById('admin-about-founder');
+                if (el) el.value = data.about_chamber_founder;
+            }
+            if (data.about_chamber_vision !== undefined) {
+                const el = document.getElementById('admin-about-vision');
+                if (el) el.value = data.about_chamber_vision;
+            }
+            if (data.about_chamber_text !== undefined) {
+                const aboutTextEl = document.getElementById('admin-about-text');
+                if (aboutTextEl) aboutTextEl.value = data.about_chamber_text;
+            }
+            if (data.google_site_verification !== undefined) {
+                const gvEl = document.getElementById('admin-google-verification');
+                if (gvEl) gvEl.value = data.google_site_verification;
+            }
+            if (data.about_chamber_owner_image || data.about_chamber_image1) {
+                globalAboutImg1Url = data.about_chamber_owner_image || data.about_chamber_image1;
+                const preview1 = document.getElementById('admin-about-owner-preview') || document.getElementById('admin-about-img1-preview');
+                const placeholder1 = document.getElementById('admin-about-owner-placeholder') || document.getElementById('admin-about-img1-placeholder');
+                const removeBtn1 = document.getElementById('admin-remove-about-owner-btn') || document.getElementById('admin-remove-about-img1-btn');
+                if (preview1) { preview1.src = globalAboutImg1Url; preview1.style.display = 'block'; }
+                if (placeholder1) placeholder1.style.display = 'none';
+                if (removeBtn1) removeBtn1.style.display = 'inline-block';
+            } else {
+                globalAboutImg1Url = "";
+                const preview1 = document.getElementById('admin-about-owner-preview') || document.getElementById('admin-about-img1-preview');
+                const placeholder1 = document.getElementById('admin-about-owner-placeholder') || document.getElementById('admin-about-img1-placeholder');
+                const removeBtn1 = document.getElementById('admin-remove-about-owner-btn') || document.getElementById('admin-remove-about-img1-btn');
+                if (preview1) { preview1.src = ''; preview1.style.display = 'none'; }
+                if (placeholder1) placeholder1.style.display = 'block';
+                if (removeBtn1) removeBtn1.style.display = 'none';
+            }
         } catch(err) {
             console.error(err);
         }
@@ -882,6 +1123,11 @@ if (officeInfoForm) {
         const quick_links = getQuickLinksData();
         const privacy_policy = document.getElementById('admin-privacy-policy').value;
         const terms_conditions = document.getElementById('admin-terms').value;
+        const google_site_verification = document.getElementById('admin-google-verification') ? document.getElementById('admin-google-verification').value.trim() : '';
+        const about_chamber_owner_name = document.getElementById('admin-about-owner-name') ? document.getElementById('admin-about-owner-name').value.trim() : '';
+        const about_chamber_founder = document.getElementById('admin-about-founder') ? document.getElementById('admin-about-founder').value : '';
+        const about_chamber_vision = document.getElementById('admin-about-vision') ? document.getElementById('admin-about-vision').value : '';
+        const about_chamber_text = document.getElementById('admin-about-text') ? document.getElementById('admin-about-text').value : '';
         const btn = officeInfoForm.querySelector('button');
         btn.innerText = 'Saving...';
         
@@ -889,9 +1135,30 @@ if (officeInfoForm) {
             await fetch('/api/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ allow_common_password, chamber_name, address, phone, email, footer_alert, quick_links, privacy_policy, terms_conditions, logoUrl: globalLogoUrl })
+                body: JSON.stringify({ 
+                    allow_common_password, 
+                    chamber_name, 
+                    address, 
+                    phone, 
+                    email, 
+                    footer_alert, 
+                    quick_links, 
+                    privacy_policy, 
+                    terms_conditions, 
+                    google_site_verification,
+                    about_chamber_owner_name,
+                    about_chamber_founder,
+                    about_chamber_vision,
+                    about_chamber_text,
+                    about_chamber_owner_image: globalAboutImg1Url,
+                    about_chamber_image1: globalAboutImg1Url,
+                    logoUrl: globalLogoUrl,
+                    hero_banner_image: globalHeroBannerUrl,
+                    expertise_banner_image: globalExpertiseBannerUrl,
+                    staff_banner_image: globalStaffBannerUrl
+                })
             });
-            showToast('Saved');
+            showToast('Settings saved successfully!');
         } catch(err) {
             showToast('Error saving settings', 'error');
         } finally {
@@ -902,95 +1169,7 @@ if (officeInfoForm) {
     setTimeout(loadSettings, 500);
 }
 
-    // ==========================================
-    // Gallery Management
-    // ==========================================
-    const addGalleryForm = document.getElementById('add-gallery-form');
-    const galleryList = document.getElementById('gallery-list');
-    
-    window.loadGallery = async function() {
-        if (!galleryList) return;
-        try {
-            const res = await fetch('/api/gallery', { cache: 'no-store' });
-            const items = await res.json();
-            
-            galleryList.innerHTML = '';
-            if (items.length === 0) {
-                galleryList.innerHTML = '<p style="color: #666; font-style: italic;">No images in gallery.</p>';
-                return;
-            }
-            
-            items.forEach(item => {
-                const div = document.createElement('div');
-                div.style.border = '1px solid #ddd';
-                div.style.borderRadius = '8px';
-                div.style.overflow = 'hidden';
-                div.style.background = '#fff';
-                div.style.position = 'relative';
-                
-                div.innerHTML = `
-                    <img src="${item.imageUrl}" style="width: 100%; height: 140px; object-fit: cover;">
-                    <div style="padding: 10px;">
-                        <p style="margin: 0; font-size: 0.9rem; color: #333; min-height: 20px;">${item.description || '<i>No description</i>'}</p>
-                        <button onclick="window.deleteGalleryItem('${item._id}')" class="btn" style="margin-top: 10px; width: 100%; padding: 5px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">Delete</button>
-                    </div>
-                `;
-                galleryList.appendChild(div);
-            });
-        } catch (err) {
-            console.error(err);
-        }
-    };
-    
-    if (addGalleryForm) {
-        addGalleryForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const fileInput = document.getElementById('gallery-image');
-            const descInput = document.getElementById('gallery-desc');
-            const btn = addGalleryForm.querySelector('button');
-            
-            if (fileInput.files.length === 0) return;
-            
-            btn.innerText = 'Uploading...';
-            btn.disabled = true;
-            
-            try {
-                const imageUrl = await window.compressImage(fileInput.files[0]);
-                const description = descInput.value;
-                
-                await fetch('/api/gallery', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ imageUrl, description })
-                });
-                
-                fileInput.value = '';
-                descInput.value = '';
-                await window.loadGallery();
-            } catch (err) {
-                console.error(err);
-                showToast("Error uploading image", 'error');
-            }
-            
-            btn.innerText = 'Upload Image';
-            btn.disabled = false;
-        });
-    }
-    
-    window.deleteGalleryItem = async function(id) {
-        if (!confirm("Are you sure you want to delete this gallery image?")) return;
-        try {
-            await fetch('/api/gallery/' + id, { method: 'DELETE' });
-            await window.loadGallery();
-        } catch (err) {
-            console.error(err);
-            showToast("Error deleting image", 'error');
-        }
-    };
-    
-    setTimeout(() => {
-        if (typeof window.loadGallery === 'function') window.loadGallery();
-    }, 600);
+
 
 
 
@@ -1266,8 +1445,11 @@ if (officeInfoForm) {
         document.getElementById('edit-adv-id').value = adv._id;
         document.getElementById('edit-adv-name').value = adv.name || '';
         document.getElementById('edit-adv-email').value = adv.email || '';
+        if (document.getElementById('edit-adv-role')) document.getElementById('edit-adv-role').value = adv.role || '';
         document.getElementById('edit-adv-specialty').value = adv.specialty || '';
+        if (document.getElementById('edit-adv-location')) document.getElementById('edit-adv-location').value = adv.location || '';
         document.getElementById('edit-adv-phone').value = adv.phone || '';
+        if (document.getElementById('edit-adv-linkedin')) document.getElementById('edit-adv-linkedin').value = adv.linkedin || '';
         document.getElementById('edit-adv-image').value = '';
         editAdvocateImageUrl = adv.imageUrl || ''; // keep existing photo unless replaced
         
@@ -1313,8 +1495,11 @@ if (officeInfoForm) {
         const id = document.getElementById('edit-adv-id').value;
         const name = document.getElementById('edit-adv-name').value;
         const email = document.getElementById('edit-adv-email').value;
+        const role = (document.getElementById('edit-adv-role') ? document.getElementById('edit-adv-role').value : '').trim() || 'Legal Professional';
         const specialty = document.getElementById('edit-adv-specialty').value;
+        const location = (document.getElementById('edit-adv-location') ? document.getElementById('edit-adv-location').value : '').trim() || 'High Court of Orissa, Cuttack';
         const phone = document.getElementById('edit-adv-phone').value;
+        const linkedin = (document.getElementById('edit-adv-linkedin') ? document.getElementById('edit-adv-linkedin').value : '').trim();
         const fileInput = document.getElementById('edit-adv-image');
         
         if(!name || !email || !specialty) {
@@ -1331,7 +1516,7 @@ if (officeInfoForm) {
             const response = await fetch(`/api/advocates/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, specialty, phone, imageUrl: finalImageUrl })
+                body: JSON.stringify({ name, email, specialty, phone, role, location, linkedin, imageUrl: finalImageUrl })
             });
 
 
@@ -1791,6 +1976,17 @@ window.showSection = function(sectionId) {
         } else {
             aiBtn.style.display = 'none';
         }
+    }
+    
+    // Trigger section-specific reloads
+    if (sectionId === 'services' && typeof window.loadAdminServices === 'function') {
+        window.loadAdminServices();
+    }
+    if (sectionId === 'news' && typeof window.loadAdminNews === 'function') {
+        window.loadAdminNews();
+    }
+    if (sectionId === 'opinions' && typeof window.loadAdminOpinions === 'function') {
+        window.loadAdminOpinions();
     }
 };
 
@@ -2412,3 +2608,759 @@ window.showConfirmModal = function(title, message, confirmCallback) {
         confirmCallback();
     };
 };
+
+// ==========================================
+// LEGAL EXPERTISE & 3D BOOK MANAGEMENT
+// ==========================================
+window.globalServicesData = [];
+
+window.loadAdminServices = async function() {
+    const list = document.getElementById('admin-services-list');
+    if (!list) return;
+    try {
+        const res = await fetch('/api/services?t=' + Date.now(), { cache: 'no-store' });
+        const services = await res.json();
+        window.globalServicesData = services;
+        list.innerHTML = '';
+
+        if (!services || services.length === 0) {
+            list.innerHTML = '<p style="grid-column: 1/-1; color: #64748b; font-style: italic;">No legal expertise services found. Click "Add New Expertise Service" above.</p>';
+            return;
+        }
+
+        services.forEach((s) => {
+            const pagesCount = s.book_pages ? s.book_pages.length : 0;
+            const card = document.createElement('div');
+            card.style.background = '#ffffff';
+            card.style.border = '1px solid #e2e8f0';
+            card.style.borderRadius = '12px';
+            card.style.padding = '1.5rem';
+            card.style.boxShadow = '0 4px 15px rgba(0,0,0,0.04)';
+            card.style.display = 'flex';
+            card.style.flexDirection = 'column';
+            const isImageIcon = s.icon && (s.icon.startsWith('data:') || s.icon.startsWith('http') || s.icon.startsWith('/'));
+            const iconHtml = isImageIcon
+                ? `<img src="${s.icon}" style="width: 28px; height: 28px; object-fit: contain; border-radius: 4px;">`
+                : s.icon || '⚖';
+
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 44px; height: 44px; border-radius: 10px; background: #0A1628; color: #D4AF37; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: bold; box-shadow: 0 4px 10px rgba(10,22,40,0.15); overflow: hidden;">
+                            ${iconHtml}
+                        </div>
+                        <div>
+                            <h4 style="margin: 0; color: #0f172a; font-size: 1.15rem;">${s.title}</h4>
+                            <span style="display: inline-block; background: #fef3c7; color: #92400e; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 9999px; margin-top: 4px;">
+                                📖 ${pagesCount} 3D Book ${pagesCount === 1 ? 'Page' : 'Pages'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <p style="margin: 0; font-size: 0.9rem; color: #475569; line-height: 1.5; flex-grow: 1;">
+                    ${s.short_desc || 'No summary provided.'}
+                </p>
+
+                <div style="display: flex; gap: 8px; margin-top: 0.5rem; padding-top: 1rem; border-top: 1px solid #f1f5f9;">
+                    <button class="btn btn-outline" onclick="openEditServiceModal('${s._id}')" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; border-color: var(--primary); color: var(--primary);">
+                        ✏️ Edit & Pages
+                    </button>
+                    <button class="btn btn-error" onclick="deleteService('${s._id}')" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                        🗑️ Delete
+                    </button>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+    } catch (err) {
+        console.error('Error loading admin services:', err);
+    }
+};
+
+window.updateServiceIconPreview = function(val) {
+    const previewText = document.getElementById('service-icon-preview-text');
+    const previewImg = document.getElementById('service-icon-preview-img');
+    const clearBtn = document.getElementById('service-icon-clear-btn');
+    if (!previewText || !previewImg) return;
+    
+    val = (val || '').trim();
+    if (val.startsWith('data:image/') || val.startsWith('http://') || val.startsWith('https://') || val.startsWith('/')) {
+        previewImg.src = val;
+        previewImg.style.display = 'block';
+        previewText.style.display = 'none';
+        if (clearBtn) clearBtn.style.display = 'inline-block';
+    } else {
+        previewImg.src = '';
+        previewImg.style.display = 'none';
+        previewText.style.display = 'block';
+        previewText.innerText = val || '⚖';
+        if (clearBtn) clearBtn.style.display = 'none';
+    }
+};
+
+window.handleServiceIconUpload = async function(input) {
+    if (input.files && input.files[0]) {
+        try {
+            const dataUrl = await window.compressImage(input.files[0], 250);
+            document.getElementById('service-form-icon').value = dataUrl;
+            window.updateServiceIconPreview(dataUrl);
+            input.value = '';
+        } catch (e) {
+            console.error(e);
+            showToast('Failed to process icon image', 'error');
+        }
+    }
+};
+
+window.clearServiceIcon = function() {
+    document.getElementById('service-form-icon').value = '⚖';
+    window.updateServiceIconPreview('⚖');
+    const fileInput = document.getElementById('service-icon-file-input');
+    if (fileInput) fileInput.value = '';
+};
+
+window.openAddServiceModal = function() {
+    document.getElementById('service-form-id').value = '';
+    document.getElementById('service-form-title').value = '';
+    document.getElementById('service-form-icon').value = '⚖';
+    window.updateServiceIconPreview('⚖');
+    document.getElementById('service-form-desc').value = '';
+    document.getElementById('service-modal-title').innerText = 'Add New Legal Expertise & 3D Book';
+    document.getElementById('service-save-btn').innerText = '💾 Save Service & Book Content';
+    
+    const container = document.getElementById('service-pages-container');
+    container.innerHTML = '';
+    addPageToServiceForm('Overview & Legal Scope', '', []);
+    addPageToServiceForm('Our Strategic Approach', '', []);
+    
+    document.getElementById('service-modal').style.display = 'flex';
+};
+
+window.openEditServiceModal = function(id) {
+    const s = window.globalServicesData.find(x => x._id === id);
+    if (!s) return;
+
+    document.getElementById('service-form-id').value = s._id;
+    document.getElementById('service-form-title').value = s.title || '';
+    document.getElementById('service-form-icon').value = s.icon || '⚖';
+    window.updateServiceIconPreview(s.icon || '⚖');
+    document.getElementById('service-form-desc').value = s.short_desc || '';
+    document.getElementById('service-modal-title').innerText = 'Edit ' + s.title + ' (3D Book)';
+    document.getElementById('service-save-btn').innerText = '💾 Update Service & Book Content';
+
+    const container = document.getElementById('service-pages-container');
+    container.innerHTML = '';
+    if (s.book_pages && s.book_pages.length > 0) {
+        s.book_pages.forEach(p => {
+            addPageToServiceForm(p.chapter || '', p.content || '', p.images || []);
+        });
+    } else {
+        addPageToServiceForm('Overview & Legal Scope', '', []);
+    }
+
+    document.getElementById('service-modal').style.display = 'flex';
+};
+
+window.closeServiceModal = function() {
+    document.getElementById('service-modal').style.display = 'none';
+};
+
+window.handlePageImageSlotUpload = async function(input) {
+    if (input.files && input.files[0]) {
+        const slotEl = input.closest('.page-img-slot');
+        if (!slotEl) return;
+        try {
+            const dataUrl = await window.compressImage(input.files[0], 650);
+            const previewImg = slotEl.querySelector('.slot-preview-img');
+            const emptyText = slotEl.querySelector('.slot-empty-text');
+            const removeBtn = slotEl.querySelector('.slot-remove-btn');
+            const hiddenInput = slotEl.querySelector('.page-img-data');
+            
+            if (previewImg) { previewImg.src = dataUrl; previewImg.style.display = 'block'; }
+            if (emptyText) emptyText.style.display = 'none';
+            if (removeBtn) removeBtn.style.display = 'block';
+            if (hiddenInput) hiddenInput.value = dataUrl;
+            
+            input.value = '';
+        } catch (e) {
+            console.error(e);
+            showToast('Failed to process chapter image', 'error');
+        }
+    }
+};
+
+window.removePageSlotImage = function(btn) {
+    const slotEl = btn.closest('.page-img-slot');
+    if (!slotEl) return;
+    const previewImg = slotEl.querySelector('.slot-preview-img');
+    const emptyText = slotEl.querySelector('.slot-empty-text');
+    const hiddenInput = slotEl.querySelector('.page-img-data');
+    
+    if (previewImg) { previewImg.src = ''; previewImg.style.display = 'none'; }
+    if (emptyText) emptyText.style.display = 'block';
+    if (hiddenInput) hiddenInput.value = '';
+    btn.style.display = 'none';
+};
+
+window.addPageToServiceForm = function(chapter = '', content = '', images = []) {
+    const container = document.getElementById('service-pages-container');
+    const pageIndex = container.children.length + 1;
+    
+    const pageCard = document.createElement('div');
+    pageCard.className = 'service-page-item';
+    pageCard.style.background = '#f8fafc';
+    pageCard.style.border = '1px solid #cbd5e1';
+    pageCard.style.borderRadius = '10px';
+    pageCard.style.padding = '1rem';
+    pageCard.style.display = 'flex';
+    pageCard.style.flexDirection = 'column';
+    pageCard.style.gap = '8px';
+
+    const img1 = (Array.isArray(images) && images[0]) ? images[0] : '';
+    const img2 = (Array.isArray(images) && images[1]) ? images[1] : '';
+
+    pageCard.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="color: var(--primary); font-size: 0.9rem;">📄 Page ${pageIndex} Chapter Title:</strong>
+            <button type="button" onclick="this.closest('.service-page-item').remove(); renumberServicePages();" class="btn" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 2px 6px; font-size: 0.85rem;">
+                ✕ Remove
+            </button>
+        </div>
+        <input type="text" class="form-control page-chapter-input" value="${chapter.replace(/"/g, '&quot;')}" placeholder="e.g. Chapter 1: Pre-trial Procedures & Injunctions" required>
+        
+        <div style="background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px; margin-top: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 0.82rem; font-weight: 700; color: #334155;">🖼️ Page Illustrations / Documents (Optional - Max 2):</span>
+                <span style="font-size: 0.74rem; color: #64748b;">Displays inside the 3D book</span>
+            </div>
+            <div class="page-images-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <!-- Slot 1 -->
+                <div class="page-img-slot" data-slot="0" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; background: #f8fafc; text-align: center;">
+                    <div class="img-preview-container" style="height: 80px; display: flex; align-items: center; justify-content: center; background: #edf2f7; border-radius: 4px; overflow: hidden; margin-bottom: 6px; position: relative;">
+                        <img class="slot-preview-img" src="${img1}" style="max-width: 100%; max-height: 100%; object-fit: contain; ${img1 ? 'display: block;' : 'display: none;'}">
+                        <span class="slot-empty-text" style="font-size: 0.75rem; color: #94a3b8; ${img1 ? 'display: none;' : 'display: block;'}">Image 1 (Optional)</span>
+                        <button type="button" class="slot-remove-btn" onclick="removePageSlotImage(this)" style="${img1 ? 'display: block;' : 'display: none;'} position: absolute; top: 4px; right: 4px; background: rgba(239, 68, 68, 0.9); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 11px; line-height: 1;" title="Remove image">✕</button>
+                    </div>
+                    <label class="btn btn-outline" style="padding: 3px 8px; font-size: 0.75rem; cursor: pointer; width: 100%; box-sizing: border-box; display: inline-block;">
+                        📷 Upload Image 1
+                        <input type="file" accept="image/*" style="display: none;" onchange="handlePageImageSlotUpload(this)">
+                    </label>
+                    <input type="hidden" class="page-img-data" value="${img1.replace(/"/g, '&quot;')}">
+                </div>
+                <!-- Slot 2 -->
+                <div class="page-img-slot" data-slot="1" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; background: #f8fafc; text-align: center;">
+                    <div class="img-preview-container" style="height: 80px; display: flex; align-items: center; justify-content: center; background: #edf2f7; border-radius: 4px; overflow: hidden; margin-bottom: 6px; position: relative;">
+                        <img class="slot-preview-img" src="${img2}" style="max-width: 100%; max-height: 100%; object-fit: contain; ${img2 ? 'display: block;' : 'display: none;'}">
+                        <span class="slot-empty-text" style="font-size: 0.75rem; color: #94a3b8; ${img2 ? 'display: none;' : 'display: block;'}">Image 2 (Optional)</span>
+                        <button type="button" class="slot-remove-btn" onclick="removePageSlotImage(this)" style="${img2 ? 'display: block;' : 'display: none;'} position: absolute; top: 4px; right: 4px; background: rgba(239, 68, 68, 0.9); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 11px; line-height: 1;" title="Remove image">✕</button>
+                    </div>
+                    <label class="btn btn-outline" style="padding: 3px 8px; font-size: 0.75rem; cursor: pointer; width: 100%; box-sizing: border-box; display: inline-block;">
+                        📷 Upload Image 2
+                        <input type="file" accept="image/*" style="display: none;" onchange="handlePageImageSlotUpload(this)">
+                    </label>
+                    <input type="hidden" class="page-img-data" value="${img2.replace(/"/g, '&quot;')}">
+                </div>
+            </div>
+        </div>
+
+        <label style="font-size: 0.8rem; font-weight: 600; color: #475569; margin-top: 4px;">Book Page Text Content:</label>
+        <textarea class="form-control page-content-input" rows="4" placeholder="Enter in-depth legal expertise text that clients will read in the 3D book..." required>${content}</textarea>
+    `;
+    container.appendChild(pageCard);
+};
+
+window.renumberServicePages = function() {
+    const container = document.getElementById('service-pages-container');
+    const items = container.querySelectorAll('.service-page-item');
+    items.forEach((item, index) => {
+        const strong = item.querySelector('strong');
+        if (strong) strong.innerText = `📄 Page ${index + 1} Chapter Title:`;
+    });
+};
+
+window.saveServiceForm = async function(e) {
+    e.preventDefault();
+    const id = document.getElementById('service-form-id').value;
+    const title = document.getElementById('service-form-title').value.trim();
+    const icon = document.getElementById('service-form-icon').value.trim() || '⚖';
+    const short_desc = document.getElementById('service-form-desc').value.trim();
+
+    const pageItems = document.querySelectorAll('.service-page-item');
+    const book_pages = [];
+    pageItems.forEach(item => {
+        const chapter = item.querySelector('.page-chapter-input').value.trim();
+        const content = item.querySelector('.page-content-input').value.trim();
+        const imgInputs = item.querySelectorAll('.page-img-data');
+        const images = [];
+        imgInputs.forEach(inp => {
+            if (inp.value && inp.value.trim()) {
+                images.push(inp.value.trim());
+            }
+        });
+        if (chapter || content || images.length > 0) {
+            book_pages.push({ chapter, content, images });
+        }
+    });
+
+    if (book_pages.length === 0) {
+        showToast('Please add at least 1 book page for clients to read.', 'error');
+        return;
+    }
+
+    const saveBtn = document.getElementById('service-save-btn');
+    saveBtn.innerText = 'Saving...';
+    saveBtn.disabled = true;
+
+    try {
+        const url = id ? `/api/services/${id}` : '/api/services';
+        const method = id ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, icon, short_desc, book_pages })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showToast(id ? 'Service & 3D book updated successfully!' : 'Service created successfully!', 'success');
+            closeServiceModal();
+            loadAdminServices();
+        } else {
+            showToast(data.error || 'Failed to save service', 'error');
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('Error saving service', 'error');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerText = '💾 Save Service & Book Content';
+    }
+};
+
+window.deleteService = async function(id) {
+    if (!confirm('Are you sure you want to delete this expertise service and its 3D book?')) return;
+    try {
+        const res = await fetch(`/api/services/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            showToast('Service deleted.', 'success');
+            loadAdminServices();
+        } else {
+            showToast('Failed to delete service', 'error');
+        }
+    } catch (err) {
+        showToast('Error deleting service', 'error');
+    }
+};
+
+// Initial load of services in admin
+setTimeout(() => {
+    if (typeof loadAdminServices === 'function') loadAdminServices();
+    if (typeof loadAdminNews === 'function') loadAdminNews();
+}, 700);
+
+/* =========================================================
+   NEWS AND INSIGHTS MANAGEMENT CONTROLLER
+========================================================= */
+window.globalNewsData = [];
+
+window.loadAdminNews = async function() {
+    try {
+        const res = await fetch('/api/news', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        window.globalNewsData = data;
+
+        const list = document.getElementById('admin-news-list');
+        if (!list) return;
+
+        list.innerHTML = '';
+
+        if (!data || data.length === 0) {
+            list.innerHTML = '<p style="grid-column: 1/-1; color: #64748b; font-style: italic;">No news articles published yet. Click "Publish New Article / News" above to add one.</p>';
+            return;
+        }
+
+        data.forEach((item) => {
+            const card = document.createElement('div');
+            card.style.background = '#ffffff';
+            card.style.border = '1px solid #e2e8f0';
+            card.style.borderRadius = '12px';
+            card.style.overflow = 'hidden';
+            card.style.boxShadow = '0 4px 15px rgba(0,0,0,0.04)';
+            card.style.display = 'flex';
+            card.style.flexDirection = 'column';
+
+            const iconRender = item.icon && (item.icon.startsWith('data:') || item.icon.startsWith('http') || item.icon.startsWith('/'))
+                ? `<img src="${item.icon}" style="width: 16px; height: 16px; object-fit: contain; vertical-align: middle; margin-right: 4px;">`
+                : `<span style="margin-right: 4px;">${item.icon || '⚖️'}</span>`;
+
+            const imgHtml = (item.image || item.image_url)
+                ? `<img src="${item.image || item.image_url}" style="width: 100%; height: 160px; object-fit: cover;" alt="Article">`
+                : `<div style="width: 100%; height: 160px; background: linear-gradient(135deg, #0A1628 0%, #1e293b 100%); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: #D4AF37;">${item.icon || '⚖️'}</div>`;
+
+            card.innerHTML = `
+                <div style="position: relative;">
+                    ${imgHtml}
+                    <span style="position: absolute; top: 10px; left: 10px; background: rgba(10,22,40,0.92); color: #D4AF37; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; padding: 4px 10px; border-radius: 9999px; border: 1px solid rgba(212,175,55,0.4); display: inline-flex; align-items: center;">
+                        ${iconRender} ${item.category || 'Legal Insight'}
+                    </span>
+                </div>
+                <div style="padding: 1.2rem; display: flex; flex-direction: column; flex-grow: 1;">
+                    <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 6px;">
+                        📅 ${item.date || 'Recent'} • ✍️ ${item.author || 'JSM Chambers'}
+                    </div>
+                    <h4 style="margin: 0 0 8px 0; color: #0f172a; font-size: 1.1rem; line-height: 1.35; font-family: 'Playfair Display', Georgia, serif;">
+                        ${item.title}
+                    </h4>
+                    <p style="margin: 0 0 1rem 0; font-size: 0.88rem; color: #475569; line-height: 1.5; flex-grow: 1;">
+                        ${item.summary || ''}
+                    </p>
+                    <div style="display: flex; gap: 8px; border-top: 1px solid #f1f5f9; padding-top: 0.8rem; margin-top: auto;">
+                        <button class="btn btn-outline" onclick="openEditNewsModal('${item._id}')" style="flex: 1; padding: 0.45rem; font-size: 0.82rem; border-color: var(--primary); color: var(--primary);">
+                            ✏️ Edit
+                        </button>
+                        <button class="btn btn-error" onclick="deleteNews('${item._id}')" style="padding: 0.45rem 0.9rem; font-size: 0.82rem;">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+    } catch (err) {
+        console.error('Error loading admin news:', err);
+    }
+};
+
+window.updateNewsIconPreview = function(val) {
+    const previewChar = document.getElementById('news-icon-preview-char');
+    const previewImg = document.getElementById('news-icon-preview-img');
+    if (!previewChar) return;
+
+    val = (val || '').trim();
+    if (!val) val = '⚖️';
+
+    const isImage = val.startsWith('data:image/') || val.startsWith('http://') || val.startsWith('https://') || val.startsWith('/');
+    if (isImage) {
+        if (previewImg) {
+            previewImg.src = val;
+            previewImg.style.display = 'block';
+        }
+        previewChar.style.display = 'none';
+    } else {
+        previewChar.innerText = val;
+        previewChar.style.display = 'block';
+        if (previewImg) previewImg.style.display = 'none';
+    }
+};
+
+window.setNewsPresetIcon = function(icon) {
+    const input = document.getElementById('news-form-icon');
+    if (input) input.value = icon;
+    window.updateNewsIconPreview(icon);
+};
+
+window.handleNewsIconUpload = async function(input) {
+    if (input.files && input.files[0]) {
+        try {
+            const dataUrl = await window.compressImage(input.files[0], 250);
+            document.getElementById('news-form-icon').value = dataUrl;
+            window.updateNewsIconPreview(dataUrl);
+            input.value = '';
+        } catch (e) {
+            console.error(e);
+            showToast('Failed to process icon image', 'error');
+        }
+    }
+};
+
+window.updateNewsImagePreview = function(val) {
+    const previewImg = document.getElementById('news-image-preview-img');
+    const placeholder = document.getElementById('news-image-preview-placeholder');
+    const clearBtn = document.getElementById('news-image-clear-btn');
+    if (!previewImg) return;
+
+    val = (val || '').trim();
+    if (val.startsWith('data:image/') || val.startsWith('http://') || val.startsWith('https://') || val.startsWith('/')) {
+        previewImg.src = val;
+        previewImg.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+        if (clearBtn) clearBtn.style.display = 'inline-block';
+    } else {
+        previewImg.src = '';
+        previewImg.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'block';
+        if (clearBtn) clearBtn.style.display = 'none';
+    }
+};
+
+window.handleNewsImageUpload = async function(input) {
+    if (input.files && input.files[0]) {
+        try {
+            const dataUrl = await window.compressImage(input.files[0], 800);
+            document.getElementById('news-form-image').value = dataUrl;
+            window.updateNewsImagePreview(dataUrl);
+            input.value = '';
+        } catch (e) {
+            console.error(e);
+            showToast('Failed to process image', 'error');
+        }
+    }
+};
+
+window.clearNewsImage = function() {
+    document.getElementById('news-form-image').value = '';
+    window.updateNewsImagePreview('');
+    const fileInput = document.getElementById('news-image-file-input');
+    if (fileInput) fileInput.value = '';
+};
+
+window.openAddNewsModal = function() {
+    document.getElementById('news-form-id').value = '';
+    document.getElementById('news-form-title').value = '';
+    document.getElementById('news-form-category').value = 'Supreme Court Update';
+    document.getElementById('news-form-icon').value = '⚖️';
+    window.updateNewsIconPreview('⚖️');
+    document.getElementById('news-form-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('news-form-author').value = 'JSM Chambers Editorial';
+    document.getElementById('news-form-image').value = '';
+    window.updateNewsImagePreview('');
+    document.getElementById('news-form-summary').value = '';
+    document.getElementById('news-form-content').value = '';
+    document.getElementById('news-modal-title').innerText = 'Publish News & Legal Insight';
+    document.getElementById('news-save-btn').innerText = '💾 Publish Article';
+    document.getElementById('news-modal').style.display = 'flex';
+};
+
+window.openEditNewsModal = function(id) {
+    const item = window.globalNewsData.find(x => x._id === id);
+    if (!item) return;
+
+    document.getElementById('news-form-id').value = item._id;
+    document.getElementById('news-form-title').value = item.title || '';
+    document.getElementById('news-form-category').value = item.category || 'Supreme Court Update';
+    const icon = item.icon || '⚖️';
+    document.getElementById('news-form-icon').value = icon;
+    window.updateNewsIconPreview(icon);
+    document.getElementById('news-form-date').value = item.date || new Date().toISOString().split('T')[0];
+    document.getElementById('news-form-author').value = item.author || 'JSM Chambers';
+    document.getElementById('news-form-image').value = item.image || item.image_url || '';
+    window.updateNewsImagePreview(item.image || item.image_url || '');
+    document.getElementById('news-form-summary').value = item.summary || '';
+    document.getElementById('news-form-content').value = item.content || '';
+    document.getElementById('news-modal-title').innerText = 'Edit News Article';
+    document.getElementById('news-save-btn').innerText = '💾 Update Article';
+    document.getElementById('news-modal').style.display = 'flex';
+};
+
+window.closeNewsModal = function() {
+    document.getElementById('news-modal').style.display = 'none';
+};
+
+window.saveNewsForm = async function(e) {
+    e.preventDefault();
+    const id = document.getElementById('news-form-id').value;
+    const title = document.getElementById('news-form-title').value.trim();
+    const category = document.getElementById('news-form-category').value.trim() || 'Judicial Update';
+    const icon = (document.getElementById('news-form-icon') ? document.getElementById('news-form-icon').value.trim() : '') || '⚖️';
+    const date = document.getElementById('news-form-date').value || new Date().toISOString().split('T')[0];
+    const author = document.getElementById('news-form-author').value.trim() || 'JSM Chambers';
+    const image = document.getElementById('news-form-image').value.trim();
+    const summary = document.getElementById('news-form-summary').value.trim();
+    const content = document.getElementById('news-form-content').value.trim();
+
+    if (!title || !summary || !content) {
+        showToast('Please fill in the title, summary, and article content.', 'error');
+        return;
+    }
+
+    const saveBtn = document.getElementById('news-save-btn');
+    saveBtn.innerText = 'Saving...';
+    saveBtn.disabled = true;
+
+    try {
+        const url = id ? `/api/news/${id}` : '/api/news';
+        const method = id ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, category, icon, date, author, image, summary, content })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showToast(id ? 'Article updated successfully!' : 'Article published successfully!', 'success');
+            closeNewsModal();
+            loadAdminNews();
+        } else {
+            showToast(data.error || 'Failed to save article', 'error');
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('Error saving article', 'error');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerText = '💾 Publish Article';
+    }
+};
+
+window.deleteNews = async function(id) {
+    if (!confirm('Are you sure you want to delete this news article from the main page?')) return;
+    try {
+        const res = await fetch(`/api/news/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            showToast('Article deleted.', 'success');
+            loadAdminNews();
+        } else {
+            showToast('Failed to delete article', 'error');
+        }
+    } catch (err) {
+        showToast('Error deleting article', 'error');
+    }
+};
+
+// ==========================================
+// TODAY'S OPINION ADMIN MANAGEMENT
+// ==========================================
+window.adminOpinionsCache = [];
+
+window.loadAdminOpinions = async function() {
+    const listEl = document.getElementById('admin-opinions-list');
+    if (!listEl) return;
+    listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #64748b;">Loading opinions...</div>';
+
+    try {
+        const res = await fetch('/api/opinions');
+        const opinions = await res.json();
+        window.adminOpinionsCache = opinions || [];
+
+        if (!opinions || opinions.length === 0) {
+            listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #64748b;">No opinions published yet. Click "Add Today\'s Opinion" to publish.</div>';
+            return;
+        }
+
+        listEl.innerHTML = opinions.map(op => `
+            <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-top: 4px solid #D4AF37; border-radius: 10px; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 6px;">
+                        <span style="background: #0A1628; color: #D4AF37; font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; text-transform: uppercase;">
+                            ${escapeHtml(op.category || 'Editorial')}
+                        </span>
+                        <span style="color: #64748b; font-size: 0.78rem; font-weight: 600;">
+                            📅 ${escapeHtml(op.date || '')}
+                        </span>
+                    </div>
+                    <h4 style="margin: 0 0 0.5rem 0; color: #0A1628; font-family: 'Playfair Display', Georgia, serif; font-size: 1.1rem; line-height: 1.35;">
+                        ${escapeHtml(op.title || '')}
+                    </h4>
+                    <div style="color: #475569; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.6rem;">
+                        ✍️ ${escapeHtml(op.author || 'Chamber Counsel')}
+                    </div>
+                    <p style="color: #475569; font-size: 0.84rem; line-height: 1.5; margin: 0 0 1rem 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                        ${escapeHtml(op.message || '')}
+                    </p>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #e2e8f0; padding-top: 0.8rem;">
+                    <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="editOpinion('${op._id}')">
+                        ✏️ Edit
+                    </button>
+                    <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; color: #dc2626; border-color: #fca5a5;" onclick="deleteOpinion('${op._id}')">
+                        🗑️ Delete
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } catch(err) {
+        console.error(err);
+        listEl.innerHTML = '<div style="grid-column: 1/-1; color: #dc2626; text-align: center; padding: 2rem;">Error loading opinions.</div>';
+    }
+};
+
+window.openAddOpinionModal = function() {
+    document.getElementById('opinion-form-id').value = '';
+    document.getElementById('opinion-form-title').value = '';
+    document.getElementById('opinion-form-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('opinion-form-author').value = 'Managing Counsel';
+    document.getElementById('opinion-form-category').value = 'Constitutional Law';
+    document.getElementById('opinion-form-message').value = '';
+    document.getElementById('opinion-modal-title').innerText = "Publish Today's Opinion";
+    document.getElementById('opinion-submit-btn').innerText = "💾 Save & Publish Opinion";
+    document.getElementById('opinion-modal-admin').style.display = 'flex';
+};
+
+window.closeOpinionModal = function() {
+    document.getElementById('opinion-modal-admin').style.display = 'none';
+};
+
+window.editOpinion = function(id) {
+    const op = window.adminOpinionsCache.find(o => o._id === id);
+    if (!op) return;
+    document.getElementById('opinion-form-id').value = op._id;
+    document.getElementById('opinion-form-title').value = op.title || '';
+    document.getElementById('opinion-form-date').value = op.date || new Date().toISOString().split('T')[0];
+    document.getElementById('opinion-form-author').value = op.author || '';
+    document.getElementById('opinion-form-category').value = op.category || '';
+    document.getElementById('opinion-form-message').value = op.message || '';
+    document.getElementById('opinion-modal-title').innerText = "Edit Today's Opinion";
+    document.getElementById('opinion-submit-btn').innerText = "💾 Update Opinion";
+    document.getElementById('opinion-modal-admin').style.display = 'flex';
+};
+
+window.saveOpinionForm = async function(e) {
+    e.preventDefault();
+    const id = document.getElementById('opinion-form-id').value;
+    const title = document.getElementById('opinion-form-title').value.trim();
+    const date = document.getElementById('opinion-form-date').value || new Date().toISOString().split('T')[0];
+    const author = document.getElementById('opinion-form-author').value.trim() || 'Chamber Counsel';
+    const category = document.getElementById('opinion-form-category').value.trim() || 'Legal Editorial';
+    const message = document.getElementById('opinion-form-message').value.trim();
+
+    if (!title || !message) {
+        showToast('Please fill in both the opinion title and message content.', 'error');
+        return;
+    }
+
+    const submitBtn = document.getElementById('opinion-submit-btn');
+    submitBtn.innerText = 'Saving...';
+    submitBtn.disabled = true;
+
+    try {
+        const url = id ? `/api/opinions/${id}` : '/api/opinions';
+        const method = id ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, date, author, category, message })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showToast(id ? 'Opinion updated successfully!' : "Today's opinion published successfully!", 'success');
+            closeOpinionModal();
+            loadAdminOpinions();
+        } else {
+            showToast(data.error || 'Failed to save opinion', 'error');
+        }
+    } catch(err) {
+        console.error(err);
+        showToast('Error saving opinion', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = '💾 Save & Publish Opinion';
+    }
+};
+
+window.deleteOpinion = async function(id) {
+    if (!confirm('Are you sure you want to delete this opinion?')) return;
+    try {
+        const res = await fetch(`/api/opinions/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            showToast('Opinion deleted.', 'success');
+            loadAdminOpinions();
+        } else {
+            showToast('Failed to delete opinion', 'error');
+        }
+    } catch(err) {
+        showToast('Error deleting opinion', 'error');
+    }
+};
+
+

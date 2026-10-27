@@ -5,6 +5,37 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>JSM. Chambers | Private Legal Organization</title>
+<meta name="description" content="Welcome to JSM. Chambers — an independent private legal organization dedicated to professional legal consultation, strategic advocacy and comprehensive case-management support for complex matters.">
+<meta name="robots" content="index, follow">
+<meta name="google-site-verification" id="google-site-verification-meta" content="">
+
+<!-- Schema.org Structured Data for Google Search Console & Legal Practice Indexing -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "LegalService",
+  "name": "JSM. Chambers",
+  "alternateName": "JSM Chambers & Associates",
+  "description": "Independent private legal organization dedicated to professional legal consultation, strategic advocacy and comprehensive case-management support for complex matters.",
+  "url": "http://127.0.0.1:8081",
+  "founder": {
+    "@type": "Person",
+    "name": "Managing Counsel",
+    "jobTitle": "Senior Advocate & Chamber Founder"
+  },
+  "areaServed": {
+    "@type": "AdministrativeArea",
+    "name": "Odisha, India"
+  },
+  "knowsAbout": [
+    "Civil Litigation",
+    "Constitutional Law & Writ Petitions",
+    "Corporate & Commercial Advisory",
+    "Criminal Defense & Bail Matters",
+    "Appellate Advocacy"
+  ]
+}
+</script>
 
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -201,6 +232,10 @@ button{
 
     font-weight:650;
 
+}
+
+.nav-row{
+    display:contents;
 }
 
 .nav-links a{
@@ -1012,123 +1047,144 @@ section{
    ADVOCATES
 ========================================================= */
 
-.advocates{
-
-    background:var(--navy);
-
-    color:#fff;
-
+.advocates {
+    background: #ffffff;
+    color: var(--navy);
+    padding: 100px 0;
+    border-top: 1px solid #eef2f6;
+    border-bottom: 1px solid #eef2f6;
 }
 
-.advocates .section-head h2{
-
-    color:#fff;
-
+.advocates .section-head h2 {
+    color: var(--navy);
 }
 
-.advocates .section-head p{
-
-    color:#aebcc6;
-
+.advocates .section-head p {
+    color: var(--muted);
 }
 
-.advocate-grid{
-
-    display:grid;
-
-    grid-template-columns:
-        repeat(3,1fr);
-
-    gap:20px;
-
+.advocate-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 26px;
 }
 
-.advocate{
-    border:1px solid rgba(212, 175, 55, 0.15);
-    border-radius:20px;
-    overflow:hidden;
-    background: linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
-    backdrop-filter: blur(10px);
-    transition: all 0.4s ease;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+@media (max-width: 1180px) {
+    .advocate-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+}
+
+@media (max-width: 680px) {
+    .advocate-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+}
+
+.advocate {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03);
 }
 
 .advocate:hover {
     transform: translateY(-8px);
-    border-color: rgba(212, 175, 55, 0.5);
-    box-shadow: 0 15px 40px rgba(212, 175, 55, 0.15);
+    border-color: var(--gold);
+    box-shadow: 0 20px 40px rgba(5, 20, 38, 0.09);
 }
 
-.advocate-image{
-
-    height:310px;
-
-    background-size:cover;
-
-    background-position:center;
-
-    filter:saturate(.7);
-
+.advocate-image {
+    height: 300px;
+    width: 100%;
+    background-size: cover;
+    background-position: top center;
+    background-repeat: no-repeat;
+    border-bottom: 1px solid #f1f5f9;
+    position: relative;
+    overflow: hidden;
 }
 
-.advocate:nth-child(1)
-.advocate-image{
-
-    background-image:
-        url("https://images.unsplash.com/photo-1556157382-97eda2d62296?auto=format&fit=crop&w=900&q=85");
-
+.advocate-info {
+    padding: 22px 22px 20px 22px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
 }
 
-.advocate:nth-child(2)
-.advocate-image{
-
-    background-image:
-        url("https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=900&q=85");
-
+.advocate-info h3 {
+    margin: 0 0 4px 0;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1.3;
 }
 
-.advocate:nth-child(3)
-.advocate-image{
-
-    background-image:
-        url("https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=900&q=85");
-
+.advocate-role {
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 11.5px;
+    font-weight: 700;
+    margin-bottom: 8px;
 }
 
-.advocate-info{
-
-    padding:25px;
-
+.advocate-specialty {
+    color: #334155;
+    font-size: 13px;
+    line-height: 1.55;
+    margin: 0 0 10px 0;
+    min-height: 40px;
 }
 
-.advocate-role{
-
-    color:var(--gold-light);
-
-    text-transform:uppercase;
-
-    letter-spacing:2px;
-
-    font-size:9px;
-
-    font-weight:bold;
-
+.advocate-location {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #64748b;
+    font-size: 12px;
+    margin-bottom: 14px;
+    font-weight: 500;
 }
 
-.advocate-info h3{
-    margin: 8px 0 5px;
-    font-family: var(--font-heading);
-    font-size: 24px;
-    color: var(--white);
-    letter-spacing: 0.5px;
+.advocate-actions {
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
 }
 
-.advocate-info p{
+.advocate-contact-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: var(--navy);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 700;
+    transition: all 0.2s ease;
+}
 
-    color:#9daeb9;
-
-    font-size:12px;
-
+.advocate-contact-btn:hover {
+    background: var(--navy);
+    color: var(--gold);
+    border-color: var(--gold);
+    transform: translateY(-2px);
 }
 
 /* =========================================================
@@ -1780,40 +1836,79 @@ footer{
 
 @media(max-width:1000px){
 
-    .nav-links{
-
-        display:none;
-
-        position:absolute;
-
-        left:0;
-
-        right:0;
-
-        top:82px;
-
-        padding:25px;
-
-        background:#fff;
-
-        border-bottom:1px solid var(--border);
-
-        flex-direction:column;
-
-        align-items:flex-start;
-
+    .nav-inner {
+        flex-direction: column;
+        align-items: center;
+        padding: 12px 16px;
+        min-height: auto;
+        gap: 8px;
     }
 
-    .nav-links.open{
-
-        display:flex;
-
+    .mobile-btn {
+        display: none !important;
     }
 
-    .mobile-btn{
+    .nav-links {
+        display: flex !important;
+        position: static !important;
+        flex-direction: column !important;
+        width: 100%;
+        margin-top: 6px;
+        gap: 8px;
+        padding: 0 !important;
+        background: transparent !important;
+        border: none !important;
+    }
 
-        display:block;
+    .nav-row-1, .nav-row-2 {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+    }
 
+    .nav-row-1 a, .nav-row-2 a {
+        flex: 1;
+        max-width: 180px;
+        text-align: center;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--navy);
+        background: rgba(10, 22, 40, 0.04);
+        border: 1px solid rgba(212, 175, 55, 0.35);
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: block;
+    }
+
+    .nav-row-1 a:active, .nav-row-2 a:active,
+    .nav-row-1 a:hover, .nav-row-2 a:hover {
+        background: var(--navy);
+        color: var(--gold-light);
+        border-color: var(--navy);
+    }
+
+    .nav-row-3 {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .nav-row-3 .nav-login {
+        width: 100%;
+        max-width: 372px;
+        text-align: center;
+        padding: 10px 16px;
+        font-size: 13px;
+        font-weight: 700;
+        border-radius: 8px;
+        background: var(--navy);
+        color: #fff !important;
+        box-shadow: 0 4px 12px rgba(10, 22, 40, 0.15);
+        display: block;
     }
 
     .hero-grid{
@@ -2182,7 +2277,6 @@ select:focus-visible{
 .email-box { margin-top: 20px; padding: 13px; border-radius: 12px; color: #065f46; background: #d1fae5; font-size: 14px; }
 
 </style>
-    <meta name="google-site-verification" content="Cb6ak0wetmxY9fGq95lyGFJI2XIfWpdpoZRLJ_e-4RY" />
 
     <style>
         #global-toast {
@@ -2216,7 +2310,7 @@ select:focus-visible{
 
 <body>
     <!-- Full Page Loading Screen -->
-    <div id="public-loading-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s ease;">
+    <div id="public-loading-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 999999; display: none; pointer-events: none; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s ease;">
         <img id="public-loading-logo" src="" style="max-width: 200px; max-height: 200px; width: 80%; object-fit: contain; display: none; animation: pulse 2s infinite; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
         <h2 id="public-loading-text" style="margin-top: 30px; color: #051426; font-family: 'Playfair Display', serif; letter-spacing: 2px; text-align: center; font-size: 32px;">JSM. Chambers<br><small style="font-size: 15px; font-weight: 500; color: #D4AF37; letter-spacing: 3px; text-transform: uppercase;">Loading...</small></h2>
     </div>
@@ -2267,31 +2361,19 @@ PRIVATE LEGAL ORGANIZATION
 
 
 <nav class="nav-links" id="navLinks">
-
-<a href="#home">Home</a>
-
-<a href="#services" style="display: none;">Legal Services</a>
-
-<a href="#advocates" style="display: none;">Advocates</a>
-
-<a href="#contact">Contact</a>
-
-<a href="#"
-   class="nav-login"
-   onclick="window.location.href='client-login.html';return false;">
-Client Login
-</a>
-
+    <div class="nav-row nav-row-1">
+        <a href="#home">Home</a>
+        <a href="#" onclick="openAboutFullscreen(); return false;">About</a>
+        <a href="#expertise">Expertise</a>
+    </div>
+    <div class="nav-row nav-row-2">
+        <a href="#staffs">Staffs</a>
+        <a href="#contact">Contact Us</a>
+    </div>
+    <div class="nav-row nav-row-3">
+        <a href="#" class="nav-login" onclick="window.location.href='client-login.html';return false;">Client Login</a>
+    </div>
 </nav>
-
-
-<button
-class="mobile-btn"
-onclick="toggleMenu()">
-
-☰
-
-</button>
 
 </div>
 
@@ -2302,121 +2384,135 @@ onclick="toggleMenu()">
      HERO
 ========================================================= -->
 
-<section class="hero" id="home">
-
-<div class="container hero-grid">
-
-
-<div class="hero-content">
-
-<div class="hero-tag">
-<i></i>
-Private Legal Organization
-</div>
-
-
-<h1>
-
-Expert Legal
-
-<br>
-
-<span>Representation</span>
-
-<br>
-
-& Consultation
-
-</h1>
-
-
-<p class="hero-description">
-
-Welcome to JSM. Chambers — an independent private
-legal organization dedicated to professional legal
-consultation, strategic advocacy and comprehensive
-case-management support for complex matters.
-
-</p>
-
-
-<div class="hero-buttons">
-
-<button
-class="btn btn-primary"
-onclick="openModal('appointmentModal')">
-
-Book Appointment
-
-→
-
-</button>
-
-
-<button
-class="btn btn-secondary"
-onclick="window.location.href='client-login.html'">
-
-Client Login
-
-</button>
-
-</div>
-
-</div>
-
-
-<div class="hero-panel">
-
-<div class="panel-top">
-
-<span class="panel-label">
-JSM. Chambers
-</span>
-
-<span class="panel-number">
-01
-</span>
-
-</div>
-
-
-<div class="panel-main">
-
-<div class="panel-line"></div>
-
 <style>
-@keyframes popUpLogo {
-    0% { opacity: 0; transform: scale(0.5) translateY(20px); }
-    100% { opacity: 1; transform: scale(1) translateY(0); }
+/* Hero Reference Banner - Transparent Overlay on Law Chamber Background */
+.hero-reference-banner {
+    position: relative;
+    width: 100%;
+    min-height: 480px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+    padding: clamp(80px, 10vw, 125px) 24px;
+    box-sizing: border-box;
+}
+
+.hero-ref-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    transform: scale(1.02);
+    transition: background-image 0.5s ease-in-out;
+}
+
+.hero-ref-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        180deg,
+        rgba(8, 26, 48, 0.85) 0%,
+        rgba(14, 43, 77, 0.80) 50%,
+        rgba(8, 26, 48, 0.88) 100%
+    );
+    backdrop-filter: blur(1.5px);
+    -webkit-backdrop-filter: blur(1.5px);
+}
+
+.hero-ref-content {
+    position: relative;
+    z-index: 3;
+    max-width: 980px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.hero-ref-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(2rem, 3.8vw, 3.1rem);
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin: 0 0 14px 0;
+    line-height: 1.25;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.6);
+}
+
+.hero-ref-divider {
+    width: 70px;
+    height: 2px;
+    background: #ffffff;
+    opacity: 0.85;
+    margin: 0 auto 22px auto;
+    border-radius: 2px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.hero-ref-description {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: clamp(1.05rem, 1.65vw, 1.25rem);
+    line-height: 1.75;
+    color: #ffffff;
+    opacity: 0.96;
+    max-width: 900px;
+    margin: 0 auto 28px auto;
+    font-weight: 400;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+}
+
+.hero-ref-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .hero-reference-banner {
+        min-height: 380px;
+        padding: 60px 18px;
+    }
+    .hero-ref-title {
+        font-size: 1.85rem;
+        letter-spacing: 2px;
+    }
+    .hero-ref-divider {
+        width: 50px;
+        margin-bottom: 16px;
+    }
+    .hero-ref-description {
+        font-size: 1rem;
+        line-height: 1.6;
+    }
 }
 </style>
-<div style="text-align: left; margin-bottom: 20px; animation: popUpLogo 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; opacity: 0; transform: scale(0.5);">
-    <img src="assets/images/75_constitution.jpg" alt="75 Years of Constitution" style="height: 90px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); background: white; padding: 6px; border: 1.5px solid rgba(212, 175, 55, 0.5);">
-</div>
 
-<h2>
-
-Strategic Advocacy.
-Clear Legal Direction.
-
-</h2>
-
-<p>
-
-Professional support designed around
-preparation, communication and focused
-legal strategy.
-
-</p>
-
-</div>
-
-</div>
-
-
-</div>
-
+<section class="hero-reference-banner" id="home">
+    <div class="hero-ref-bg" id="hero-banner-bg" style="background-image: url('assets/images/default_chamber_banner.jpg');"></div>
+    <div class="hero-ref-overlay"></div>
+    <div class="hero-ref-content">
+        <h1 class="hero-ref-title">JSM. CHAMBERS</h1>
+        <div class="hero-ref-divider"></div>
+        <p class="hero-ref-description">
+            Welcome to JSM. Chambers — an independent private legal organization dedicated to professional legal consultation, strategic advocacy and comprehensive case-management support for complex matters. JSM. Chambers
+        </p>
+        <div style="margin-top: 28px;">
+            <button class="btn btn-primary" onclick="openAboutFullscreen()" style="box-shadow: 0 4px 22px rgba(212,175,55,0.4); font-size: 15px; padding: 13px 34px; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 10px; cursor: pointer;">
+                <span>About This Chamber</span>
+                <span style="font-size: 18px;">→</span>
+            </button>
+        </div>
+    </div>
 </section>
 
 
@@ -2424,7 +2520,7 @@ legal strategy.
      TRUST BAR
 ========================================================= -->
 
-<div class="trust">
+<div class="trust scroll-reveal">
 
 <div class="container trust-grid">
 
@@ -2516,287 +2612,655 @@ Clear communication
 </div>
 
 
+<style>
+/* Reference Banners (Expertise & Staffs) */
+.reference-banner-section {
+    position: relative;
+    width: 100%;
+    min-height: 420px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+    padding: clamp(70px, 9vw, 110px) 24px;
+    box-sizing: border-box;
+}
+
+/* Split Banner Design: Half image on left, text & button on right */
+.split-banner-section {
+    padding: 35px 20px;
+    background: transparent;
+}
+.split-banner-card {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: linear-gradient(135deg, #071322, #0A1628);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 15px 40px rgba(5, 20, 38, 0.25);
+    min-height: 350px;
+}
+.split-banner-image-side {
+    position: relative;
+    width: 100%;
+    min-height: 280px;
+    overflow: hidden;
+}
+.split-banner-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    transition: transform 0.6s ease;
+}
+.split-banner-card:hover .split-banner-bg {
+    transform: scale(1.04);
+}
+.split-banner-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(7, 19, 34, 0.35) 0%, rgba(10, 22, 40, 0.85) 100%);
+}
+.split-banner-content-side {
+    padding: clamp(32px, 4.5vw, 50px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    color: #ffffff;
+    position: relative;
+    z-index: 2;
+}
+.split-banner-kicker {
+    color: #D4AF37;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+.split-banner-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(1.8rem, 2.5vw, 2.35rem);
+    color: #ffffff;
+    margin: 0 0 12px 0;
+    letter-spacing: 1.5px;
+    line-height: 1.25;
+}
+.split-banner-line {
+    width: 50px;
+    height: 2px;
+    background: #D4AF37;
+    margin-bottom: 16px;
+}
+.split-banner-desc {
+    color: #cbd5e1;
+    font-size: 14.5px;
+    line-height: 1.65;
+    margin: 0 0 24px 0;
+}
+
+/* Full-Screen Data Views */
+.fullscreen-data-overlay {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 90000;
+    background: #f8fafc;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    animation: fullscreenFadeIn 0.3s ease;
+}
+@keyframes fullscreenFadeIn {
+    from { opacity: 0; transform: scale(0.99); }
+    to { opacity: 1; transform: scale(1); }
+}
+.fullscreen-topbar {
+    background: #0A1628;
+    color: #ffffff;
+    padding: 14px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #D4AF37;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    flex-shrink: 0;
+    z-index: 10;
+}
+.fullscreen-back-btn {
+    background: rgba(212, 175, 55, 0.15);
+    color: #D4AF37;
+    border: 1px solid #D4AF37;
+    padding: 9px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.fullscreen-back-btn:hover {
+    background: #D4AF37;
+    color: #0A1628;
+    transform: translateX(-3px);
+}
+.fullscreen-topbar-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 16px;
+    color: #ffffff;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+.fullscreen-close-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #cbd5e1;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+.fullscreen-close-btn:hover {
+    background: #e11d48;
+    color: #ffffff;
+}
+.fullscreen-body {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 60px;
+}
+
+/* News Train Carousel (Running Left to Right) */
+.news-train-viewport {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    padding: 25px 0;
+    mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+}
+.news-train-track {
+    display: flex;
+    gap: 28px;
+    width: max-content;
+    animation: newsTrainRunLeftToRight 38s linear infinite;
+    will-change: transform;
+}
+.news-train-track:hover {
+    animation-play-state: paused;
+}
+@keyframes newsTrainRunLeftToRight {
+    0% {
+        transform: translateX(-50%);
+    }
+    100% {
+        transform: translateX(0%);
+    }
+}
+.news-train-card {
+    width: 350px !important;
+    max-width: 85vw !important;
+    flex-shrink: 0 !important;
+}
+
+/* Today's Opinion Train (Runs from Right to Left) */
+.opinion-train-viewport {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    padding: 25px 0;
+    mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+}
+.opinion-train-track {
+    display: flex;
+    gap: 28px;
+    width: max-content;
+    animation: opinionTrainRunRightToLeft 38s linear infinite;
+    will-change: transform;
+}
+.opinion-train-track:hover {
+    animation-play-state: paused;
+}
+@keyframes opinionTrainRunRightToLeft {
+    0% {
+        transform: translateX(0%);
+    }
+    100% {
+        transform: translateX(-50%);
+    }
+}
+.opinion-train-card {
+    width: 380px !important;
+    max-width: 85vw !important;
+    flex-shrink: 0 !important;
+    background: #0A1628;
+    border: 1.5px solid rgba(212, 175, 55, 0.35);
+    border-radius: 12px;
+    padding: 24px;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    cursor: pointer;
+}
+.opinion-train-card:hover {
+    transform: translateY(-5px);
+    border-color: #D4AF37;
+    box-shadow: 0 15px 35px rgba(212, 175, 55, 0.25);
+}
+
+@media (max-width: 860px) {
+    .split-banner-card {
+        grid-template-columns: 1fr;
+    }
+    .split-banner-image-side {
+        height: 220px;
+        min-height: 220px;
+    }
+    .split-banner-overlay {
+        background: linear-gradient(180deg, rgba(7, 19, 34, 0.2) 0%, rgba(10, 22, 40, 0.8) 100%);
+    }
+    .fullscreen-topbar-title {
+        display: none;
+    }
+}
+
+/* On-Scroll Reveal (One by One Animation) */
+.scroll-reveal {
+    opacity: 0;
+    transform: translateY(45px);
+    transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1), transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+}
+
+.scroll-reveal.in-view {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+}
+
+@media (max-width: 900px) {
+    .about-fullscreen-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .scroll-reveal {
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
+    }
+}
+</style>
+
+<!-- Full-Screen About Chamber Institutional Document -->
+<div id="about-fullscreen-view" class="fullscreen-data-overlay">
+    <!-- Top Sticky Navigation Bar with Back to Dashboard Button -->
+    <div class="fullscreen-topbar">
+        <button class="fullscreen-back-btn" onclick="closeAboutFullscreen()">
+            ← Back to Dashboard
+        </button>
+        <div class="fullscreen-topbar-title">
+            🏛️ JSM. Chambers • Official Institutional Document & Profile
+        </div>
+        <button class="fullscreen-close-btn" onclick="closeAboutFullscreen()" title="Close full screen">
+            ✕
+        </button>
+    </div>
+
+    <!-- Scrollable Full-Screen Document Content -->
+    <div class="fullscreen-body" style="background: #071322; background-image: radial-gradient(circle at 50% 0%, rgba(212,175,55,0.08) 0%, transparent 60%); padding: 30px 16px 80px 16px;">
+        <div class="container" style="max-width: 1050px; margin: 0 auto;">
+
+            <!-- Formal Legal Document Container -->
+            <div style="background: #ffffff; border: 2px solid #D4AF37; box-shadow: 0 20px 50px rgba(0,0,0,0.45); border-radius: 12px; padding: clamp(28px, 5.5vw, 65px); position: relative; color: #1e293b;">
+
+                <!-- Double Gold Top Trim -->
+                <div style="position: absolute; top: 0; left: 0; right: 0; height: 6px; background: linear-gradient(90deg, #997520, #F3E5AB, #D4AF37, #997520); border-radius: 10px 10px 0 0;"></div>
+
+                <!-- Section 1: Chamber Owner (Full Uncropped Image in Middle & Owner Name) -->
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-top: 4px solid #D4AF37; border-radius: 12px; padding: clamp(26px, 4vw, 38px) 24px; margin-bottom: 35px; box-shadow: 0 4px 18px rgba(0,0,0,0.04); text-align: center;">
+                    <div style="font-size: 13px; font-weight: 800; letter-spacing: 3px; color: #b48608; text-transform: uppercase; margin-bottom: 8px;">
+                        CHAMBER OWNER
+                    </div>
+
+                    <h2 id="about-doc-owner-name" style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(1.6rem, 2.8vw, 2.2rem); color: #0A1628; margin: 0 0 24px 0; font-weight: 700; letter-spacing: 0.5px;">
+                        Chamber Owner
+                    </h2>
+
+                    <!-- Full Uncropped Owner Image in Middle -->
+                    <div style="margin: 0 auto; max-width: 400px; width: 100%; border: 3px solid #D4AF37; border-radius: 10px; box-shadow: 0 12px 35px rgba(10,22,40,0.22); background: #0A1628; padding: 6px; box-sizing: border-box;">
+                        <img id="about-doc-owner-img" src="assets/images/advocate_logo.jpg" alt="Chamber Owner" style="width: 100%; height: auto; max-height: 520px; object-fit: contain; display: block; border-radius: 6px; margin: 0 auto;">
+                    </div>
+                </div>
+
+                <!-- Section 2: Vision & Institutional Goals -->
+                <div style="background: #f8fafc; border-left: 4px solid #0A1628; border-radius: 0 10px 10px 0; padding: 24px 28px; margin-bottom: 35px; box-shadow: 0 3px 12px rgba(0,0,0,0.03);">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                        <span style="font-size: 20px;">🎯</span>
+                        <h2 style="font-family: 'Playfair Display', Georgia, serif; font-size: 1.35rem; color: #0A1628; margin: 0; font-weight: 700;">
+                            Institutional Vision & Goals
+                        </h2>
+                    </div>
+                    <div id="about-doc-vision" style="font-size: 15.5px; line-height: 1.85; color: #334155; font-family: 'Georgia', serif; white-space: pre-wrap;">
+Our vision is to provide unparalleled strategic clarity and fearless legal advocacy. Our goal is to ensure each client matter is backed by thorough documentary preparation, jurisdictional mastery, and uncompromising integrity in every court of law.
+                    </div>
+                </div>
+
+                <!-- Section 3: Full Chamber Profile, History & Case-Management Philosophy -->
+                <div style="margin-bottom: 40px; padding: 0 4px;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                        <span style="font-size: 20px;">📜</span>
+                        <h2 style="font-family: 'Playfair Display', Georgia, serif; font-size: 1.45rem; color: #0A1628; margin: 0; font-weight: 700;">
+                            Chamber Background & Jurisprudential Philosophy
+                        </h2>
+                    </div>
+                    <div id="about-doc-text" style="font-size: 16px; line-height: 1.9; color: #2d3748; font-family: 'Georgia', serif; white-space: pre-wrap;">
+Welcome to JSM. Chambers — an independent private legal organization dedicated to professional legal consultation, strategic advocacy and comprehensive case-management support for complex matters.
+
+Founded on the timeless principles of precision, integrity, and client-centric representation, our chamber brings together experienced legal minds equipped to handle civil disputes, corporate compliance, writ petitions, and appellate proceedings.
+
+Our practitioners emphasize meticulous research, structured documentary review, and disciplined trial strategy to ensure each matter receives the strategic depth and tactical focus it demands.
+                    </div>
+                </div>
+
+                <!-- Section 5: Institutional Tenets & Seal -->
+                <div style="border-top: 2px solid #e2e8f0; padding-top: 30px; margin-top: 20px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 30px;">
+                        <div style="padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
+                            <div style="font-size: 22px; margin-bottom: 6px;">⚖️</div>
+                            <strong style="color: #0A1628; font-size: 14px;">Strategic Advocacy</strong>
+                        </div>
+                        <div style="padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
+                            <div style="font-size: 22px; margin-bottom: 6px;">🔒</div>
+                            <strong style="color: #0A1628; font-size: 14px;">Privilege & Ethics</strong>
+                        </div>
+                        <div style="padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
+                            <div style="font-size: 22px; margin-bottom: 6px;">📜</div>
+                            <strong style="color: #0A1628; font-size: 14px;">Documentary Rigor</strong>
+                        </div>
+                        <div style="padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
+                            <div style="font-size: 22px; margin-bottom: 6px;">🏛️</div>
+                            <strong style="color: #0A1628; font-size: 14px;">Constitutional Law</strong>
+                        </div>
+                    </div>
+                    <div style="text-align: center; font-size: 12px; color: #64748b; font-style: italic;">
+                        “Fiat Justitia Ruat Caelum — Let Justice Be Done Though The Heavens Fall”
+                    </div>
+                </div>
+
+                <!-- Bottom Back Button inside Document -->
+                <div style="text-align: center; margin-top: 35px; padding-top: 25px; border-top: 1px dashed #cbd5e1;">
+                    <button class="fullscreen-back-btn" onclick="closeAboutFullscreen()" style="padding: 13px 40px; font-size: 15px;">
+                        ← Back to Dashboard
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- =========================================================
-     SERVICES
+     OUR LEGAL EXPERTISE (SPLIT BANNER)
 ========================================================= -->
 
-<section class="services" id="services" style="display: none;">
+<section class="split-banner-section scroll-reveal" id="expertise">
+    <a id="services" style="display: block; position: relative; top: -90px; visibility: hidden;"></a>
+    <div class="split-banner-card" id="expertise-banner">
+        <!-- Left Side: Half Image -->
+        <div class="split-banner-image-side">
+            <div class="split-banner-bg" id="expertise-banner-bg" style="background-image: url('assets/images/default_chamber_banner.jpg');"></div>
+            <div class="split-banner-overlay"></div>
+            <div style="position: absolute; bottom: 20px; left: 24px; z-index: 3;">
+                <span style="background: rgba(10, 22, 40, 0.8); color: #D4AF37; border: 1px solid rgba(212,175,55,0.4); padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;">
+                    ⚖️ Practice Monographs
+                </span>
+            </div>
+        </div>
 
-<div class="container">
-
-<div class="section-head">
-
-<div>
-
-<div class="section-kicker">
-Practice Areas
-</div>
-
-<h2>
-Our Legal Services
-</h2>
-
-</div>
-
-<p>
-
-Professional legal assistance across
-key areas of litigation, advisory and
-dispute resolution.
-
-</p>
-
-</div>
-
-
-<div class="service-grid">
-
-
-<div class="service-card">
-
-<div class="service-number">
-01
-</div>
-
-<div class="service-icon">
-⚖
-</div>
-
-<h3>
-Civil Litigation
-</h3>
-
-<p>
-
-Expert representation in civil disputes,
-property matters and contractual
-disagreements.
-
-</p>
-
-<div class="service-link">
-Explore Service →
-</div>
-
-</div>
-
-
-<div class="service-card">
-
-<div class="service-number">
-02
-</div>
-
-<div class="service-icon">
-◈
-</div>
-
-<h3>
-Criminal Defense
-</h3>
-
-<p>
-
-Defense strategy, legal representation
-and bail application support.
-
-</p>
-
-<div class="service-link">
-Explore Service →
-</div>
-
-</div>
-
-
-<div class="service-card">
-
-<div class="service-number">
-03
-</div>
-
-<div class="service-icon">
-▣
-</div>
-
-<h3>
-Corporate Law
-</h3>
-
-<p>
-
-Corporate advisory, commercial disputes,
-compliance and business matters.
-
-</p>
-
-<div class="service-link">
-Explore Service →
-</div>
-
-</div>
-
-
-<div class="service-card">
-
-<div class="service-number">
-04
-</div>
-
-<div class="service-icon">
-◇
-</div>
-
-<h3>
-Family Law
-</h3>
-
-<p>
-
-Professional handling of matrimonial,
-custody and family-related disputes.
-
-</p>
-
-<div class="service-link">
-Explore Service →
-</div>
-
-</div>
-
-
-</div>
-
-</div>
-
+        <!-- Right Side: Content & Action Button -->
+        <div class="split-banner-content-side">
+            <div class="split-banner-kicker">Practice Areas & Expertise</div>
+            <h2 class="split-banner-title">OUR LEGAL EXPERTISE</h2>
+            <div class="split-banner-line"></div>
+            <p class="split-banner-desc">
+                Professional legal assistance and strategic advocacy across key areas of litigation, corporate advisory, and dispute resolution. Explore our comprehensive practice monographs and legal publications.
+            </p>
+            <div>
+                <button class="btn btn-primary" onclick="openExpertiseFullscreen()" style="box-shadow: 0 4px 20px rgba(212,175,55,0.35); font-size: 15px; padding: 13px 32px; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 10px;">
+                    <span>Explore All Legal Expertise</span>
+                    <span style="font-size: 18px;">→</span>
+                </button>
+            </div>
+        </div>
+    </div>
 </section>
 
+<!-- Full-Screen Legal Expertise Data View -->
+<div id="expertise-fullscreen-view" class="fullscreen-data-overlay">
+    <!-- Top Sticky Navigation Bar with Back to Dashboard Button -->
+    <div class="fullscreen-topbar">
+        <button class="fullscreen-back-btn" onclick="closeExpertiseFullscreen()">
+            ← Back to Dashboard
+        </button>
+        <div class="fullscreen-topbar-title">
+            ⚖️ Practice Areas & 3D Legal Monographs
+        </div>
+        <button class="fullscreen-close-btn" onclick="closeExpertiseFullscreen()" title="Close full screen">
+            ✕
+        </button>
+    </div>
 
+    <!-- Scrollable Full-Screen Content -->
+    <div class="fullscreen-body">
+        <div class="container" style="max-width: 1300px; padding: 40px 20px;">
+            <div style="text-align: center; margin-bottom: 45px;">
+                <div style="color: #D4AF37; font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 8px;">Interactive 3D Monographs</div>
+                <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2rem, 3.5vw, 2.9rem); color: #0A1628; margin: 0 0 14px 0;">Our Legal Expertise & Monographs</h1>
+                <p style="color: #64748b; font-size: 15.5px; max-width: 700px; margin: 0 auto; line-height: 1.6;">Click "Explore Service →" on any practice area below to open the interactive 3D monograph book with realistic paper page-turning.</p>
+            </div>
 
+            <div class="service-grid" id="services-grid">
+                <div class="service-card" onclick="openServiceBook(0)" style="cursor: pointer;">
+                    <div class="service-number">01</div>
+                    <div class="service-icon">⚖</div>
+                    <h3>Civil Litigation</h3>
+                    <p>Expert representation in civil disputes, property matters and contractual disagreements.</p>
+                    <div class="service-link" role="button" tabindex="0" onclick="event.stopPropagation(); openServiceBook(0)" style="cursor: pointer;">
+                        Explore Service →
+                    </div>
+                </div>
 
+                <div class="service-card" onclick="openServiceBook(1)" style="cursor: pointer;">
+                    <div class="service-number">02</div>
+                    <div class="service-icon">◈</div>
+                    <h3>Criminal Defense</h3>
+                    <p>Defense strategy, legal representation and bail application support.</p>
+                    <div class="service-link" role="button" tabindex="0" onclick="event.stopPropagation(); openServiceBook(1)" style="cursor: pointer;">
+                        Explore Service →
+                    </div>
+                </div>
+
+                <div class="service-card" onclick="openServiceBook(2)" style="cursor: pointer;">
+                    <div class="service-number">03</div>
+                    <div class="service-icon">▣</div>
+                    <h3>Corporate & Commercial Law</h3>
+                    <p>Corporate advisory, commercial disputes, compliance and business matters.</p>
+                    <div class="service-link" role="button" tabindex="0" onclick="event.stopPropagation(); openServiceBook(2)" style="cursor: pointer;">
+                        Explore Service →
+                    </div>
+                </div>
+
+                <div class="service-card" onclick="openServiceBook(3)" style="cursor: pointer;">
+                    <div class="service-number">04</div>
+                    <div class="service-icon">◇</div>
+                    <h3>Family & Matrimonial Law</h3>
+                    <p>Professional handling of matrimonial, custody and family-related disputes.</p>
+                    <div class="service-link" role="button" tabindex="0" onclick="event.stopPropagation(); openServiceBook(3)" style="cursor: pointer;">
+                        Explore Service →
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- =========================================================
-     ADVOCATES
+     STAFFS (SPLIT BANNER)
 ========================================================= -->
 
-<section class="advocates" id="advocates" style="display: none;">
+<section class="split-banner-section scroll-reveal" id="staffs">
+    <a id="people" style="display: block; position: relative; top: -90px; visibility: hidden;"></a>
+    <a id="advocates" style="display: block; position: relative; top: -90px; visibility: hidden;"></a>
+    <div class="split-banner-card" id="staff-banner">
+        <!-- Left Side: Half Image -->
+        <div class="split-banner-image-side">
+            <div class="split-banner-bg" id="staff-banner-bg" style="background-image: url('assets/images/default_chamber_banner.jpg');"></div>
+            <div class="split-banner-overlay"></div>
+            <div style="position: absolute; bottom: 20px; left: 24px; z-index: 3;">
+                <span style="background: rgba(10, 22, 40, 0.8); color: #D4AF37; border: 1px solid rgba(212,175,55,0.4); padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;">
+                    👥 Chamber Counsel
+                </span>
+            </div>
+        </div>
 
-<div class="container">
-
-<div class="section-head">
-
-<div>
-
-<div class="section-kicker">
-Our Legal Professionals
-</div>
-
-<h2>
-Meet Our Advocates
-</h2>
-
-</div>
-
-<p>
-
-Experienced professionals committed
-to thoughtful legal representation.
-
-</p>
-
-</div>
-
-
-<div class="advocate-grid" id="advocates-grid">
-
-
-<div class="advocate">
-
-<div class="advocate-image"></div>
-
-<div class="advocate-info">
-
-<div class="advocate-role">
-Senior Legal Professional
-</div>
-
-<h3>
-Advocate Name
-</h3>
-
-<p>
-Litigation & Advisory
-</p>
-
-</div>
-
-</div>
-
-
-<div class="advocate">
-
-<div class="advocate-image"></div>
-
-<div class="advocate-info">
-
-<div class="advocate-role">
-Legal Professional
-</div>
-
-<h3>
-Advocate Name
-</h3>
-
-<p>
-Corporate & Civil Matters
-</p>
-
-</div>
-
-</div>
-
-
-<div class="advocate">
-
-<div class="advocate-image"></div>
-
-<div class="advocate-info">
-
-<div class="advocate-role">
-Legal Professional
-</div>
-
-<h3>
-Advocate Name
-</h3>
-
-<p>
-Family & Criminal Matters
-</p>
-
-</div>
-
-</div>
-
-
-</div>
-
-</div>
-
+        <!-- Right Side: Content & Action Button -->
+        <div class="split-banner-content-side">
+            <div class="split-banner-kicker">Legal Counsel & Chamber Team</div>
+            <h2 class="split-banner-title">OUR STAFFS</h2>
+            <div class="split-banner-line"></div>
+            <p class="split-banner-desc">
+                Distinguished advocates, senior counsel, partners, and chamber legal staff committed to courtroom excellence, strategic litigation, and dedicated client representation.
+            </p>
+            <div>
+                <button class="btn btn-primary" onclick="openStaffsFullscreen()" style="box-shadow: 0 4px 20px rgba(212,175,55,0.35); font-size: 15px; padding: 13px 32px; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 10px;">
+                    <span>Meet Our Staffs</span>
+                    <span style="font-size: 18px;">→</span>
+                </button>
+            </div>
+        </div>
+    </div>
 </section>
 
+<!-- Full-Screen Staffs Data View -->
+<div id="staffs-fullscreen-view" class="fullscreen-data-overlay">
+    <!-- Top Sticky Navigation Bar with Back to Dashboard Button -->
+    <div class="fullscreen-topbar">
+        <button class="fullscreen-back-btn" onclick="closeStaffsFullscreen()">
+            ← Back to Dashboard
+        </button>
+        <div class="fullscreen-topbar-title">
+            👥 Advocates & Legal Staff
+        </div>
+        <button class="fullscreen-close-btn" onclick="closeStaffsFullscreen()" title="Close full screen">
+            ✕
+        </button>
+    </div>
 
+    <!-- Scrollable Full-Screen Content -->
+    <div class="fullscreen-body">
+        <div class="container" style="max-width: 1300px; padding: 40px 20px;">
+            <div style="text-align: center; margin-bottom: 45px;">
+                <div style="color: #D4AF37; font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 8px;">Chamber Professionals</div>
+                <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2rem, 3.5vw, 2.9rem); color: #0A1628; margin: 0 0 14px 0;">Current Advocates & Legal Staff</h1>
+                <p style="color: #64748b; font-size: 15.5px; max-width: 700px; margin: 0 auto; line-height: 1.6;">Dedicated practitioners equipped with deep jurisdictional insight and extensive trial and appellate experience.</p>
+            </div>
 
+            <div class="advocate-grid" id="advocates-grid">
+                <!-- Dynamically populated from database via /api/advocates -->
+            </div>
+        </div>
+    </div>
+</div>
 
+<!-- =========================================================
+     NEWS AND INSIGHTS (TRAIN RUNNING LEFT TO RIGHT)
+========================================================= -->
 
+<section class="news-section scroll-reveal" id="news" style="padding: 90px 0 100px 0; background: linear-gradient(180deg, #071322 0%, #0A1628 100%); color: #ffffff; position: relative; overflow: hidden;">
+    <div class="container">
+        <div class="section-head" style="margin-bottom: 40px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 20px;">
+            <div>
+                <div class="section-kicker" style="color: #D4AF37; text-transform: uppercase; font-size: 11px; letter-spacing: 3px; font-weight: 700; margin-bottom: 8px;">
+                    Judicial Updates & Editorial
+                </div>
+                <h2 style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2rem, 3.5vw, 2.8rem); color: #ffffff; margin: 0; line-height: 1.2;">
+                    News & Insights
+                </h2>
+            </div>
+            <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                <span style="display: inline-flex; align-items: center; gap: 8px; background: rgba(212,175,55,0.12); border: 1px solid rgba(212,175,55,0.3); color: #D4AF37; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;">
+                    <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; animation: pulse 1.8s infinite;"></span>
+                    Live Running Conveyor • Hover to Pause
+                </span>
+            </div>
+        </div>
+    </div>
 
+    <!-- Running Train Carousel Viewport -->
+    <div class="news-train-viewport">
+        <div class="news-train-track" id="news-train-track">
+            <!-- Dynamically populated from /api/news via js/main.js and repeated for continuous looping -->
+        </div>
+    </div>
+</section>
 
+<!-- =========================================================
+     TODAY'S OPINION (Day-wise Editorial & Running Train Right to Left)
+========================================================= -->
+<section class="opinion-section scroll-reveal" id="opinions" style="padding: 75px 0; background: #071322; border-top: 1px solid rgba(212,175,55,0.2); position: relative; overflow: hidden;">
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <span style="font-size: 11px; font-weight: 800; letter-spacing: 3px; color: #D4AF37; text-transform: uppercase; display: block; margin-bottom: 6px;">
+                    Daily Legal Perspectives & Editorial
+                </span>
+                <h2 style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(1.8rem, 3.2vw, 2.5rem); color: #ffffff; margin: 0; font-weight: 700; letter-spacing: 1px;">
+                    TODAY'S OPINION
+                </h2>
+                <div style="width: 50px; height: 2px; background: #D4AF37; margin-top: 10px;"></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                <span style="display: inline-flex; align-items: center; gap: 8px; background: rgba(212,175,55,0.12); border: 1px solid rgba(212,175,55,0.3); color: #D4AF37; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;">
+                    <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #D4AF37; box-shadow: 0 0 8px #D4AF37; animation: pulse 1.8s infinite;"></span>
+                    Live Editorial Train • Hover to Pause • Right to Left
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Running Train Carousel Viewport (Right to Left) -->
+    <div class="opinion-train-viewport">
+        <div class="opinion-train-track" id="opinion-train-track">
+            <!-- Dynamically populated from /api/opinions via js/main.js and repeated for continuous looping -->
+        </div>
+    </div>
+</section>
 
 <!-- =========================================================
      CTA
 ========================================================= -->
 
-<section class="cta" id="contact">
+<section class="cta scroll-reveal" id="contact">
 
 <div class="container">
 
@@ -2843,7 +3307,7 @@ Book Appointment
 <!-- =========================================================
      3D LOGO SECTION
 ========================================================= -->
-<section class="logo-wrapper-section">
+<section class="logo-wrapper-section scroll-reveal">
     <div class="logo-container-3d">
         <!-- Rotating decorative ring -->
         <div class="logo-ring-3d"></div>
@@ -2861,72 +3325,6 @@ Book Appointment
     </div>
 </section>
 
-<!-- =========================================================
-     GALLERY
-========================================================= -->
-
-<style>
-.gallery-section {
-    padding: 60px 0;
-    background: #e9edf2;
-    text-align: center;
-}
-.gallery-container {
-    max-width: 800px;
-    margin: 0 auto;
-    position: relative;
-    height: 450px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    overflow: hidden;
-}
-.gallery-slide {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    transform: scale(0.9);
-    transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-}
-.gallery-slide.active {
-    opacity: 1;
-    transform: scale(1);
-    pointer-events: auto;
-}
-.gallery-slide img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain; background: #e9edf2;
-    position: absolute;
-    top: 0;
-    left: 0;
-}
-.gallery-slide .desc {
-    position: absolute;
-    bottom: 20px;
-    left: 20px;
-    right: 20px;
-    background: rgba(10, 22, 40, 0.8);
-    color: white;
-    padding: 15px;
-    border-radius: 8px;
-    font-size: 1.1rem;
-    backdrop-filter: blur(5px);
-}
-</style>
-<section class="gallery-section" id="public-gallery" style="display: none;">
-    <div class="container">
-        <h2 style="font-family: Georgia, serif; font-size: 32px; color: #0A1628; margin-bottom: 30px;">Chambers Gallery</h2>
-        <div class="gallery-container" id="gallery-container">
-            <!-- Slides loaded via JS -->
-        </div>
-    </div>
-</section>
 
 
 <!-- =========================================================
@@ -3337,39 +3735,445 @@ document.querySelectorAll("#navLinks a").forEach(function(link){
 });
 
 </script>
-<script src="js/main.js?v=9"></script>
-<script>
-// Force-render advocates to bypass any cached main.js issues
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(async () => {
-        try {
-            const grid = document.getElementById('advocates-grid');
-            if (!grid) return;
-            const res = await fetch('/api/advocates?t=' + new Date().getTime());
-            const advs = await res.json();
-            
-            grid.innerHTML = '';
-            advs.forEach(adv => {
-                const div = document.createElement('div');
-                div.className = 'advocate';
-                let imgHtml = '';
-                if (adv.imageUrl && adv.imageUrl.length > 10) {
-                    imgHtml = `<img src="${adv.imageUrl}" style="width: 100%; height: 310px; object-fit: contain; background: #e9edf2; display: block;" alt="Photo">`;
-                }
-                div.innerHTML = `
-                    ${imgHtml}
-                    <div class="advocate-info" style="padding: 25px;">
-                        <div class="advocate-role" style="color: var(--color-primary); font-weight: bold; margin-bottom: 5px;">${adv.role || 'Legal Professional'}</div>
-                        <h3 style="margin-bottom: 5px;">${adv.name}</h3>
-                        <p style="color: #a0a0a0;">${adv.specialty}</p>
-                    </div>
-                `;
-                grid.appendChild(div);
-            });
-        } catch(e) { console.error('Error fetching advocates', e); }
-    }, 1500); // Run slightly after main.js to override it
-});
-</script>
+<script src="js/main.js?v=25"></script>
+
+<!-- 3D Interactive Legal Book Modal -->
+<div id="service-book-modal" class="book-modal-backdrop">
+    <!-- Top Floating Toolbar -->
+    <div class="book-toolbar">
+        <div class="book-title-badge">
+            <span id="book-service-icon" style="font-size: 1.25rem;">⚖</span>
+            <span id="book-service-title" style="font-weight: 700; color: #D4AF37; font-size: 1.05rem;">Civil Litigation</span>
+            <span style="color: rgba(255,255,255,0.3); font-size: 0.9rem;">|</span>
+            <span style="color: #cbd5e1; font-size: 0.82rem; letter-spacing: 1px; text-transform: uppercase;">Practice Monograph</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <button class="book-tool-btn" id="sound-toggle-btn" onclick="toggleBookSound()" title="Toggle paper sound">
+                🔊 Sound ON
+            </button>
+            <button class="book-tool-btn close-btn" onclick="closeServiceBook()" title="Close book">
+                ✕ Close Book
+            </button>
+        </div>
+    </div>
+
+    <!-- 3D Book Stage Wrapper -->
+    <div class="book-stage">
+        <div class="book-3d" id="book-3d-element">
+            <!-- Hardcover Outer Shadow & Binding -->
+            <div class="book-cover-left"></div>
+            <div class="book-spine"></div>
+            <div class="book-cover-right"></div>
+
+            <!-- Left Static Page (Spread Left) -->
+            <div class="book-page book-page-left" id="book-page-left" onclick="turnBookPageLeft()">
+                <div class="page-crease-shadow left"></div>
+                <div class="page-content" id="page-left-content">
+                    <!-- Left page content injected dynamically -->
+                </div>
+                <div class="page-footer" id="page-left-footer">- 1 -</div>
+            </div>
+
+            <!-- Right Static Page (Spread Right) -->
+            <div class="book-page book-page-right" id="book-page-right" onclick="turnBookPageRight()">
+                <div class="page-crease-shadow right"></div>
+                <div class="page-content" id="page-right-content">
+                    <!-- Right page content injected dynamically -->
+                </div>
+                <div class="page-footer" id="page-right-footer">- 2 -</div>
+            </div>
+
+            <!-- Flipping 3D Sheet (Animates in 3D across the spine) -->
+            <div class="flipping-sheet" id="flipping-sheet">
+                <!-- Front face of turning sheet (turns over right to left) -->
+                <div class="sheet-face sheet-front" id="sheet-front">
+                    <div class="page-crease-shadow right"></div>
+                    <div class="page-content" id="sheet-front-content"></div>
+                    <div class="page-footer" id="sheet-front-footer"></div>
+                    <div class="sheet-curl-shadow"></div>
+                </div>
+                <!-- Back face of turning sheet (lands on left) -->
+                <div class="sheet-face sheet-back" id="sheet-back">
+                    <div class="page-crease-shadow left"></div>
+                    <div class="page-content" id="sheet-back-content"></div>
+                    <div class="page-footer" id="sheet-back-footer"></div>
+                    <div class="sheet-curl-shadow"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Controls & Navigation -->
+    <div class="book-bottom-nav">
+        <button class="book-nav-btn prev" id="book-prev-btn" onclick="turnBookPageLeft()">
+            ← Previous Page
+        </button>
+        <div class="book-page-indicator" id="book-page-indicator">
+            📖 Pages 1-2 of 6
+        </div>
+        <button class="book-nav-btn next" id="book-next-btn" onclick="turnBookPageRight()">
+            Turn Page (Right) →
+        </button>
+    </div>
+</div>
+
+<style>
+/* 3D Real Book Styles */
+.book-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: radial-gradient(circle at center, rgba(10, 22, 40, 0.97) 0%, rgba(3, 8, 15, 0.99) 100%);
+    backdrop-filter: blur(12px);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    box-sizing: border-box;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+}
+.book-modal-backdrop.open {
+    display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+.book-toolbar {
+    width: 100%;
+    max-width: 1040px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0 10px 0;
+}
+.book-title-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    padding: 8px 18px;
+    border-radius: 9999px;
+    backdrop-filter: blur(8px);
+}
+.book-tool-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.book-tool-btn:hover {
+    background: rgba(212, 175, 55, 0.25);
+    border-color: #D4AF37;
+    color: #D4AF37;
+}
+.book-tool-btn.close-btn {
+    background: #e11d48;
+    border: none;
+    font-weight: 700;
+}
+.book-tool-btn.close-btn:hover {
+    background: #be123c;
+    color: white;
+}
+
+/* 3D Stage */
+.book-stage {
+    perspective: 2400px;
+    perspective-origin: 50% 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 1040px;
+    height: 590px;
+    margin: auto;
+}
+
+.book-3d {
+    position: relative;
+    width: 960px;
+    height: 570px;
+    transform-style: preserve-3d;
+    box-shadow: 0 40px 90px rgba(0, 0, 0, 0.75), 0 15px 30px rgba(0,0,0,0.5);
+    border-radius: 8px;
+}
+
+/* Leather covers underneath */
+.book-cover-left, .book-cover-right {
+    position: absolute;
+    top: -10px;
+    bottom: -10px;
+    width: 495px;
+    background: linear-gradient(135deg, #071322 0%, #102138 60%, #050d18 100%);
+    border: 2px solid #D4AF37;
+    border-radius: 8px;
+    z-index: 1;
+}
+.book-cover-left {
+    left: -12px;
+    box-shadow: -10px 14px 35px rgba(0, 0, 0, 0.6);
+}
+.book-cover-right {
+    right: -12px;
+    box-shadow: 10px 14px 35px rgba(0, 0, 0, 0.6);
+}
+
+.book-spine {
+    position: absolute;
+    top: -10px;
+    bottom: -10px;
+    left: 50%;
+    width: 36px;
+    transform: translateX(-50%);
+    background: linear-gradient(90deg, #050e1b 0%, #192b45 50%, #050e1b 100%);
+    border-top: 2px solid #D4AF37;
+    border-bottom: 2px solid #D4AF37;
+    z-index: 2;
+    box-shadow: 0 0 18px rgba(0,0,0,0.7);
+}
+
+/* Book Pages */
+.book-page {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 480px;
+    background: #fdfbf7;
+    background-image: linear-gradient(to right, rgba(0,0,0,0.03) 0%, rgba(255,255,255,0.7) 10%, rgba(0,0,0,0.01) 90%, rgba(0,0,0,0.05) 100%);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 35px 44px 25px 44px;
+    overflow: hidden;
+    user-select: none;
+    z-index: 3;
+}
+.book-page-left {
+    left: 0;
+    border-radius: 5px 0 0 5px;
+    border-right: 1px solid #dfd8cb;
+    cursor: pointer;
+}
+.book-page-right {
+    right: 0;
+    border-radius: 0 5px 5px 0;
+    border-left: 1px solid #dfd8cb;
+    cursor: pointer;
+}
+
+/* Page Crease Shadows */
+.page-crease-shadow {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 45px;
+    pointer-events: none;
+    z-index: 10;
+}
+.page-crease-shadow.left {
+    right: 0;
+    background: linear-gradient(to left, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.03) 60%, transparent 100%);
+}
+.page-crease-shadow.right {
+    left: 0;
+    background: linear-gradient(to right, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.03) 60%, transparent 100%);
+}
+
+/* Page Typography */
+.page-header-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #8c7b64;
+    font-weight: 700;
+    border-bottom: 1px solid #e7dfcf;
+    padding-bottom: 6px;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+}
+.page-chapter-heading {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 21px;
+    color: #1a150e;
+    margin: 0 0 12px 0;
+    line-height: 1.35;
+}
+.page-body-text {
+    font-family: 'Georgia', serif;
+    font-size: 14px;
+    line-height: 1.75;
+    color: #2d261e;
+    text-align: justify;
+    margin: 0;
+}
+.page-body-text.has-dropcap::first-letter {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 38px;
+    float: left;
+    line-height: 0.85;
+    margin: 4px 8px 0 0;
+    color: #0A1628;
+    font-weight: bold;
+}
+.page-footer {
+    text-align: center;
+    font-size: 11px;
+    color: #a39580;
+    font-family: Georgia, serif;
+    letter-spacing: 1.5px;
+    border-top: 1px solid #ece4d6;
+    padding-top: 8px;
+}
+
+/* 3D Flipping Sheet */
+.flipping-sheet {
+    display: none;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 480px;
+    width: 480px;
+    transform-origin: left center;
+    transform-style: preserve-3d;
+    z-index: 20;
+    pointer-events: none;
+    transition: transform 0.85s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.flipping-sheet.flipped {
+    transform: rotateY(-180deg);
+}
+
+.sheet-face {
+    position: absolute;
+    inset: 0;
+    background: #fdfbf7;
+    background-image: linear-gradient(to right, rgba(0,0,0,0.03) 0%, rgba(255,255,255,0.7) 10%, rgba(0,0,0,0.01) 90%, rgba(0,0,0,0.05) 100%);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 35px 44px 25px 44px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+.sheet-front {
+    border-radius: 0 5px 5px 0;
+    box-shadow: -6px 0 25px rgba(0,0,0,0.18);
+}
+.sheet-back {
+    transform: rotateY(180deg);
+    border-radius: 5px 0 0 5px;
+    box-shadow: 6px 0 25px rgba(0,0,0,0.18);
+}
+
+.sheet-curl-shadow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    background: linear-gradient(to right, rgba(0,0,0,0.2) 0%, rgba(255,255,255,0.4) 50%, rgba(0,0,0,0.2) 100%);
+}
+.flipping-sheet.flipping .sheet-curl-shadow {
+    opacity: 0.85;
+}
+
+/* Bottom Controls */
+.book-bottom-nav {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 0;
+}
+.book-nav-btn {
+    background: #0A1628;
+    color: #D4AF37;
+    border: 1px solid rgba(212, 175, 55, 0.45);
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.book-nav-btn:hover:not(:disabled) {
+    background: #D4AF37;
+    color: #0A1628;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+}
+.book-nav-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none;
+}
+.book-page-indicator {
+    background: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 8px 20px;
+    border-radius: 9999px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Mobile Responsive 3D Book */
+@media (max-width: 990px) {
+    .book-stage {
+        height: 520px;
+        perspective: 1500px;
+    }
+    .book-3d {
+        width: 100%;
+        max-width: 480px;
+        height: 500px;
+    }
+    .book-cover-left, .book-page-left, .book-spine {
+        display: none !important;
+    }
+    .book-cover-right {
+        left: 0;
+        right: 0;
+        width: 100%;
+    }
+    .book-page-right {
+        left: 0;
+        right: 0;
+        width: 100%;
+        border-radius: 8px;
+    }
+    .flipping-sheet {
+        left: 0;
+        width: 100%;
+    }
+    .book-page, .sheet-face {
+        padding: 24px 22px 20px 22px;
+    }
+    .page-chapter-heading {
+        font-size: 18px;
+    }
+    .page-body-text {
+        font-size: 13.5px;
+        line-height: 1.65;
+    }
+}
+</style>
 
 <div id="booking-hours-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
     <div style="background: white; border-radius: 12px; width: 90%; max-width: 400px; padding: 30px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: slideIn 0.3s ease-out; position: relative;">
@@ -3612,6 +4416,180 @@ window.showToast = function(message, type = 'success') {
         <button onclick="document.getElementById('spamWarningModal').style.display='none'" style="background: #0A192F; color: #D4AF37; border: none; padding: 14px 35px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.3s; width: 100%; font-family: 'Plus Jakarta Sans', sans-serif;">I Understand</button>
     </div>
 </div>
+
+<!-- News Article Reader Modal -->
+<div id="news-article-modal" class="news-modal-backdrop" style="display: none;">
+    <div class="news-modal-box">
+        <div class="news-modal-header">
+            <div>
+                <span id="news-reader-badge" class="news-badge">Supreme Court Update</span>
+                <span id="news-reader-date" style="color: #94a3b8; font-size: 0.82rem; margin-left: 10px;">📅 Date</span>
+                <span style="color: #64748b; font-size: 0.82rem; margin: 0 6px;">•</span>
+                <span id="news-reader-author" style="color: #D4AF37; font-size: 0.82rem; font-weight: 600;">✍️ Author</span>
+            </div>
+            <button class="news-modal-close" onclick="closeNewsArticleModal()" title="Close article">✕</button>
+        </div>
+
+        <div class="news-modal-body" style="overflow-y: auto; padding: 25px 30px; max-height: calc(88vh - 120px);">
+            <div id="news-reader-img-wrap" style="width: 100%; max-height: 320px; overflow: hidden; border-radius: 10px; margin-bottom: 20px; display: none;">
+                <img id="news-reader-img" style="width: 100%; height: 100%; object-fit: cover;" alt="Cover">
+            </div>
+            
+            <h2 id="news-reader-title" style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(1.4rem, 2.5vw, 1.95rem); color: #0A1628; margin: 0 0 16px 0; line-height: 1.35;">
+                Article Headline
+            </h2>
+
+            <div id="news-reader-summary" style="font-size: 15px; font-weight: 600; color: #475569; border-left: 3px solid #D4AF37; padding-left: 14px; margin-bottom: 20px; line-height: 1.6; font-style: italic;">
+            </div>
+
+            <div id="news-reader-content" class="news-article-text" style="font-family: 'Georgia', serif; font-size: 15.5px; line-height: 1.85; color: #2d3748; white-space: pre-wrap;">
+            </div>
+
+            <div style="margin-top: 35px; padding-top: 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                <div style="font-size: 0.85rem; color: #64748b;">
+                    Published by <strong>JSM Chambers & Associates</strong> • Advocates & Legal Consultants
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Today's Opinion Reader Modal -->
+<div id="opinion-article-modal" class="news-modal-backdrop" style="display: none;">
+    <div class="news-modal-box">
+        <div class="news-modal-header">
+            <div>
+                <span id="opinion-reader-badge" class="news-badge" style="background: #D4AF37; color: #0A1628; font-weight: 800;">Constitutional Law</span>
+                <span id="opinion-reader-date" style="color: #94a3b8; font-size: 0.82rem; margin-left: 10px;">📅 Date</span>
+                <span style="color: #64748b; font-size: 0.82rem; margin: 0 6px;">•</span>
+                <span id="opinion-reader-author" style="color: #D4AF37; font-size: 0.82rem; font-weight: 600;">✍️ Author</span>
+            </div>
+            <button class="news-modal-close" onclick="closeOpinionArticleModal()" title="Close opinion">✕</button>
+        </div>
+
+        <div class="news-modal-body" style="overflow-y: auto; padding: 25px 30px; max-height: calc(88vh - 120px);">
+            <div style="display: inline-flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: 2.5px; color: #b48608; text-transform: uppercase; margin-bottom: 10px;">
+                🏛️ CHAMBER EDITORIAL & PERSPECTIVE
+            </div>
+
+            <h2 id="opinion-reader-title" style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(1.4rem, 2.5vw, 1.95rem); color: #0A1628; margin: 0 0 20px 0; line-height: 1.35; font-weight: 700;">
+                Opinion Headline
+            </h2>
+
+            <div id="opinion-reader-content" class="news-article-text" style="font-family: 'Georgia', serif; font-size: 16px; line-height: 1.9; color: #2d3748; white-space: pre-wrap; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+            </div>
+
+            <div style="margin-top: 35px; padding-top: 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                <div style="font-size: 0.85rem; color: #64748b;">
+                    Delivered by <strong>JSM Chambers & Associates</strong> • Daily Editorial Opinion
+                </div>
+                <button type="button" class="btn btn-outline" style="padding: 0.4rem 1rem; font-size: 0.85rem;" onclick="closeOpinionArticleModal()">Close Opinion</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* News & Insights Styles */
+.news-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: rgba(5, 20, 38, 0.85);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+.news-modal-backdrop.open {
+    display: flex !important;
+    opacity: 1 !important;
+}
+.news-modal-box {
+    background: #ffffff;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 820px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 70px rgba(0,0,0,0.5);
+    overflow: hidden;
+    animation: modalSlideUp 0.35s ease;
+}
+.news-modal-header {
+    background: #0A1628;
+    color: white;
+    padding: 16px 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #D4AF37;
+}
+.news-badge {
+    background: rgba(212, 175, 55, 0.15);
+    color: #D4AF37;
+    border: 1px solid #D4AF37;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    display: inline-block;
+}
+.news-modal-close {
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border: none;
+    font-size: 1.2rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+.news-modal-close:hover {
+    background: #e11d48;
+    color: white;
+}
+.news-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.35s ease;
+    cursor: pointer;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+.news-card:hover {
+    transform: translateY(-8px);
+    border-color: rgba(212, 175, 55, 0.65);
+    box-shadow: 0 20px 45px rgba(212, 175, 55, 0.15);
+}
+.news-card:hover .news-card-img {
+    transform: scale(1.05);
+}
+.news-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+@keyframes modalSlideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
 
 </body>
 

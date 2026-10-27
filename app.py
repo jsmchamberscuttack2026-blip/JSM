@@ -1,7 +1,9 @@
 from datetime import timedelta
 import concurrent.futures
 import os
-from flask import Flask, request, jsonify, send_from_directory, send_file
+from flask import Flask, request, jsonify, send_from_directory, send_file, Response
+import re
+import base64
 from pymongo import MongoClient
 from bson import ObjectId
 import smtplib
@@ -67,6 +69,9 @@ try:
     email_logs_col = db['email_logs']
     gallery_col = db['gallery']
     ai_audit_logs_col = db['ai_audit_logs']
+    services_col = db['services']
+    news_col = db['news']
+    opinions_col = db['opinions']
     logging.info("Successfully connected to MongoDB")
 except Exception as e:
     logging.error(f"Error connecting to MongoDB: {e}")
@@ -266,8 +271,231 @@ Please log into the Admin Dashboard to approve and set a date/time."""
     return client_result
 
 @app.route('/')
+@app.route('/index.html')
 def serve_index():
-    return send_from_directory('.', 'index.html')
+    try:
+        with open('index.html', 'r', encoding='utf-8') as f:
+            html = f.read()
+        
+        setting_doc = settings_col.find_one({"_id": "office_info"}) or {}
+        gsv = str(setting_doc.get("google_site_verification", "") or "").strip()
+        owner_name = str(setting_doc.get("about_chamber_owner_name", "") or "").strip() or "Adv. Jayasankar Mishra"
+        chamber_name = str(setting_doc.get("chamber_name", "") or "").strip() or "JSM. Chambers"
+        phone = str(setting_doc.get("phone", "") or "").strip() or "+91 94370 00000"
+        email = str(setting_doc.get("email", "") or "").strip() or "jsmchamberscuttack2026@gmail.com"
+        address = str(setting_doc.get("address", "") or "").strip() or "High Court of Orissa, Cuttack, Odisha, India"
+        
+        base_url = request.url_root.rstrip('/')
+        owner_img_url = f"{base_url}/chamber-owner.jpg"
+        logo_url = f"{base_url}/chamber-logo.jpg"
+
+        # 1. Google Site Verification Tag
+        if gsv:
+            m = re.search(r'content=["\']([^"\']+)["\']', gsv)
+            token = m.group(1) if m else gsv
+            tag = f'<meta name="google-site-verification" content="{token}" id="google-site-verification-meta">'
+            if 'id="google-site-verification-meta"' in html:
+                html = re.sub(r'<meta\s+name=["\']google-site-verification["\'][^>]*>', tag, html)
+            else:
+                html = html.replace('</head>', f'    {tag}\n</head>', 1)
+        
+        # 2. Rich Search Engine & Social Preview Meta Tags (Google, Knowledge Graph, OpenGraph, Twitter)
+        seo_meta = f"""    <title>{chamber_name} | Chamber Owner: {owner_name} | High Court Advocates & Legal Organization</title>
+    <meta name="description" content="Welcome to {chamber_name} — an independent private legal organization founded and owned by {owner_name}. Dedicated to professional legal consultation, strategic advocacy and complex civil, writ, and corporate litigation.">
+    <meta name="keywords" content="JSM Chambers, JSM Chambers owner, JSM Chambers founder, {owner_name}, Jayasankar Mishra advocate, High Court lawyer Cuttack, legal consultation, civil litigation, constitutional writ petitions, criminal defense, corporate counsel">
+    <meta name="author" content="{owner_name}">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    
+    <!-- Open Graph (Facebook, WhatsApp, LinkedIn, Google Preview) -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{base_url}/">
+    <meta property="og:title" content="{chamber_name} | Chamber Owner: {owner_name}">
+    <meta property="og:description" content="Official chamber profile of {chamber_name}. Owned by {owner_name}. Professional legal consultation, strategic advocacy and trial practice.">
+    <meta property="og:image" content="{owner_img_url}">
+    <meta property="og:image:alt" content="{owner_name} - Chamber Owner of {chamber_name}">
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:width" content="800">
+    <meta property="og:image:height" content="800">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{chamber_name} | Chamber Owner: {owner_name}">
+    <meta name="twitter:description" content="Official website of {chamber_name} — Owned by {owner_name}. Strategic legal advocacy and consultation.">
+    <meta name="twitter:image" content="{owner_img_url}">"""
+
+        # Replace static title & description with rich dynamic meta
+        html = re.sub(r'<title>.*?</title>', '', html, flags=re.DOTALL)
+        html = re.sub(r'<meta\s+name=["\']description["\'][^>]*>', '', html, flags=re.DOTALL)
+        html = re.sub(r'<meta\s+name=["\']robots["\'][^>]*>', '', html, flags=re.DOTALL)
+        
+        # 3. Dynamic JSON-LD Structured Data for Google Knowledge Graph & Entity Search
+        json_ld_schema = {
+            "@context": "https://schema.org",
+            "@graph": [
+                {
+                    "@type": ["LegalService", "Attorney"],
+                    "@id": f"{base_url}/#organization",
+                    "name": "JSM. Chambers",
+                    "alternateName": [
+                        "JSM Chambers",
+                        "JSM Chambers & Associates",
+                        "JSM Legal",
+                        chamber_name
+                    ],
+                    "url": f"{base_url}/",
+                    "logo": logo_url,
+                    "image": owner_img_url,
+                    "description": f"Welcome to {chamber_name} — an independent private legal organization founded and owned by {owner_name}. Dedicated to strategic advocacy and consultation.",
+                    "telephone": phone,
+                    "email": email,
+                    "address": {
+                        "@type": "PostalAddress",
+                        "streetAddress": address,
+                        "addressLocality": "Cuttack",
+                        "addressRegion": "Odisha",
+                        "addressCountry": "IN"
+                    },
+                    "founder": {
+                        "@id": f"{base_url}/#owner"
+                    },
+                    "employee": [
+                        {
+                            "@id": f"{base_url}/#owner"
+                        }
+                    ],
+                    "knowsAbout": [
+                        "Constitutional Law & Writ Petitions",
+                        "Civil Litigation & Title Disputes",
+                        "Commercial Arbitration & Contractual Enforcement",
+                        "Criminal Defense & Bail Matters",
+                        "Appellate Courtroom Advocacy"
+                    ]
+                },
+                {
+                    "@type": "Person",
+                    "@id": f"{base_url}/#owner",
+                    "name": owner_name,
+                    "alternateName": [
+                        f"{owner_name} - Chamber Owner",
+                        "JSM Chambers Owner",
+                        "Owner of JSM Chambers",
+                        "JSM Chamber Founder",
+                        "Managing Counsel"
+                    ],
+                    "jobTitle": "Chamber Owner & Principal Counsel",
+                    "description": f"Chamber Owner and Principal Counsel of JSM. Chambers, directing strategic litigation, constitutional briefs, and comprehensive client advocacy.",
+                    "image": owner_img_url,
+                    "worksFor": {
+                        "@id": f"{base_url}/#organization"
+                    }
+                }
+            ]
+        }
+        json_ld_str = json.dumps(json_ld_schema, indent=2, ensure_ascii=False)
+        json_ld_tag = f'<script type="application/ld+json">\n{json_ld_str}\n</script>'
+        
+        # Replace existing schema or inject
+        if 'application/ld+json' in html:
+            html = re.sub(r'<script\s+type=["\']application/ld\+json["\']>.*?</script>', json_ld_tag, html, flags=re.DOTALL)
+        else:
+            html = html.replace('</head>', f'{json_ld_tag}\n</head>', 1)
+            
+        html = html.replace('<head>', f'<head>\n{seo_meta}\n', 1)
+        
+        # Ensure owner name in index.html is updated server-side for initial crawl
+        html = re.sub(r'(<h2\s+id=["\']about-doc-owner-name["\'][^>]*>)(.*?)(</h2>)', f'\\g<1>{owner_name}\\g<3>', html)
+        
+        return Response(html, mimetype='text/html')
+    except Exception as e:
+        logging.error(f"Error serving index.html with verification: {e}")
+        return send_from_directory('.', 'index.html')
+
+@app.route('/chamber-owner.jpg')
+def serve_chamber_owner_image():
+    try:
+        setting_doc = settings_col.find_one({"_id": "office_info"}) or {}
+        img_data = setting_doc.get("about_chamber_owner_image") or setting_doc.get("about_chamber_image1")
+        if img_data and 'base64,' in img_data:
+            header, encoded = img_data.split('base64,', 1)
+            mime = 'image/jpeg'
+            if 'image/png' in header: mime = 'image/png'
+            elif 'image/webp' in header: mime = 'image/webp'
+            img_bytes = base64.b64decode(encoded)
+            return Response(img_bytes, mimetype=mime, headers={
+                "Cache-Control": "public, max-age=86400",
+                "Content-Disposition": "inline; filename=\"jsm-chambers-owner.jpg\""
+            })
+    except Exception as e:
+        logging.error(f"Error serving owner image: {e}")
+    return send_from_directory('assets/images', 'advocate_logo.jpg')
+
+@app.route('/chamber-logo.jpg')
+def serve_chamber_logo_image():
+    try:
+        setting_doc = settings_col.find_one({"_id": "office_info"}) or {}
+        img_data = setting_doc.get("logoUrl")
+        if img_data and 'base64,' in img_data:
+            header, encoded = img_data.split('base64,', 1)
+            mime = 'image/jpeg'
+            if 'image/png' in header: mime = 'image/png'
+            elif 'image/webp' in header: mime = 'image/webp'
+            img_bytes = base64.b64decode(encoded)
+            return Response(img_bytes, mimetype=mime, headers={
+                "Cache-Control": "public, max-age=86400",
+                "Content-Disposition": "inline; filename=\"jsm-chambers-logo.jpg\""
+            })
+    except Exception as e:
+        logging.error(f"Error serving chamber logo: {e}")
+    return send_from_directory('assets/images', 'advocate_logo.jpg')
+
+@app.route('/google<string:code>.html')
+def serve_google_verification_file(code):
+    return f"google-site-verification: google{code}.html", 200, {'Content-Type': 'text/html; charset=utf-8'}
+
+@app.route('/robots.txt')
+def serve_robots_txt():
+    base_url = request.url_root.rstrip('/')
+    robots = f"""User-agent: *
+Allow: /
+Allow: /chamber-owner.jpg
+Allow: /chamber-logo.jpg
+Disallow: /admin-dashboard.html
+Disallow: /admin-login.html
+Disallow: /api/
+
+Sitemap: {base_url}/sitemap.xml
+"""
+    return Response(robots, mimetype='text/plain')
+
+@app.route('/sitemap.xml')
+def serve_sitemap_xml():
+    base = request.url_root.rstrip('/')
+    now = datetime.utcnow().strftime('%Y-%m-%d')
+    setting_doc = settings_col.find_one({"_id": "office_info"}) or {}
+    owner_name = str(setting_doc.get("about_chamber_owner_name", "") or "").strip() or "Adv. Jayasankar Mishra"
+    
+    sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>{base}/</loc>
+    <lastmod>{now}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>{base}/chamber-owner.jpg</image:loc>
+      <image:title>{owner_name} - Chamber Owner | JSM. Chambers</image:title>
+      <image:caption>Official photograph of {owner_name}, Chamber Owner of JSM. Chambers</image:caption>
+    </image:image>
+  </url>
+  <url>
+    <loc>{base}/client-portal.html</loc>
+    <lastmod>{now}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>"""
+    return Response(sitemap, mimetype='application/xml')
 
 
 
@@ -1484,6 +1712,8 @@ def add_advocate():
     email = data.get('email')
     specialty = data.get('specialty')
     role = data.get('role', 'Legal Professional')
+    location = data.get('location', 'Cuttack, Odisha')
+    linkedin = data.get('linkedin', '')
     image_url = data.get('imageUrl', '')
     phone = data.get('phone', '')
     
@@ -1503,6 +1733,8 @@ def add_advocate():
         "password": password,
         "specialty": specialty,
         "role": role,
+        "location": location,
+        "linkedin": linkedin,
         "imageUrl": image_url
     })
     
@@ -1570,6 +1802,12 @@ def update_advocate(id):
         update_fields['email'] = data['email']
     if 'specialty' in data:
         update_fields['specialty'] = data['specialty']
+    if 'role' in data:
+        update_fields['role'] = data['role']
+    if 'location' in data:
+        update_fields['location'] = data['location']
+    if 'linkedin' in data:
+        update_fields['linkedin'] = data['linkedin']
     if 'phone' in data:
         update_fields['phone'] = data['phone']
     if 'imageUrl' in data:
@@ -1815,33 +2053,358 @@ def email_id_card():
 
 
 
-@app.route('/api/gallery', methods=['GET'])
-def get_gallery():
-    if gallery_col is None: return jsonify([])
-    items = list(gallery_col.find())
-    for item in items:
-        item['_id'] = str(item['_id'])
-    return jsonify(items)
-
-@app.route('/api/gallery', methods=['POST'])
-def add_gallery():
-    data = request.get_json(force=True, silent=True) or {}
-    image_url = data.get('imageUrl')
-    description = data.get('description', '')
-    if not image_url:
-        return jsonify({"error": "Image is required"}), 400
-    new_item = {
-        "imageUrl": image_url,
-        "description": description
+DEFAULT_SERVICES = [
+    {
+        "title": "Civil Litigation",
+        "short_desc": "Expert representation in civil disputes, property matters and contractual disagreements.",
+        "icon": "⚖",
+        "order": 1,
+        "book_pages": [
+            {
+                "chapter": "Overview & Practice Scope",
+                "content": "JSM Chambers provides distinguished legal counsel across the broad spectrum of civil disputes. Our civil litigation practice represents individuals, institutions, and corporations in civil original suits, money recovery claims, declaratory suits, injunctions, and specific performance of contracts. We maintain a meticulous approach to drafting pleadings, conducting cross-examinations, and preparing appellate arguments before the District Courts and the High Court."
+            },
+            {
+                "chapter": "Property & Real Estate Law",
+                "content": "Our property litigation team specializes in partition suits, boundary disputes, title investigations, land acquisition matters, and eviction proceedings under rent control statutes. We represent buyers, sellers, and builders in resolving real estate conflicts and consumer forum actions. In contractual matters, we aggressively seek damages, restitution, and specific enforcement for commercial breaches."
+            },
+            {
+                "chapter": "Appeals & Strategic Advisory",
+                "content": "Appellate litigation demands razor-sharp legal acumen. We prepare and argue First Appeals, Second Appeals, Civil Revision Petitions, and Writ Petitions before the Hon'ble High Court. Every case is supported by deep research into statutory precedents and Supreme Court citations to construct bulletproof legal theories for our clients."
+            },
+            {
+                "chapter": "Our Courtroom Track Record",
+                "content": "At JSM Chambers, every client receives personalized attention. From pre-litigation legal notices to interim relief hearings and final execution decrees, our dedicated advocates ensure timely filing, transparent case tracking, and unwavering courtroom advocacy."
+            }
+        ]
+    },
+    {
+        "title": "Criminal Defense",
+        "short_desc": "Defense strategy, legal representation, bail applications and trial advocacy.",
+        "icon": "◈",
+        "order": 2,
+        "book_pages": [
+            {
+                "chapter": "Constitutional & Criminal Safeguards",
+                "content": "Criminal proceedings jeopardize liberty and reputation. Our defense counsel provides round-the-clock emergency assistance, from preliminary police station appearances to formal chargesheet filings. We safeguard constitutional rights under Articles 20, 21, and 22 of the Constitution, ensuring fair trial adherence at every stage."
+            },
+            {
+                "chapter": "Bail & Anticipatory Protection",
+                "content": "Time is of the essence in criminal defense. We specialize in swift, persuasive Anticipatory Bail applications before the Sessions Courts and High Courts, as well as Regular Bail, Interim Bail, and Default Bail petitions under the Code of Criminal Procedure. Our persuasive arguments highlight lack of flight risk, witness tampering safeguards, and prima facie infirmities in prosecution allegations."
+            },
+            {
+                "chapter": "Trial Strategy & Cross-Examination",
+                "content": "The hallmark of criminal defense is masterful cross-examination. Our senior advocates dissect witness testimonies, scrutinize forensic and electronic evidence, and expose investigative procedural lapses, ensuring the highest standard of reasonable doubt."
+            },
+            {
+                "chapter": "White-Collar & Quashing Proceedings",
+                "content": "We handle complex white-collar crimes including financial fraud, economic offences, cybercrime, defamation, and corporate malfeasance. Furthermore, we actively file Section 482 Quashing Petitions to strike down frivolous and malicious FIRs before the High Court."
+            }
+        ]
+    },
+    {
+        "title": "Corporate & Commercial Law",
+        "short_desc": "Corporate advisory, commercial disputes, compliance, contracts and business matters.",
+        "icon": "▣",
+        "order": 3,
+        "book_pages": [
+            {
+                "chapter": "Corporate Governance & Advisory",
+                "content": "JSM Chambers acts as strategic legal partners to startups, enterprises, and multinational corporations. We advise boards of directors and executive leadership on corporate governance, statutory compliance, Companies Act mandates, and regulatory scrutiny by the Ministry of Corporate Affairs and SEBI."
+            },
+            {
+                "chapter": "Commercial Drafting & Negotiation",
+                "content": "A strong contract is the bedrock of business stability. We draft, review, and negotiate high-stakes agreements including Shareholder Agreements, Joint Ventures, Master Service Agreements, Intellectual Property licenses, Non-Disclosure Agreements, and Vendor Contracts, eliminating ambiguities that lead to costly litigation."
+            },
+            {
+                "chapter": "Insolvency & Debt Recovery (IBC / NCLT)",
+                "content": "We maintain an active practice before the National Company Law Tribunal (NCLT) and NCLAT for Corporate Insolvency Resolution Processes (CIRP) under the Insolvency and Bankruptcy Code. We represent both financial and operational creditors seeking rapid recovery as well as corporate debtors in distress."
+            },
+            {
+                "chapter": "Arbitration & ADR",
+                "content": "We prioritize fast-track commercial dispute resolution through domestic and international arbitration. Our team handles interim relief measures, arbitrator appointments, and arbitral award challenges before the Commercial Division of the High Court."
+            }
+        ]
+    },
+    {
+        "title": "Family & Matrimonial Law",
+        "short_desc": "Professional handling of matrimonial, custody, maintenance and family-related disputes.",
+        "icon": "◇",
+        "order": 4,
+        "book_pages": [
+            {
+                "chapter": "Compassionate & Discreet Advocacy",
+                "content": "Family disputes require legal precision paired with profound empathy and discretion. JSM Chambers provides compassionate yet resolute representation in mutual consent divorces, contested marital dissolution, judicial separation, and restitution of conjugal rights under the Hindu Marriage Act, Special Marriage Act, and personal laws."
+            },
+            {
+                "chapter": "Child Custody & Guardianship",
+                "content": "The welfare of the child is paramount in our approach. We navigate contentious child custody petitions, interim visitation schedules, and guardianship disputes, advocating vigorously for sustainable parenting arrangements that prioritize the emotional and educational stability of the minor."
+            },
+            {
+                "chapter": "Maintenance, Alimony & Domestic Violence",
+                "content": "We represent clients in maintenance proceedings under Section 125 CrPC, Section 24 HMA, and the Protection of Women from Domestic Violence Act. We ensure fair assessment of spousal lifestyle, asset disclosure, and equitable permanent alimony determinations."
+            },
+            {
+                "chapter": "Pre-Litigation Mediation & Settlements",
+                "content": "Wherever feasible, we champion confidential mediation to prevent acrimonious public court battles. Our experienced counsel facilitates fair asset division, financial settlements, and MoU drafting to secure peaceful resolution for families."
+            }
+        ]
     }
-    result = gallery_col.insert_one(new_item)
-    new_item['_id'] = str(result.inserted_id)
-    return jsonify(new_item), 201
+]
 
-@app.route('/api/gallery/<id>', methods=['DELETE'])
-def delete_gallery(id):
-    gallery_col.delete_one({"_id": ObjectId(id)})
+@app.route('/api/services', methods=['GET'])
+def get_services():
+    if services_col is None: return jsonify([])
+    try:
+        if services_col.count_documents({}) == 0:
+            services_col.insert_many(DEFAULT_SERVICES)
+    except Exception as e:
+        logging.error(f"Error seeding services: {e}")
+        
+    services = list(services_col.find().sort("order", 1))
+    for s in services:
+        s['_id'] = str(s['_id'])
+    return jsonify(services), 200
+
+@app.route('/api/services', methods=['POST'])
+def add_service():
+    if services_col is None: return jsonify({"error": "DB error"}), 500
+    data = request.get_json(force=True, silent=True) or {}
+    title = data.get('title', '').strip()
+    if not title:
+        return jsonify({"error": "Service title is required"}), 400
+    new_service = {
+        "title": title,
+        "short_desc": data.get('short_desc', '').strip(),
+        "icon": data.get('icon', '⚖').strip(),
+        "order": int(data.get('order', 99)),
+        "book_pages": data.get('book_pages', [])
+    }
+    result = services_col.insert_one(new_service)
+    new_service['_id'] = str(result.inserted_id)
+    return jsonify(new_service), 201
+
+@app.route('/api/services/<id>', methods=['PUT'])
+def update_service(id):
+    if services_col is None: return jsonify({"error": "DB error"}), 500
+    data = request.get_json(force=True, silent=True) or {}
+    update_fields = {}
+    if 'title' in data: update_fields['title'] = data['title'].strip()
+    if 'short_desc' in data: update_fields['short_desc'] = data['short_desc'].strip()
+    if 'icon' in data: update_fields['icon'] = data['icon'].strip()
+    if 'order' in data: update_fields['order'] = int(data['order'])
+    if 'book_pages' in data: update_fields['book_pages'] = data['book_pages']
+    
+    services_col.update_one({"_id": ObjectId(id)}, {"$set": update_fields})
     return jsonify({"success": True}), 200
+
+@app.route('/api/services/<id>', methods=['DELETE'])
+def delete_service(id):
+    if services_col is None: return jsonify({"error": "DB error"}), 500
+    services_col.delete_one({"_id": ObjectId(id)})
+    return jsonify({"success": True}), 200
+
+# ==========================================
+# NEWS AND INSIGHTS MANAGEMENT API
+# ==========================================
+DEFAULT_NEWS = [
+    {
+        "title": "Supreme Court Clarifies Guidelines on Section 482 CrPC for Quashing FIRs",
+        "category": "Supreme Court Update",
+        "date": "2026-10-24",
+        "author": "JSM Legal Research Wing",
+        "summary": "In a landmark precedent, the Apex Court emphasizes preventing malicious prosecution and upholding personal liberty where civil disputes are dressed up as criminal offenses.",
+        "content": "The Supreme Court of India in its recent judgment has reiterated the fundamental parameters governing the exercise of inherent powers by High Courts under Section 482 of the Code of Criminal Procedure (now Section 528 of the Bharatiya Nagarik Suraksha Sanhita).\n\nThe Bench held that High Courts must not hesitate to quash criminal proceedings if the dispute is essentially of a commercial or civil character, and criminal prosecution has been weaponized as an arm-twisting tactic.\n\nOur criminal defense practice regularly invokes these constitutional safeguards to protect clients from harassment, securing timely pre-arrest bail and discharge remedies.",
+        "image": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=900&q=80",
+        "icon": "⚖️",
+        "order": 1
+    },
+    {
+        "title": "Orissa High Court Reiterates Test of Irreparable Injury in Temporary Injunctions",
+        "category": "High Court Ruling",
+        "date": "2026-10-18",
+        "author": "Advocate Jaya Sankar Mishra & Associates",
+        "summary": "The High Court rules that mere establishing of a prima facie case is inadequate without conclusive proof of irreparable loss and balance of convenience under Order XXXIX Rules 1 & 2.",
+        "content": "Delivering an essential ruling in property and declaratory suits, the High Court of Orissa clarified the rigorous three-pronged test governing temporary injunction applications.\n\nThe Court observed that injunction is an equitable remedy, and judicial discretion must balance hardship carefully between the parties. The ruling highlights the necessity for detailed documentation and site inspection reports at the interlocutory stage.\n\nAt JSM Chambers, our civil litigation team specializes in drafting comprehensive interim applications and urgent mentions before the roster benches.",
+        "image": "https://images.unsplash.com/photo-1453733197783-64a088968997?auto=format&fit=crop&w=900&q=80",
+        "icon": "🏛️",
+        "order": 2
+    },
+    {
+        "title": "Fast-Track Commercial Arbitration: Navigating Statutory Timelines & Enforcement",
+        "category": "Corporate & Commercial",
+        "date": "2026-10-10",
+        "author": "Corporate Advisory Team",
+        "summary": "Key insights into the enforcement of domestic arbitral awards under Section 34 & 36 of the Arbitration Act, emphasizing speed and commercial certainty.",
+        "content": "With commercial disputes demanding rapid adjudication to preserve capital and operational momentum, institutional arbitration has taken center stage in India's legal ecosystem.\n\nThis monograph explores recent judicial trends concerning minimal court intervention, the enforcement of foreign seated awards, and expedited tribunal constitutions under the amended rules.\n\nOur chambers advises enterprises, joint ventures, and contractors on structuring robust dispute resolution clauses that pre-empt multi-year litigation.",
+        "image": "https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=900&q=80",
+        "icon": "📜",
+        "order": 3
+    }
+]
+
+@app.route('/api/news', methods=['GET'])
+def get_news():
+    if news_col is None: return jsonify([])
+    try:
+        if news_col.count_documents({}) == 0:
+            news_col.insert_many(DEFAULT_NEWS)
+    except Exception as e:
+        logging.error(f"Error seeding news: {e}")
+        
+    news = list(news_col.find().sort("date", -1))
+    for n in news:
+        n['_id'] = str(n['_id'])
+        n['image_url'] = n.get('image') or n.get('image_url') or ''
+        n['icon'] = n.get('icon') or '⚖️'
+    return jsonify(news), 200
+
+@app.route('/api/news', methods=['POST'])
+def add_news():
+    if news_col is None: return jsonify({"error": "DB error"}), 500
+    data = request.get_json(force=True, silent=True) or {}
+    title = data.get('title', '').strip()
+    if not title:
+        return jsonify({"error": "Article title is required"}), 400
+        
+    new_article = {
+        "title": title,
+        "category": data.get('category', 'Judicial Update').strip(),
+        "date": data.get('date', datetime.now().strftime("%Y-%m-%d")),
+        "author": data.get('author', 'JSM Chambers').strip(),
+        "summary": data.get('summary', '').strip(),
+        "content": data.get('content', '').strip(),
+        "icon": data.get('icon', '⚖️').strip(),
+        "image": (data.get('image') or data.get('image_url') or '').strip(),
+        "order": int(data.get('order', 99))
+    }
+    result = news_col.insert_one(new_article)
+    new_article['_id'] = str(result.inserted_id)
+    new_article['image_url'] = new_article['image']
+    return jsonify(new_article), 201
+
+@app.route('/api/news/<id>', methods=['PUT'])
+def update_news(id):
+    if news_col is None: return jsonify({"error": "DB error"}), 500
+    data = request.get_json(force=True, silent=True) or {}
+    update_fields = {}
+    if 'title' in data: update_fields['title'] = data['title'].strip()
+    if 'category' in data: update_fields['category'] = data['category'].strip()
+    if 'date' in data: update_fields['date'] = data['date'].strip()
+    if 'author' in data: update_fields['author'] = data['author'].strip()
+    if 'summary' in data: update_fields['summary'] = data['summary'].strip()
+    if 'content' in data: update_fields['content'] = data['content'].strip()
+    if 'icon' in data: update_fields['icon'] = data['icon'].strip()
+    if 'image' in data: update_fields['image'] = data['image'].strip()
+    if 'image_url' in data: update_fields['image'] = data['image_url'].strip()
+    if 'order' in data: update_fields['order'] = int(data['order'])
+    
+    news_col.update_one({"_id": ObjectId(id)}, {"$set": update_fields})
+    return jsonify({"success": True}), 200
+
+@app.route('/api/news/<id>', methods=['DELETE'])
+def delete_news(id):
+    if news_col is None: return jsonify({"error": "DB error"}), 500
+    news_col.delete_one({"_id": ObjectId(id)})
+    return jsonify({"success": True}), 200
+
+# =========================================================
+# TODAY'S OPINION (Day-wise Chamber Editorial & Insights)
+# =========================================================
+
+DEFAULT_OPINIONS = [
+    {
+        "date": datetime.now().strftime("%Y-%m-%d"),
+        "title": "Constitutional Due Process & Institutional Restraint in Judicial Review",
+        "author": "Managing Counsel",
+        "category": "Constitutional Law",
+        "message": "The equilibrium between executive expediency and judicial scrutiny remains the lodestar of our constitutional order. Under Article 226 and Article 32, the High Courts and Supreme Court serve not merely as appellate corrections, but as vigilance posts ensuring that state discretion does not degenerate into administrative arbitrariness.\n\nRecent jurisprudence reinforces that procedural fairness is not an ornamental formality; it is the lifeblood of administrative validity. Where documentary records reveal an absence of reasoned deliberation, judicial intervention is not just permitted—it is constitutionally mandated.",
+        "order": 1
+    },
+    {
+        "date": (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d"),
+        "title": "Minimal Court Intervention & Expedited Enforcement in Commercial Arbitration",
+        "author": "Chamber Arbitration Bench",
+        "category": "Arbitration & Commercial",
+        "message": "The modern commercial landscape demands that arbitration awards be respected as definitive adjudications rather than interim milestones. The narrow aperture of Section 34 of the Arbitration and Conciliation Act mandates that courts refrain from re-evaluating evidentiary conclusions or substituting their own view for that of the arbitral tribunal.\n\nParties drafting commercial pacts must prioritize clear forum selection, institutional rules, and well-defined terms of reference. Precision in the arbitration clause ensures prompt enforcement under Section 36 without multi-year appellate detours.",
+        "order": 2
+    },
+    {
+        "date": (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d"),
+        "title": "Evidentiary Rigor & Forensic Documentary Review in Complex Civil Trials",
+        "author": "Senior Advocate",
+        "category": "Civil Jurisprudence",
+        "message": "Trial advocacy in high-stakes civil and property disputes is fundamentally won during the discovery and documentary admission phases. Oral testimony, however compelling, cannot cure deficits in foundational pleadings or unproven exhibited documents under the Evidence Act.\n\nOur chamber's trial philosophy centers on comprehensive chronological indexing, admissibility scrutiny, and anticipating cross-examination vectors long before the matter reaches final oral arguments.",
+        "order": 3
+    }
+]
+
+@app.route('/api/opinions', methods=['GET'])
+def get_opinions():
+    if opinions_col is None: return jsonify([])
+    try:
+        if opinions_col.count_documents({}) == 0:
+            opinions_col.insert_many(DEFAULT_OPINIONS)
+    except Exception as e:
+        logging.error(f"Error seeding opinions: {e}")
+        
+    date_filter = request.args.get('date')
+    query = {"date": date_filter} if date_filter else {}
+    
+    opinions = list(opinions_col.find(query).sort([("date", -1), ("order", 1)]))
+    for op in opinions:
+        op['_id'] = str(op['_id'])
+        op['category'] = op.get('category') or 'Legal Editorial'
+        op['author'] = op.get('author') or 'Chamber Counsel'
+    return jsonify(opinions), 200
+
+@app.route('/api/opinions', methods=['POST'])
+def add_opinion():
+    if opinions_col is None: return jsonify({"error": "DB error"}), 500
+    data = request.get_json(force=True, silent=True) or {}
+    title = data.get('title', '').strip()
+    message = data.get('message', '').strip()
+    date_val = data.get('date', '').strip() or datetime.now().strftime("%Y-%m-%d")
+    
+    if not title:
+        return jsonify({"error": "Opinion title is required"}), 400
+    if not message:
+        return jsonify({"error": "Opinion message content is required"}), 400
+        
+    new_op = {
+        "title": title,
+        "date": date_val,
+        "author": data.get('author', 'Chamber Counsel').strip(),
+        "category": data.get('category', 'Legal Editorial').strip(),
+        "message": message,
+        "order": int(data.get('order', 1)),
+        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    result = opinions_col.insert_one(new_op)
+    new_op['_id'] = str(result.inserted_id)
+    return jsonify(new_op), 201
+
+@app.route('/api/opinions/<id>', methods=['PUT'])
+def update_opinion(id):
+    if opinions_col is None: return jsonify({"error": "DB error"}), 500
+    data = request.get_json(force=True, silent=True) or {}
+    update_fields = {}
+    if 'title' in data: update_fields['title'] = data['title'].strip()
+    if 'date' in data: update_fields['date'] = data['date'].strip()
+    if 'author' in data: update_fields['author'] = data['author'].strip()
+    if 'category' in data: update_fields['category'] = data['category'].strip()
+    if 'message' in data: update_fields['message'] = data['message'].strip()
+    if 'order' in data: update_fields['order'] = int(data['order'])
+    
+    opinions_col.update_one({"_id": ObjectId(id)}, {"$set": update_fields})
+    return jsonify({"success": True}), 200
+
+@app.route('/api/opinions/<id>', methods=['DELETE'])
+def delete_opinion(id):
+    if opinions_col is None: return jsonify({"error": "DB error"}), 500
+    opinions_col.delete_one({"_id": ObjectId(id)})
+    return jsonify({"success": True}), 200
+
 
 @app.after_request
 

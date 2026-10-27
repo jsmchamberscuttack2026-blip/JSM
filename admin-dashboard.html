@@ -308,6 +308,28 @@
             color: var(--primary); font-size: 0.9rem;
         }
 
+        /* Advocate Card & Grid Styling */
+        .advocates-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        .advocate-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .advocate-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        }
+
         /* Mobile Adjustments */
         @media (max-width: 1024px) {
             .sidebar { transform: translateX(-100%); }
@@ -425,6 +447,18 @@
                     <div class="admin-menu-btn" onclick="showSection('case-payments')">
                         <div class="icon">💳</div>
                         <div class="title">Fee Payments</div>
+                    </div>
+                    <div class="admin-menu-btn" onclick="showSection('services')">
+                        <div class="icon">📖</div>
+                        <div class="title">Legal Expertise & Books</div>
+                    </div>
+                    <div class="admin-menu-btn" onclick="showSection('news')">
+                        <div class="icon">📰</div>
+                        <div class="title">News & Insights</div>
+                    </div>
+                    <div class="admin-menu-btn" onclick="showSection('opinions')">
+                        <div class="icon">✍️</div>
+                        <div class="title">Today's Opinion</div>
                     </div>
                     <div class="admin-menu-btn" onclick="showSection('settings')">
                         <div class="icon">⚙️</div>
@@ -578,15 +612,27 @@
                                 <input type="email" id="adv-email" class="form-control" required placeholder="e.g. rajesh@jsmchambers.com">
                             </div>
                             <div class="form-group">
-                                <label class="form-label" for="adv-specialty">Specialty / Title</label>
-                                <input type="text" id="adv-specialty" class="form-control" required placeholder="e.g. Senior Counsel - Civil Litigation">
+                                <label class="form-label" for="adv-role">Designation / Role</label>
+                                <input type="text" id="adv-role" class="form-control" placeholder="e.g. Partner - Corporate, Senior Advocate">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="adv-specialty">Practice Areas / Specializations</label>
+                                <input type="text" id="adv-specialty" class="form-control" required placeholder="e.g. Civil Litigation | Commercial Arbitration | Writs">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="adv-location">Location / Office</label>
+                                <input type="text" id="adv-location" class="form-control" placeholder="e.g. High Court of Orissa, Cuttack">
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="adv-phone">Mobile Number</label>
                                 <input type="text" id="adv-phone" class="form-control" required placeholder="e.g. +91 9876543210">
                             </div>
                             <div class="form-group">
-                                <label class="form-label" for="adv-image">Upload Image (Optional)</label>
+                                <label class="form-label" for="adv-linkedin">LinkedIn Profile URL (Optional)</label>
+                                <input type="url" id="adv-linkedin" class="form-control" placeholder="e.g. https://linkedin.com/in/username">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="adv-image">Upload Portrait Image (Optional)</label>
                                 <input type="file" id="adv-image" class="form-control" accept="image/*">
                             </div>
                             <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end;"><button type="submit" class="btn btn-primary" style="padding: 1rem 2rem; font-size: 1.1rem; box-shadow: 0 10px 20px rgba(59,130,246,0.3);">Add Advocate</button></div>
@@ -832,6 +878,204 @@
                                 </div>
                                 <input type="file" id="admin-logo" class="form-control" accept="image/*">
                             </div>
+
+                            <div class="form-group" style="grid-column: 1 / -1; margin: 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 10px;">
+                                    <div>
+                                        <label class="form-label" style="font-weight: 700; color: var(--navy); margin: 0; font-size: 1.05rem;">
+                                            🖼️ Homepage Hero Banner Background
+                                        </label>
+                                        <p style="color: var(--color-text-light); margin: 4px 0 0 0; font-size: 0.88rem;">
+                                            Upload a custom background photo for the front-page header. The website will display it with the semi-transparent navy overlay matching your reference style.
+                                        </p>
+                                    </div>
+                                    <button type="button" id="admin-remove-banner-btn" class="btn" onclick="removeHeroBanner()" style="display: none; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 0.4rem 0.9rem; font-size: 0.85rem; border-radius: 6px; font-weight: 600;">
+                                        ✕ Reset to Default Banner
+                                    </button>
+                                </div>
+
+                                <!-- Live Preview Box Styled Like Front Page Banner -->
+                                <div id="hero-banner-preview-wrapper" style="width: 100%; border-radius: 10px; overflow: hidden; position: relative; min-height: 170px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; text-align: center; margin-bottom: 1rem; border: 1.5px solid rgba(212,175,55,0.4);">
+                                    <div id="hero-banner-preview-bg" style="position: absolute; inset: 0; background: url('assets/images/user_ref_banner.png') center/cover no-repeat; transition: all 0.3s ease;"></div>
+                                    <div style="position: absolute; inset: 0; background: rgba(14, 43, 77, 0.82);"></div>
+                                    <div style="position: relative; z-index: 2; padding: 22px 20px; color: #ffffff;">
+                                        <div style="font-family: 'Playfair Display', Georgia, serif; font-size: 17px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;">JSM. CHAMBERS</div>
+                                        <div style="width: 45px; height: 2px; background: rgba(255,255,255,0.7); margin: 8px auto;"></div>
+                                        <div style="font-size: 12px; color: rgba(255,255,255,0.92); max-width: 550px; margin: 0 auto; line-height: 1.5;">
+                                            Welcome to JSM. Chambers — an independent private legal organization dedicated to professional legal consultation, strategic advocacy and comprehensive case-management support for complex matters. JSM. Chambers
+                                        </div>
+                                        <div style="margin-top: 6px; font-size: 10px; color: #D4AF37; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">
+                                            ✓ Live Preview with Transparent Overlay
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; gap: 12px; align-items: center;">
+                                    <input type="file" id="admin-hero-banner" class="form-control" accept="image/*" style="flex: 1;">
+                                    <span style="font-size: 0.82rem; color: #64748b;">(JPG, PNG, WebP)</span>
+                                </div>
+                            </div>
+
+                            <!-- Legal Expertise Banner Background Upload -->
+                            <div class="form-group" style="grid-column: 1 / -1; margin: 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 10px;">
+                                    <div>
+                                        <label class="form-label" style="font-weight: 700; color: var(--navy); margin: 0; font-size: 1.05rem;">
+                                            ⚖️ Legal Expertise Banner Background
+                                        </label>
+                                        <p style="color: var(--color-text-light); margin: 4px 0 0 0; font-size: 0.88rem;">
+                                            Upload a custom background photo for the "Our Legal Expertise" banner on the homepage.
+                                        </p>
+                                    </div>
+                                    <button type="button" id="admin-remove-expertise-banner-btn" class="btn" onclick="removeExpertiseBanner()" style="display: none; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 0.4rem 0.9rem; font-size: 0.85rem; border-radius: 6px; font-weight: 600;">
+                                        ✕ Reset to Default Banner
+                                    </button>
+                                </div>
+
+                                <!-- Live Preview Box -->
+                                <div style="width: 100%; border-radius: 10px; overflow: hidden; position: relative; min-height: 160px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; text-align: center; margin-bottom: 1rem; border: 1.5px solid rgba(212,175,55,0.4);">
+                                    <div id="expertise-banner-preview-bg" style="position: absolute; inset: 0; background: url('assets/images/default_chamber_banner.jpg') center/cover no-repeat; transition: all 0.3s ease;"></div>
+                                    <div style="position: absolute; inset: 0; background: rgba(14, 43, 77, 0.82);"></div>
+                                    <div style="position: relative; z-index: 2; padding: 20px; color: #ffffff;">
+                                        <div style="font-family: 'Playfair Display', Georgia, serif; font-size: 17px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;">OUR LEGAL EXPERTISE</div>
+                                        <div style="width: 45px; height: 2px; background: rgba(255,255,255,0.7); margin: 8px auto;"></div>
+                                        <div style="font-size: 12px; color: rgba(255,255,255,0.92); max-width: 550px; margin: 0 auto; line-height: 1.5;">
+                                            Practice areas and legal monographs banner preview.
+                                        </div>
+                                        <div style="margin-top: 6px; font-size: 10px; color: #D4AF37; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">
+                                            ✓ Live Preview with Transparent Overlay
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; gap: 12px; align-items: center;">
+                                    <input type="file" id="admin-expertise-banner" class="form-control" accept="image/*" style="flex: 1;">
+                                    <span style="font-size: 0.82rem; color: #64748b;">(JPG, PNG, WebP)</span>
+                                </div>
+                            </div>
+
+                            <!-- Staffs Banner Background Upload -->
+                            <div class="form-group" style="grid-column: 1 / -1; margin: 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 10px;">
+                                    <div>
+                                        <label class="form-label" style="font-weight: 700; color: var(--navy); margin: 0; font-size: 1.05rem;">
+                                            👥 Staffs Banner Background
+                                        </label>
+                                        <p style="color: var(--color-text-light); margin: 4px 0 0 0; font-size: 0.88rem;">
+                                            Upload a custom background photo for the "Our Staffs" banner on the homepage.
+                                        </p>
+                                    </div>
+                                    <button type="button" id="admin-remove-staff-banner-btn" class="btn" onclick="removeStaffBanner()" style="display: none; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 0.4rem 0.9rem; font-size: 0.85rem; border-radius: 6px; font-weight: 600;">
+                                        ✕ Reset to Default Banner
+                                    </button>
+                                </div>
+
+                                <!-- Live Preview Box -->
+                                <div style="width: 100%; border-radius: 10px; overflow: hidden; position: relative; min-height: 160px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; text-align: center; margin-bottom: 1rem; border: 1.5px solid rgba(212,175,55,0.4);">
+                                    <div id="staff-banner-preview-bg" style="position: absolute; inset: 0; background: url('assets/images/default_chamber_banner.jpg') center/cover no-repeat; transition: all 0.3s ease;"></div>
+                                    <div style="position: absolute; inset: 0; background: rgba(14, 43, 77, 0.82);"></div>
+                                    <div style="position: relative; z-index: 2; padding: 20px; color: #ffffff;">
+                                        <div style="font-family: 'Playfair Display', Georgia, serif; font-size: 17px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;">OUR STAFFS</div>
+                                        <div style="width: 45px; height: 2px; background: rgba(255,255,255,0.7); margin: 8px auto;"></div>
+                                        <div style="font-size: 12px; color: rgba(255,255,255,0.92); max-width: 550px; margin: 0 auto; line-height: 1.5;">
+                                            Advocates, partners, and legal staff banner preview.
+                                        </div>
+                                        <div style="margin-top: 6px; font-size: 10px; color: #D4AF37; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">
+                                            ✓ Live Preview with Transparent Overlay
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; gap: 12px; align-items: center;">
+                                    <input type="file" id="admin-staff-banner" class="form-control" accept="image/*" style="flex: 1;">
+                                    <span style="font-size: 0.82rem; color: #64748b;">(JPG, PNG, WebP)</span>
+                                </div>
+                            </div>
+
+                            <!-- About This Chamber Section Settings -->
+                            <div class="form-group" style="grid-column: 1 / -1; margin: 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem;">
+                                <div style="margin-bottom: 1.2rem;">
+                                    <label class="form-label" style="font-weight: 700; color: var(--navy); margin: 0; font-size: 1.05rem;">
+                                        🏛️ About This Chamber Document & Profile Settings
+                                    </label>
+                                    <p style="color: var(--color-text-light); margin: 4px 0 0 0; font-size: 0.88rem;">
+                                        Configure the Chamber Founder/Owner, Vision & Goals, and detailed history shown when visitors click "About This Chamber" on the homepage. Also upload up to 2 optional showcase document images.
+                                    </p>
+                                </div>
+
+                                <!-- Chamber Owner Name -->
+                                <div style="margin-bottom: 1.25rem;">
+                                    <label class="form-label" for="admin-about-owner-name" style="font-weight: 600; color: #1e293b; margin-bottom: 6px;">
+                                        Chamber Owner Name
+                                    </label>
+                                    <input type="text" id="admin-about-owner-name" class="form-control" placeholder="e.g. Adv. John Doe">
+                                </div>
+
+                                <!-- Vision & Goals -->
+                                <div style="margin-bottom: 1.25rem;">
+                                    <label class="form-label" for="admin-about-vision" style="font-weight: 600; color: #1e293b; margin-bottom: 6px;">
+                                        Chamber Vision & Institutional Goals
+                                    </label>
+                                    <textarea id="admin-about-vision" class="form-control" rows="3" placeholder="e.g. To deliver principled, fearless, and uncompromising legal representation rooted in constitutional jurisprudence and thorough trial readiness."></textarea>
+                                </div>
+
+                                <!-- Chamber Description / Text -->
+                                <div style="margin-bottom: 1.5rem;">
+                                    <label class="form-label" for="admin-about-text" style="font-weight: 600; color: #1e293b; margin-bottom: 6px;">
+                                        Full Chamber Profile, Background & Case-Management Philosophy
+                                    </label>
+                                    <textarea id="admin-about-text" class="form-control" rows="6" placeholder="Enter detailed information about the chamber, heritage, strategic advocacy, core values, areas of courtroom practice, etc..."></textarea>
+                                </div>
+
+                                <!-- Chamber Owner Image (1 Image Only) -->
+                                <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 1.25rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                                        <label style="font-weight: 700; font-size: 0.95rem; color: var(--navy); margin: 0;">
+                                            📸 Chamber Owner / Founder Photograph (Single Upload)
+                                        </label>
+                                        <button type="button" id="admin-remove-about-owner-btn" class="btn" onclick="removeAboutOwnerImage()" style="display: none; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 0.25rem 0.75rem; font-size: 0.75rem; border-radius: 4px; font-weight: 600;">
+                                            ✕ Remove Photo
+                                        </button>
+                                    </div>
+                                    <p style="color: #64748b; font-size: 0.82rem; margin: 0 0 10px 0;">
+                                        Upload the photograph of the chamber owner. Displayed fully uncropped in the middle of the Chamber Owner section in the official document.
+                                    </p>
+                                    <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                                        <div style="width: 120px; height: 135px; border-radius: 8px; overflow: hidden; background: #0A1628; border: 2px solid #D4AF37; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); flex-shrink: 0; padding: 4px; box-sizing: border-box;">
+                                            <img id="admin-about-owner-preview" src="" alt="Owner Preview" style="width: 100%; height: 100%; object-fit: contain; display: none;">
+                                            <span id="admin-about-owner-placeholder" style="color: #D4AF37; font-size: 28px;">⚖️</span>
+                                        </div>
+                                        <div style="flex: 1; min-width: 220px;">
+                                            <input type="file" id="admin-about-owner-img" class="form-control" accept="image/*">
+                                            <span style="font-size: 0.8rem; color: #64748b; margin-top: 4px; display: block;">Recommended: Clear portrait or photo (JPG, PNG, WebP)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Google Search Console Verification Settings -->
+                            <div class="form-group" style="grid-column: 1 / -1; margin: 0; margin-top: 1.5rem; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 1.5rem;">
+                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.5rem;">
+                                    <span style="font-size: 24px;">🔍</span>
+                                    <div>
+                                        <label class="form-label" style="font-weight: 700; color: #166534; margin: 0; font-size: 1.05rem;">
+                                            Google Search Console Verification & SEO
+                                        </label>
+                                        <p style="color: #15803d; margin: 3px 0 0 0; font-size: 0.86rem;">
+                                            Ready for Google Search Console domain ownership verification and Google search indexing.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 1rem;">
+                                    <label class="form-label" for="admin-google-verification" style="font-weight: 600; color: #166534; font-size: 0.9rem; margin-bottom: 4px;">
+                                        Google Site Verification Token or HTML Meta Tag
+                                    </label>
+                                    <input type="text" id="admin-google-verification" class="form-control" placeholder="e.g. google-site-verification=XXXXXXXXXXXXXXXXXXXXX or token string" style="background: #ffffff; border-color: #86efac; font-family: monospace; font-size: 0.9rem;">
+                                    <small style="display: block; margin-top: 6px; color: #166534;">
+                                        Paste either the full meta tag <code>&lt;meta name="google-site-verification" content="..."&gt;</code> or just the verification string code.
+                                    </small>
+                                </div>
+                            </div>
                             
                             <div style="grid-column: 1 / -1; text-align: center; margin-top: 1rem;">
                                 
@@ -860,30 +1104,74 @@
                             </div>
                         </form>
                     </div>
-                    <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow); margin-top: 2rem;">
-                        <h3>Gallery Management</h3>
-                        <p style="color: var(--color-text-light); margin-top: 1rem;">Upload images to display in the public gallery slideshow.</p>
-                        
-                        <form id="add-gallery-form" style="margin-top: 1.5rem; display: grid; grid-template-columns: 1fr 1fr auto; gap: 1.5rem; align-items: end;">
-                            <div class="form-group" style="margin: 0;">
-                                <label class="form-label" for="gallery-image">Gallery Image</label>
-                                <input type="file" id="gallery-image" class="form-control" accept="image/*" required>
-                            </div>
-                            <div class="form-group" style="margin: 0;">
-                                <label class="form-label" for="gallery-desc">Description (Optional)</label>
-                                <input type="text" id="gallery-desc" class="form-control" placeholder="Caption for image">
-                            </div>
-                            <div style="margin: 0;">
-                                <button type="submit" class="btn btn-secondary" style="padding: 0.5rem 2rem; font-size: 1rem; height: auto;">Upload Image</button>
-                            </div>
-                        </form>
 
-                        <h4 style="margin-top: 2.5rem; margin-bottom: 1.5rem; font-size: 1.2rem; color: var(--color-primary); border-bottom: 2px solid #e7ebf0; padding-bottom: 0.5rem;">Current Gallery Images</h4>
-                        <div id="gallery-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
-                            <!-- Gallery items will be loaded here -->
+
+                </div>
+            </div>
+
+            <!-- Legal Expertise & 3D Books Section -->
+            <div id="section-services" class="admin-section">
+                <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 2rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-bottom: 2px solid var(--secondary); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                        <div>
+                            <h3 style="margin: 0; color: var(--primary);">⚖️ Legal Expertise & 3D Book Content</h3>
+                            <p style="color: var(--color-text-light); margin: 0.5rem 0 0 0; font-size: 0.95rem;">
+                                Customize the practice areas shown on the homepage and upload text page-by-page for the interactive 3D book.
+                            </p>
                         </div>
+                        <button class="btn btn-primary" onclick="openAddServiceModal()" style="display: flex; align-items: center; gap: 8px; padding: 0.7rem 1.4rem;">
+                            ➕ Add New Expertise Service
+                        </button>
                     </div>
 
+                    <!-- Services Grid in Admin -->
+                    <div id="admin-services-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- News & Insights Section -->
+            <div id="section-news" class="admin-section">
+                <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 2rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-bottom: 2px solid var(--secondary); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                        <div>
+                            <h3 style="margin: 0; color: var(--primary); font-family: 'Playfair Display', Georgia, serif;">📰 News & Judicial Insights</h3>
+                            <p style="color: var(--color-text-light); margin: 0.5rem 0 0 0; font-size: 0.95rem;">
+                                Publish and manage legal updates, judicial articles, and chamber news shown on the main homepage.
+                            </p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openAddNewsModal()" style="display: flex; align-items: center; gap: 8px; padding: 0.7rem 1.4rem;">
+                            ➕ Publish New Article / News
+                        </button>
+                    </div>
+
+                    <!-- News Grid in Admin -->
+                    <div id="admin-news-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Today's Opinion Section -->
+            <div id="section-opinions" class="admin-section">
+                <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 2rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-bottom: 2px solid var(--secondary); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                        <div>
+                            <h3 style="margin: 0; color: var(--primary); font-family: 'Playfair Display', Georgia, serif;">✍️ Today's Opinion Management</h3>
+                            <p style="color: var(--color-text-light); margin: 0.5rem 0 0 0; font-size: 0.95rem;">
+                                Publish and manage day-wise legal opinions and chamber perspectives shown on the front page.
+                            </p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openAddOpinionModal()" style="display: flex; align-items: center; gap: 8px; padding: 0.7rem 1.4rem;">
+                            ➕ Add Today's Opinion
+                        </button>
+                    </div>
+
+                    <!-- Opinions Grid in Admin -->
+                    <div id="admin-opinions-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
+                        <!-- Populated via JS -->
+                    </div>
                 </div>
             </div>
         
@@ -901,7 +1189,184 @@
     </main>
     </div>
 
-    <script src="js/admin.js?v=23"></script>
+    <!-- Service Edit / Add Modal -->
+    <div id="service-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 20px; overflow-y: auto;">
+        <div style="background: white; border-radius: 14px; width: 100%; max-width: 750px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; margin: auto;">
+            <div style="padding: 1.2rem 1.8rem; background: #0A1628; color: white; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #D4AF37;">
+                <div>
+                    <h3 id="service-modal-title" style="margin: 0; color: #D4AF37; font-family: 'Playfair Display', Georgia, serif; font-size: 1.3rem;">Edit Legal Expertise & 3D Book</h3>
+                    <p style="margin: 4px 0 0 0; font-size: 0.82rem; color: #cbd5e1;">Configure card details and upload text page-by-page for the 3D book.</p>
+                </div>
+                <span onclick="closeServiceModal()" style="font-size: 1.8rem; cursor: pointer; color: #cbd5e1; line-height: 1;">&times;</span>
+            </div>
+
+            <form id="service-form" onsubmit="saveServiceForm(event)" style="padding: 1.5rem 1.8rem; overflow-y: auto; flex: 1;">
+                <input type="hidden" id="service-form-id">
+                
+                <div style="display: grid; grid-template-columns: 1.2fr 1.3fr; gap: 1rem; margin-bottom: 1.2rem;">
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Service Title *</label>
+                        <input type="text" id="service-form-title" class="form-control" placeholder="e.g. Civil Litigation" required>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Icon / Symbol (Emoji or Upload Image)</label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <div id="service-icon-preview-box" style="width: 42px; height: 42px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0; overflow: hidden;">
+                                <span id="service-icon-preview-text">⚖</span>
+                                <img id="service-icon-preview-img" style="width: 100%; height: 100%; object-fit: contain; display: none;" alt="Icon">
+                            </div>
+                            <input type="text" id="service-form-icon" class="form-control" placeholder="Emoji e.g. ⚖" style="flex: 1; min-width: 70px;" oninput="updateServiceIconPreview(this.value)">
+                            <label class="btn btn-outline" style="padding: 0.45rem 0.65rem; font-size: 0.8rem; cursor: pointer; white-space: nowrap; margin: 0; display: inline-flex; align-items: center; gap: 4px;" title="Upload custom icon image">
+                                📁 Upload
+                                <input type="file" id="service-icon-file-input" accept="image/*" style="display: none;" onchange="handleServiceIconUpload(this)">
+                            </label>
+                            <button type="button" class="btn btn-outline" id="service-icon-clear-btn" onclick="clearServiceIcon()" style="padding: 0.45rem 0.55rem; font-size: 0.8rem; color: #ef4444; border-color: #fca5a5; display: none;" title="Remove uploaded icon">✕</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label class="form-label">Card Summary (Shown on Homepage Card) *</label>
+                    <textarea id="service-form-desc" class="form-control" rows="2" placeholder="Brief 1-2 sentence overview shown on the card..." required></textarea>
+                </div>
+
+                <div style="border-top: 1px solid #e2e8f0; padding-top: 1.2rem; margin-top: 1.2rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <div>
+                            <h4 style="margin: 0; color: var(--primary);">📖 3D Book Pages (Uploaded Text)</h4>
+                            <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: #64748b;">Clients will turn these pages one by one like a real 3D paper book.</p>
+                        </div>
+                        <button type="button" class="btn btn-outline" onclick="addPageToServiceForm()" style="font-size: 0.85rem; padding: 0.4rem 0.8rem; border-color: var(--primary); color: var(--primary);">
+                            ➕ Add Page
+                        </button>
+                    </div>
+
+                    <div id="service-pages-container" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <!-- Dynamic page items injected by JS -->
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1.2rem;">
+                    <button type="button" class="btn btn-outline" onclick="closeServiceModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="service-save-btn">💾 Save Service & Book Content</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- News Edit / Add Modal -->
+    <div id="news-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 20px; overflow-y: auto;">
+        <div style="background: white; border-radius: 14px; width: 100%; max-width: 720px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; margin: auto;">
+            <div style="padding: 1.2rem 1.8rem; background: #0A1628; color: white; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #D4AF37;">
+                <div>
+                    <h3 id="news-modal-title" style="margin: 0; color: #D4AF37; font-family: 'Playfair Display', Georgia, serif; font-size: 1.3rem;">Publish News & Legal Insight</h3>
+                    <p style="margin: 4px 0 0 0; font-size: 0.82rem; color: #cbd5e1;">Articles published here appear live in the News & Insights section on the main page.</p>
+                </div>
+                <span onclick="closeNewsModal()" style="font-size: 1.8rem; cursor: pointer; color: #cbd5e1; line-height: 1;">&times;</span>
+            </div>
+
+            <form id="news-form" onsubmit="saveNewsForm(event)" style="padding: 1.5rem 1.8rem; overflow-y: auto; flex: 1;">
+                <input type="hidden" id="news-form-id">
+                
+                <div class="form-group" style="margin-bottom: 1.2rem;">
+                    <label class="form-label">Article Headline / Title *</label>
+                    <input type="text" id="news-form-title" class="form-control" placeholder="e.g. Supreme Court Clarifies Guidelines on Section 482 CrPC" required>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 1rem; margin-bottom: 1.2rem;">
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Article Type / Category *</label>
+                        <input type="text" id="news-form-category" class="form-control" placeholder="e.g. Supreme Court Update" required list="news-category-presets">
+                        <datalist id="news-category-presets">
+                            <option value="Supreme Court Update">
+                            <option value="High Court Ruling">
+                            <option value="Constitutional Law">
+                            <option value="Criminal Jurisprudence">
+                            <option value="Civil Litigation">
+                            <option value="Corporate & Commercial">
+                            <option value="Arbitration & ADR">
+                            <option value="Chambers Announcement">
+                            <option value="Legal Editorial">
+                        </datalist>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Publication Date</label>
+                        <input type="date" id="news-form-date" class="form-control" required>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Author / Byline</label>
+                        <input type="text" id="news-form-author" class="form-control" placeholder="e.g. JSM Chambers Editorial">
+                    </div>
+                </div>
+
+                <!-- Article Icon / Symbol Picker & Uploader -->
+                <div class="form-group" style="margin-bottom: 1.2rem; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Article Icon / Symbol (Shown on Card Badge & Reader)</span>
+                        <span style="font-size: 0.75rem; color: #64748b; font-weight: normal;">Pick below or upload custom icon</span>
+                    </label>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <div id="news-icon-preview-box" style="width: 44px; height: 44px; border-radius: 8px; border: 1.5px solid #D4AF37; background: #0A1628; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+                            <span id="news-icon-preview-char" style="font-size: 1.5rem; line-height: 1;">⚖️</span>
+                            <img id="news-icon-preview-img" style="width: 100%; height: 100%; object-fit: contain; display: none;" alt="Icon">
+                        </div>
+                        <input type="text" id="news-form-icon" class="form-control" placeholder="Emoji or icon URL" style="width: 140px; font-size: 1rem; font-weight: bold; text-align: center;" value="⚖️" oninput="updateNewsIconPreview(this.value)">
+                        
+                        <!-- Quick emoji buttons -->
+                        <div style="display: flex; gap: 4px; flex-wrap: wrap; align-items: center;">
+                            <button type="button" class="btn btn-outline" style="padding: 4px 8px; font-size: 15px;" onclick="setNewsPresetIcon('⚖️')">⚖️</button>
+                            <button type="button" class="btn btn-outline" style="padding: 4px 8px; font-size: 15px;" onclick="setNewsPresetIcon('🏛️')">🏛️</button>
+                            <button type="button" class="btn btn-outline" style="padding: 4px 8px; font-size: 15px;" onclick="setNewsPresetIcon('📜')">📜</button>
+                            <button type="button" class="btn btn-outline" style="padding: 4px 8px; font-size: 15px;" onclick="setNewsPresetIcon('⚡')">⚡</button>
+                            <button type="button" class="btn btn-outline" style="padding: 4px 8px; font-size: 15px;" onclick="setNewsPresetIcon('🔍')">🔍</button>
+                            <button type="button" class="btn btn-outline" style="padding: 4px 8px; font-size: 15px;" onclick="setNewsPresetIcon('📢')">📢</button>
+                            <button type="button" class="btn btn-outline" style="padding: 4px 8px; font-size: 15px;" onclick="setNewsPresetIcon('💼')">💼</button>
+                            <button type="button" class="btn btn-outline" style="padding: 4px 8px; font-size: 15px;" onclick="setNewsPresetIcon('🛡️')">🛡️</button>
+                            <button type="button" class="btn btn-outline" style="padding: 4px 8px; font-size: 15px;" onclick="setNewsPresetIcon('📖')">📖</button>
+                        </div>
+
+                        <!-- Or Upload Custom Icon File -->
+                        <label class="btn btn-outline" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 6px; border-color: #D4AF37; color: #0A1628; background: #fff;">
+                            📁 Upload Custom Icon
+                            <input type="file" id="news-icon-file-input" accept="image/*" style="display: none;" onchange="handleNewsIconUpload(this)">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.2rem;">
+                    <label class="form-label">Featured Image (Upload or URL)</label>
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+                        <div id="news-image-preview-box" style="width: 70px; height: 50px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f1f5f9; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                            <img id="news-image-preview-img" style="width: 100%; height: 100%; object-fit: cover; display: none;" alt="Preview">
+                            <span id="news-image-preview-placeholder" style="font-size: 1.3rem;">🖼️</span>
+                        </div>
+                        <label class="btn btn-outline" style="padding: 0.5rem 0.9rem; font-size: 0.85rem; cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 6px;">
+                            📁 Upload Image
+                            <input type="file" id="news-image-file-input" accept="image/*" style="display: none;" onchange="handleNewsImageUpload(this)">
+                        </label>
+                        <input type="text" id="news-form-image" class="form-control" placeholder="Or paste image URL (https://...)" style="flex: 1;" oninput="updateNewsImagePreview(this.value)">
+                        <button type="button" class="btn btn-outline" id="news-image-clear-btn" onclick="clearNewsImage()" style="padding: 0.5rem 0.7rem; color: #ef4444; border-color: #fca5a5; display: none;" title="Remove image">✕</button>
+                    </div>
+                    <small style="color: #64748b; font-size: 0.78rem;">Optional. A default legal chamber illustration will be used if left blank.</small>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.2rem;">
+                    <label class="form-label">Card Summary / Excerpt (Shown on Homepage Card) *</label>
+                    <textarea id="news-form-summary" class="form-control" rows="2" placeholder="Brief 1-2 sentence preview for the card..." required></textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label class="form-label">Full Article Content (Shown when reading article) *</label>
+                    <textarea id="news-form-content" class="form-control" rows="6" placeholder="Write full legal analysis, case details, citations and commentary. Use line breaks between paragraphs." required></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 1.2rem;">
+                    <button type="button" class="btn btn-outline" onclick="closeNewsModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="news-save-btn">💾 Publish Article</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Edit Advocate Modal -->
     <div id="edit-advocate-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
@@ -919,12 +1384,24 @@
                 <input type="email" id="edit-adv-email" class="form-control" required>
             </div>
             <div class="form-group">
-                <label class="form-label">Specialty / Title</label>
-                <input type="text" id="edit-adv-specialty" class="form-control" required>
+                <label class="form-label">Designation / Role</label>
+                <input type="text" id="edit-adv-role" class="form-control" placeholder="e.g. Partner - Corporate, Senior Advocate">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Practice Areas / Specializations</label>
+                <input type="text" id="edit-adv-specialty" class="form-control" required placeholder="e.g. Civil Litigation | Commercial Arbitration">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Location / Office</label>
+                <input type="text" id="edit-adv-location" class="form-control" placeholder="e.g. High Court of Orissa, Cuttack">
             </div>
             <div class="form-group">
                 <label class="form-label">Mobile Number</label>
                 <input type="text" id="edit-adv-phone" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">LinkedIn Profile URL (Optional)</label>
+                <input type="url" id="edit-adv-linkedin" class="form-control" placeholder="e.g. https://linkedin.com/in/username">
             </div>
             <div class="form-group">
                 <label class="form-label">Advocate Image</label>
@@ -1107,5 +1584,53 @@
         </div>
     </div>
 
+    <!-- Opinion Add / Edit Modal -->
+    <div id="opinion-modal-admin" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 20px; overflow-y: auto;">
+        <div style="background: white; border-radius: 14px; width: 100%; max-width: 700px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; margin: auto;">
+            <div style="padding: 1.2rem 1.8rem; background: #0A1628; color: white; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #D4AF37;">
+                <div>
+                    <h3 id="opinion-modal-title" style="margin: 0; color: #D4AF37; font-family: 'Playfair Display', Georgia, serif; font-size: 1.3rem;">Publish Today's Opinion</h3>
+                    <p style="margin: 4px 0 0 0; font-size: 0.82rem; color: #cbd5e1;">Add or update a day-wise legal opinion shown on the homepage.</p>
+                </div>
+                <span onclick="closeOpinionModal()" style="font-size: 1.8rem; cursor: pointer; color: #cbd5e1; line-height: 1;">&times;</span>
+            </div>
+
+            <form id="opinion-form" onsubmit="saveOpinionForm(event)" style="padding: 1.5rem 1.8rem; overflow-y: auto; flex: 1;">
+                <input type="hidden" id="opinion-form-id">
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.2rem;">
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label" style="font-weight: 600;">Date (Day-wise) *</label>
+                        <input type="date" id="opinion-form-date" class="form-control" required>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label" style="font-weight: 600;">Category / Subject *</label>
+                        <input type="text" id="opinion-form-category" class="form-control" placeholder="e.g. Constitutional Law" required>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.2rem;">
+                    <label class="form-label" style="font-weight: 600;">Opinion Title / Headline *</label>
+                    <input type="text" id="opinion-form-title" class="form-control" placeholder="e.g. Scope of Judicial Review in Commercial Discretion" required>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.2rem;">
+                    <label class="form-label" style="font-weight: 600;">Author / Counsel *</label>
+                    <input type="text" id="opinion-form-author" class="form-control" placeholder="e.g. Managing Counsel / Senior Advocate" required>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label class="form-label" style="font-weight: 600;">Opinion Content / Detailed Message *</label>
+                    <textarea id="opinion-form-message" class="form-control" rows="8" placeholder="Type the daily legal opinion, jurisprudential analysis, or chamber commentary here..." required style="line-height: 1.6;"></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 1.2rem;">
+                    <button type="button" class="btn btn-outline" onclick="closeOpinionModal()">Cancel</button>
+                    <button type="submit" id="opinion-submit-btn" class="btn btn-primary" style="padding: 0.6rem 1.6rem;">💾 Save & Publish Opinion</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script src="js/admin.js?v=34"></script>
 </body>
 </html>
