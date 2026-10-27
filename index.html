@@ -328,18 +328,73 @@ button{
 
 }
 
-.mobile-btn{
+/* =========================================================
+   HAMBURGER BUTTON (MOBILE)
+========================================================= */
+.mobile-hamburger-btn {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    width: 44px;
+    height: 44px;
+    background: #0A1628;
+    border: 1.5px solid rgba(212, 175, 55, 0.45);
+    border-radius: 9px;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.25s ease;
+    z-index: 1002;
+    box-shadow: 0 4px 12px rgba(10, 22, 40, 0.2);
+    -webkit-tap-highlight-color: transparent;
+}
 
-    display:none;
+.mobile-hamburger-btn .bar {
+    display: block;
+    width: 22px;
+    height: 2.5px;
+    background: #D4AF37;
+    border-radius: 2px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: center;
+}
 
-    border:0;
+.mobile-hamburger-btn:hover {
+    border-color: #D4AF37;
+    background: #051426;
+    box-shadow: 0 4px 18px rgba(212, 175, 55, 0.35);
+}
 
-    background:none;
+.mobile-hamburger-btn.active {
+    background: #051426;
+    border-color: #D4AF37;
+}
 
-    font-size:27px;
+.mobile-hamburger-btn.active .bar-1 {
+    transform: translateY(7.5px) rotate(45deg);
+    background: #ffffff;
+}
 
-    color:var(--navy);
+.mobile-hamburger-btn.active .bar-2 {
+    opacity: 0;
+    transform: scaleX(0);
+}
 
+.mobile-hamburger-btn.active .bar-3 {
+    transform: translateY(-7.5px) rotate(-45deg);
+    background: #ffffff;
+}
+
+@keyframes mobileNavSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* =========================================================
@@ -1895,78 +1950,85 @@ footer{
 @media(max-width:1000px){
 
     .nav-inner {
-        flex-direction: column;
-        align-items: center;
-        padding: 12px 16px;
-        min-height: auto;
-        gap: 8px;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        padding: 12px 20px !important;
+        min-height: 72px !important;
+        position: relative;
     }
 
-    .mobile-btn {
-        display: none !important;
+    .mobile-hamburger-btn {
+        display: flex !important;
     }
 
     .nav-links {
-        display: flex !important;
-        position: static !important;
+        display: none !important;
+        position: absolute !important;
+        top: 100% !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        background: #071526 !important;
+        border-bottom: 3px solid #D4AF37 !important;
+        box-shadow: 0 20px 45px rgba(5, 20, 38, 0.65) !important;
+        padding: 18px 20px 24px 20px !important;
         flex-direction: column !important;
-        width: 100%;
-        margin-top: 6px;
-        gap: 8px;
-        padding: 0 !important;
-        background: transparent !important;
-        border: none !important;
+        gap: 10px !important;
+        z-index: 1001 !important;
+        box-sizing: border-box !important;
+        margin-top: 0 !important;
     }
 
-    .nav-row-1, .nav-row-2 {
-        display: flex;
-        justify-content: center;
+    .nav-links.open {
+        display: flex !important;
+        animation: mobileNavSlideDown 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .nav-links a {
+        display: flex !important;
         align-items: center;
-        gap: 12px;
-        width: 100%;
-    }
-
-    .nav-row-1 a, .nav-row-2 a {
-        flex: 1;
-        max-width: 180px;
-        text-align: center;
-        padding: 8px 12px;
-        font-size: 13px;
-        font-weight: 700;
-        color: var(--navy);
-        background: rgba(10, 22, 40, 0.04);
-        border: 1px solid rgba(212, 175, 55, 0.35);
-        border-radius: 8px;
-        transition: all 0.2s ease;
+        justify-content: flex-start;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 13px 18px !important;
+        font-size: 14.5px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.5px;
+        color: #E2E8F0 !important;
         text-decoration: none;
-        display: block;
+        background: rgba(255, 255, 255, 0.04) !important;
+        border: 1px solid rgba(212, 175, 55, 0.22) !important;
+        border-radius: 9px !important;
+        box-sizing: border-box !important;
+        transition: all 0.2s ease !important;
+        text-align: left !important;
     }
 
-    .nav-row-1 a:active, .nav-row-2 a:active,
-    .nav-row-1 a:hover, .nav-row-2 a:hover {
-        background: var(--navy);
-        color: var(--gold-light);
-        border-color: var(--navy);
+    .nav-links a:hover,
+    .nav-links a:active {
+        background: rgba(212, 175, 55, 0.16) !important;
+        border-color: #D4AF37 !important;
+        color: #D4AF37 !important;
+        transform: translateX(4px);
     }
 
-    .nav-row-3 {
-        display: flex;
-        justify-content: center;
-        width: 100%;
+    .nav-links .nav-login {
+        margin-top: 6px !important;
+        justify-content: center !important;
+        text-align: center !important;
+        background: linear-gradient(135deg, #D4AF37, #AA8010) !important;
+        color: #051426 !important;
+        font-weight: 800 !important;
+        border: none !important;
+        box-shadow: 0 4px 18px rgba(212, 175, 55, 0.4) !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
     }
 
-    .nav-row-3 .nav-login {
-        width: 100%;
-        max-width: 372px;
-        text-align: center;
-        padding: 10px 16px;
-        font-size: 13px;
-        font-weight: 700;
-        border-radius: 8px;
-        background: var(--navy);
-        color: #fff !important;
-        box-shadow: 0 4px 12px rgba(10, 22, 40, 0.15);
-        display: block;
+    .nav-links .nav-login:hover {
+        background: linear-gradient(135deg, #F3E5AB, #D4AF37) !important;
+        color: #051426 !important;
     }
 
     .hero-grid{
@@ -2038,9 +2100,10 @@ footer{
 @media(max-width:650px){
 
     .disclaimer{
-
-        font-size:9px;
-
+        font-size: 11px;
+        line-height: 1.45;
+        padding: 8px 14px;
+        text-align: center;
     }
 
     .hero h1{
@@ -2075,13 +2138,18 @@ footer{
 
     .trust-grid{
 
-        grid-template-columns:1fr 1fr;
+        grid-template-columns:1fr;
+        gap: 12px;
 
     }
 
     .trust-item{
 
-        border-bottom:1px solid var(--border);
+        border: 1px solid rgba(212, 175, 55, 0.22);
+        border-radius: 12px;
+        padding: 16px 18px;
+        background: #ffffff;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
 
     }
 
@@ -2115,26 +2183,34 @@ footer{
     .section-head{
 
         display:block;
+        text-align: center;
 
     }
 
     .section-head p{
 
-        margin-top:20px;
+        margin-top:14px;
 
     }
 
     .cta-box{
 
-        padding:40px 28px;
+        padding:35px 20px;
 
         display:block;
+        border-radius: 16px;
 
+    }
+
+    .cta-box h2 {
+        font-size: 26px !important;
+        line-height: 1.3 !important;
     }
 
     .cta-button{
 
         margin-top:25px;
+        width: 100%;
 
     }
 
@@ -2147,9 +2223,51 @@ footer{
     .footer-bottom{
 
         flex-direction:column;
+        gap: 12px;
+        text-align: center;
 
     }
 
+}
+
+@media(max-width:480px){
+    .hero-reference-banner {
+        min-height: 330px;
+        padding: 50px 14px;
+    }
+    .hero-ref-title {
+        font-size: 1.65rem !important;
+        letter-spacing: 1.5px !important;
+    }
+    .hero-ref-description {
+        font-size: 0.94rem !important;
+        line-height: 1.55 !important;
+    }
+    .hero-ref-actions button {
+        width: 100%;
+        max-width: 290px;
+        justify-content: center;
+    }
+    .opinion-train-card {
+        width: 300px !important;
+        padding: 18px !important;
+    }
+    .news-train-card {
+        width: 285px !important;
+    }
+    .logo-text {
+        font-size: 15px;
+        letter-spacing: 1.2px;
+    }
+    .logo-text small {
+        font-size: 7px;
+        letter-spacing: 1.8px;
+    }
+    .logo-mark {
+        width: 36px;
+        height: 36px;
+        font-size: 17px;
+    }
 }
 
 /* =========================================================
@@ -2417,20 +2535,20 @@ PRIVATE LEGAL ORGANIZATION
 
 </a>
 
+<!-- 3-Line Hamburger Menu Button (Mobile) -->
+<button class="mobile-hamburger-btn" id="mobileMenuBtn" aria-label="Toggle navigation menu" aria-expanded="false" onclick="toggleMobileMenu()">
+    <span class="bar bar-1"></span>
+    <span class="bar bar-2"></span>
+    <span class="bar bar-3"></span>
+</button>
 
 <nav class="nav-links" id="navLinks">
-    <div class="nav-row nav-row-1">
-        <a href="#home">Home</a>
-        <a href="#" onclick="openAboutFullscreen(); return false;">About</a>
-        <a href="#expertise">Expertise</a>
-    </div>
-    <div class="nav-row nav-row-2">
-        <a href="#staffs">Staffs</a>
-        <a href="#contact">Contact Us</a>
-    </div>
-    <div class="nav-row nav-row-3">
-        <a href="#" class="nav-login" onclick="window.location.href='client-login.html';return false;">Client Login</a>
-    </div>
+    <a href="#home" onclick="closeMobileMenu()">Home</a>
+    <a href="#" onclick="openAboutFullscreen(); closeMobileMenu(); return false;">About</a>
+    <a href="#expertise" onclick="closeMobileMenu()">Expertise</a>
+    <a href="#staffs" onclick="closeMobileMenu()">Staffs</a>
+    <a href="#contact" onclick="closeMobileMenu()">Contact Us</a>
+    <a href="client-login.html" class="nav-login" onclick="closeMobileMenu()">Client Login</a>
 </nav>
 
 </div>
@@ -3694,11 +3812,35 @@ Done
 <script>
 
 /* =========================================================
-   MOBILE NAV
+   MOBILE NAV TOGGLE (3-LINE HAMBURGER)
 ========================================================= */
 
+function toggleMobileMenu(){
+    const navLinks = document.getElementById("navLinks");
+    const menuBtn = document.getElementById("mobileMenuBtn");
+    if (!navLinks) return;
+    const isOpen = navLinks.classList.toggle("open");
+    if (menuBtn) {
+        menuBtn.classList.toggle("active", isOpen);
+        menuBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    }
+}
+
+function closeMobileMenu(){
+    const navLinks = document.getElementById("navLinks");
+    const menuBtn = document.getElementById("mobileMenuBtn");
+    if (navLinks) {
+        navLinks.classList.remove("open");
+    }
+    if (menuBtn) {
+        menuBtn.classList.remove("active");
+        menuBtn.setAttribute("aria-expanded", "false");
+    }
+}
+
+// Backward compatibility alias
 function toggleMenu(){
-    document.getElementById("navLinks").classList.toggle("open");
+    toggleMobileMenu();
 }
 
 /* =========================================================
@@ -3783,17 +3925,33 @@ document.addEventListener("keydown", function(event){
 });
 
 /* =========================================================
-   MOBILE NAV CLOSE
+   MOBILE NAV AUTO-CLOSE & OUTSIDE CLICK
 ========================================================= */
 
 document.querySelectorAll("#navLinks a").forEach(function(link){
     link.addEventListener("click", function(){
-        document.getElementById("navLinks").classList.remove("open");
+        closeMobileMenu();
     });
 });
 
+document.addEventListener("click", function(event){
+    const navLinks = document.getElementById("navLinks");
+    const menuBtn = document.getElementById("mobileMenuBtn");
+    if (navLinks && navLinks.classList.contains("open")) {
+        if (!navLinks.contains(event.target) && (!menuBtn || !menuBtn.contains(event.target))) {
+            closeMobileMenu();
+        }
+    }
+});
+
+document.addEventListener("keydown", function(event){
+    if (event.key === "Escape") {
+        closeMobileMenu();
+    }
+});
+
 </script>
-<script src="js/main.js?v=25"></script>
+<script src="js/main.js?v=26"></script>
 
 <!-- 3D Interactive Legal Book Modal -->
 <div id="service-book-modal" class="book-modal-backdrop">

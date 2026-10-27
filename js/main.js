@@ -1,36 +1,44 @@
 // main.js - Global Interactions for JSM. Chambers
 
-document.addEventListener('DOMContentLoaded', () => {
-  
-  // Mobile Navigation Toggle
-  const mobileBtn = document.querySelector('.mobile-menu-btn');
-  const navLinks = document.querySelector('.nav-links');
-  const navActions = document.querySelector('.nav-actions');
-
-  if(mobileBtn) {
-    mobileBtn.addEventListener('click', () => {
-      navLinks.classList.toggle('active');
-      navActions.classList.toggle('active');
-    });
+window.toggleMobileMenu = function() {
+  const navLinks = document.getElementById('navLinks');
+  const menuBtn = document.getElementById('mobileMenuBtn');
+  if (!navLinks) return;
+  const isOpen = navLinks.classList.toggle('open');
+  if (menuBtn) {
+    menuBtn.classList.toggle('active', isOpen);
+    menuBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
   }
+};
 
+window.closeMobileMenu = function() {
+  const navLinks = document.getElementById('navLinks');
+  const menuBtn = document.getElementById('mobileMenuBtn');
+  if (navLinks) {
+    navLinks.classList.remove('open');
+  }
+  if (menuBtn) {
+    menuBtn.classList.remove('active');
+    menuBtn.setAttribute('aria-expanded', 'false');
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
   // Smooth Scrolling for anchor links
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
-      if(this.getAttribute('href') !== '#') {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if(target) {
+      const href = this.getAttribute('href');
+      if (href && href !== '#' && href.startsWith('#')) {
+        const target = document.querySelector(href);
+        if (target) {
+          e.preventDefault();
           target.scrollIntoView({
             behavior: 'smooth'
           });
-          // Close mobile menu if open
-          if(navLinks && navLinks.classList.contains('active')) {
-            navLinks.classList.remove('active');
-            navActions.classList.remove('active');
-          }
         }
       }
+      // Always close mobile menu on click
+      window.closeMobileMenu();
     });
   });
 
