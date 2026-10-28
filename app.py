@@ -1757,8 +1757,21 @@ def add_advocate():
         "imageUrl": image_url
     })
     
-    # Send credentials email to advocate
+    return jsonify({"message": "Advocate added", "id": str(result.inserted_id), "password": "OTP Only"}), 201
+
+@app.route('/api/advocates/<id>/send-welcome-mail', methods=['POST'])
+def send_advocate_welcome_mail(id):
     try:
+        adv = advocates_col.find_one({"_id": ObjectId(id)})
+        if not adv:
+            return jsonify({"error": "Advocate not found"}), 404
+            
+        email = adv.get('email')
+        name = adv.get('name') or "Advocate"
+        
+        if not email or "@" not in email:
+            return jsonify({"error": "Advocate does not have a valid email address"}), 400
+            
         msg = MIMEMultipart('alternative')
         msg['Date'] = formatdate(localtime=True)
         msg['Message-ID'] = make_msgid()
@@ -1766,14 +1779,66 @@ def add_advocate():
         msg['To'] = email
         msg['Subject'] = "Welcome to JSM Chambers - Staff Portal Credentials"
         
-        text = f"Dear {name},\nWelcome to JSM. Chambers! \nWe warmly welcome you to our legal team.\nAn advocate profile has been created for you.\n\nLogin ID: {email}\n\nPlease use the Send Verification Code option to login."
+        text = (
+            f"Dear {name},\n\n"
+            f"Welcome to JSM. Chambers! We warmly welcome you to our legal team.\n"
+            f"An advocate profile has been created for you.\n\n"
+            f"Login ID: {email}\n\n"
+            f"Please visit the chamber portal and use the 'Send Verification Code' option to sign in.\n\n"
+            f"Best regards,\nJSM. Chambers Management"
+        )
+        
+        html = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:24px;background:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 8px 24px rgba(0,0,0,0.06);">
+    <tr>
+      <td style="background:linear-gradient(135deg, #071322 0%, #0A1628 100%);padding:30px 24px;text-align:center;border-bottom:3px solid #D4AF37;">
+        <div style="color:#D4AF37;font-size:11px;font-weight:800;letter-spacing:3px;text-transform:uppercase;margin-bottom:6px;">Legal Counsel & Advocacy</div>
+        <h1 style="color:#ffffff;font-size:24px;margin:0;font-weight:700;letter-spacing:1px;">JSM. CHAMBERS</h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:32px 28px;">
+        <h2 style="color:#0A1628;font-size:20px;margin-top:0;margin-bottom:16px;">Welcome to the Team, {name}</h2>
+        <p style="font-size:15px;line-height:1.7;color:#334155;margin-bottom:20px;">
+          We warmly welcome you to <strong>JSM. Chambers</strong>. Your advocate profile and chamber credentials have been configured on our staff management portal.
+        </p>
+        <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-left:4px solid #D4AF37;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+          <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Staff Portal Login ID</div>
+          <div style="font-size:17px;font-weight:700;color:#0A1628;">{email}</div>
+        </div>
+        <p style="font-size:14px;line-height:1.6;color:#475569;margin-bottom:24px;">
+          To access the staff portal, navigate to the <strong>Staff / Client Login</strong> section and use the <em>Send Verification Code</em> option with your registered email.
+        </p>
+        <div style="text-align:center;padding:12px 0;">
+          <a href="https://jsm-chamber-cuttack-odisha-30.vercel.app/" style="background:#0A1628;color:#D4AF37;border:1px solid #D4AF37;padding:12px 28px;text-decoration:none;border-radius:6px;font-weight:700;font-size:14px;display:inline-block;letter-spacing:0.5px;">Open Chamber Portal →</a>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td style="background:#f8fafc;padding:16px 24px;text-align:center;font-size:12px;color:#94a3b8;border-top:1px solid #e2e8f0;">
+        © {datetime.utcnow().year} JSM. Chambers · High Court of Orissa, Cuttack · All rights reserved.
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+        
         msg.attach(MIMEText(text, 'plain', 'utf-8'))
+        msg.attach(MIMEText(html, 'html', 'utf-8'))
         
-        send_email_core(email, msg, msg['Subject'])
+        res = send_email_core(email, msg, msg['Subject'])
+        if res.get('success'):
+            now_iso = datetime.utcnow().isoformat()
+            advocates_col.update_one({"_id": ObjectId(id)}, {"$set": {"welcome_mail_sent": True, "welcome_mail_sent_at": now_iso}})
+            return jsonify({"success": True, "message": f"Welcome email sent successfully to {email}"}), 200
+        else:
+            return jsonify({"error": f"Failed to send email: {res.get('smtp_response', 'SMTP error')}"}), 500
     except Exception as e:
-        logging.error(f"Failed to send advocate email: {e}")
-        
-    return jsonify({"message": "Advocate added", "id": str(result.inserted_id), "password": "OTP Only"}), 201
+        logging.error(f"Error sending welcome email to advocate {id}: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/staff-login', methods=['POST'])
 def staff_login():

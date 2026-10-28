@@ -719,6 +719,10 @@ async function loadAdvocates() {
                 </div>
                 
                 <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: auto; padding-top: 1rem;">
+                    <button class="btn" id="send-welcome-btn-${adv._id}" style="width: 100%; background: #0A1628; color: #D4AF37; border: 1.5px solid #D4AF37; font-weight: 700; padding: 0.55rem; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onclick="sendWelcomeMail('${adv._id}', '${adv.name ? adv.name.replace(/'/g, "\\'") : ''}', '${adv.email || ''}')">
+                        ${adv.welcome_mail_sent ? '✉️ Resend Welcome Mail' : '✉️ Send Welcome Mail'}
+                    </button>
+                    ${adv.welcome_mail_sent ? '<div style="font-size: 0.76rem; color: #166534; font-weight: 600; text-align: center; margin-top: -2px;">✓ Welcome mail sent</div>' : ''}
                     <button class="btn" style="width: 100%; background: #D4AF37; color: #0A1628; font-weight: bold; border: none; padding: 0.5rem;" onclick="showIdCard('${adv._id}')">🪪 Show & Email ID Card</button>
                     <div style="display: flex; gap: 0.5rem;">
                         <button class="btn" style="flex: 1; background: var(--primary); color: white; border: none;" onclick="openEditAdvocateModal('${adv._id}')">✏️ Edit</button>
@@ -732,6 +736,46 @@ async function loadAdvocates() {
         console.error(err);
     }
 }
+
+window.sendWelcomeMail = async function(id, name, email) {
+    const btn = document.getElementById(`send-welcome-btn-${id}`);
+    const originalText = btn ? btn.innerHTML : '✉️ Send Welcome Mail';
+    
+    if (!confirm(`Are you sure you want to send the welcome email to ${name || 'this advocate'} (${email})?`)) {
+        return;
+    }
+    
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Sending Welcome Mail...';
+    }
+    
+    try {
+        const response = await fetch(`/api/advocates/${id}/send-welcome-mail`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            showToast(`Welcome email sent successfully to ${email}!`, 'success');
+            loadAdvocates();
+        } else {
+            showToast(data.error || 'Failed to send welcome email', 'error');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+    } catch (err) {
+        console.error('Error sending welcome email:', err);
+        showToast('Network error while sending welcome email', 'error');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+};
 
 async function deleteAdvocate(id) {
     if(!confirm("Are you sure you want to delete this advocate?")) return;
@@ -773,7 +817,7 @@ if (addAdvocateForm) {
             const data = await response.json();
             
             if (response.ok) {
-                showToast(`Advocate Added!\n\nEmail (Login ID): ${email}\nPassword: ${data.password}\n\nAn email has been sent to them with these credentials.`);
+                showToast(`Advocate Added Successfully!\n\nEmail: ${email}\n\nYou can click "Send Welcome Mail" on their card whenever you wish to send their welcome credentials email.`, 'success');
                 addAdvocateForm.reset();
                 loadAdvocates();
             } else {
