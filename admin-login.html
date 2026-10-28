@@ -354,9 +354,23 @@
             }, 1000);
         }
 
+        function getDeviceId() {
+            let devId = localStorage.getItem('jsm_admin_device_id');
+            if (!devId) {
+                devId = 'dev_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now().toString(36);
+                localStorage.setItem('jsm_admin_device_id', devId);
+            }
+            // Set cookie so browser passes it with every request
+            document.cookie = `jsm_admin_device_id=${encodeURIComponent(devId)}; path=/; max-age=31536000; SameSite=Lax`;
+            return devId;
+        }
+
         async function checkLockStatus() {
+            const devId = getDeviceId();
             try {
-                const res = await fetch('/api/admin-lock-status');
+                const res = await fetch(`/api/admin-lock-status?device_id=${encodeURIComponent(devId)}`, {
+                    headers: { 'X-Device-ID': devId }
+                });
                 const data = await res.json();
                 if (data.locked && data.remaining_seconds > 0) {
                     triggerLockdown(data.remaining_seconds);
@@ -423,16 +437,21 @@
             btn.innerHTML = '<span>⏳</span> Verifying credentials...';
             btn.disabled = true;
 
+            const devId = getDeviceId();
+
             try {
                 const response = await fetch('/api/admin-login', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Device-ID': devId
+                    },
+                    body: JSON.stringify({ email, password, device_id: devId })
                 });
                 const data = await response.json();
 
                 if (response.status === 423 || data.locked) {
-                    // Lockout for this device
+                    // Lockout for this device only
                     triggerLockdown(data.lockout_remaining_seconds || 300);
                     showAlert('step1', data.error || 'Access temporarily restricted. Please try again in 5 minutes.');
                 } else if (response.ok && data.requires_2fa) {
@@ -480,11 +499,16 @@
             btn.innerHTML = '<span>⏳</span> Authorizing...';
             btn.disabled = true;
 
+            const devId = getDeviceId();
+
             try {
                 const response = await fetch('/api/admin-verify-otp', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ otp })
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Device-ID': devId
+                    },
+                    body: JSON.stringify({ otp, device_id: devId })
                 });
                 const data = await response.json();
 
@@ -514,10 +538,16 @@
             resendBtn.disabled = true;
             hideAlert('step2');
 
+            const devId = getDeviceId();
+
             try {
                 const response = await fetch('/api/admin-resend-otp', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Device-ID': devId
+                    },
+                    body: JSON.stringify({ device_id: devId })
                 });
                 const data = await response.json();
 

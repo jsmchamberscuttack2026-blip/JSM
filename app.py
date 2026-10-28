@@ -324,15 +324,33 @@ def get_client_ip():
         return request.headers.get('X-Real-IP').strip()
     return request.remote_addr or '127.0.0.1'
 
-def get_admin_lockout_doc(ip=None):
+def get_client_device_id():
+    # 1. From custom header
+    dev_id = request.headers.get('X-Device-ID') or request.headers.get('X-Device-Token')
+    # 2. From JSON body
+    if not dev_id and request.is_json:
+        body = request.get_json(silent=True) or {}
+        dev_id = body.get('device_id') or body.get('device_token')
+    # 3. From query args
+    if not dev_id and request.args:
+        dev_id = request.args.get('device_id') or request.args.get('device_token')
+    # 4. From cookie
+    if not dev_id:
+        dev_id = request.cookies.get('jsm_admin_device_id')
+    # 5. Fallback: IP address
+    if not dev_id:
+        dev_id = f"ip_{get_client_ip()}"
+    return str(dev_id).strip()
+
+def get_admin_lockout_doc(device_id=None):
     if config_col is None:
         return {}
-    client_ip = (ip or get_client_ip() or '127.0.0.1').strip()
-    return config_col.find_one({"_id": f"admin_lockout_{client_ip}"}) or {}
+    target_id = (device_id or get_client_device_id()).strip()
+    return config_col.find_one({"_id": f"admin_lockout_dev_{target_id}"}) or {}
 
-def is_admin_locked(ip=None):
-    client_ip = (ip or get_client_ip() or '127.0.0.1').strip()
-    lock_doc = get_admin_lockout_doc(client_ip)
+def is_admin_locked(device_id=None):
+    target_id = (device_id or get_client_device_id()).strip()
+    lock_doc = get_admin_lockout_doc(target_id)
     locked_until_ts = lock_doc.get("locked_until_timestamp", 0)
     now_ts = get_now_ist().timestamp()
     if now_ts < locked_until_ts:
@@ -1418,8 +1436,8 @@ def delete_staff_email_logs(email):
 
 @app.route('/api/admin-lock-status', methods=['GET'])
 def admin_lock_status():
-    client_ip = get_client_ip()
-    is_locked, remaining_seconds, lock_doc = is_admin_locked(client_ip)
+    device_id = get_client_device_id()
+    is_locked, remaining_seconds, lock_doc = is_admin_locked(device_id)
     return jsonify({
         "locked": is_locked,
         "remaining_seconds": remaining_seconds
@@ -1430,10 +1448,11 @@ def admin_login():
     data = request.get_json(force=True, silent=True) or {}
     user_id = (data.get('email') or data.get('admin_id') or '').strip()
     password = data.get('password', '').strip()
+    device_id = get_client_device_id()
     client_ip = get_client_ip()
     
-    # 1. Enforce active lockout for THIS specific device/IP only
-    is_locked, rem_secs, lock_doc = is_admin_locked(client_ip)
+    # 1. Enforce active lockout for THIS specific attacking device only
+    is_locked, rem_secs, lock_doc = is_admin_locked(device_id)
     if is_locked:
         return jsonify({
             "error": "Access temporarily restricted due to repeated failed login attempts. Please try again in 5 minutes.",
@@ -1444,11 +1463,12 @@ def admin_login():
     
     # 2. Check credentials
     if user_id == 'JSM' and password == 'JAYA@CDA11':
-        # Valid login: reset failed attempts counter for this device/IP
+        # Valid login: reset failed attempts counter for this device
         if config_col is not None:
             config_col.update_one(
-                {"_id": f"admin_lockout_{client_ip}"},
+                {"_id": f"admin_lockout_dev_{device_id}"},
                 {"$set": {
+                    "device_id": device_id,
                     "failed_attempts": 0,
                     "locked_until_timestamp": 0,
                     "last_successful_login": get_now_ist().isoformat()
@@ -1486,13 +1506,13 @@ def admin_login():
             "email_sent": email_sent
         }), 200
     
-    # 3. Failed attempt handling for THIS specific device/IP
+    # 3. Failed attempt handling for THIS specific device only
     user_agent = request.headers.get('User-Agent', 'Unknown Device')
     now_ist = get_now_ist()
     current_fails = int(lock_doc.get("failed_attempts", 0)) + 1
     
     if current_fails >= 3:
-        # Lockout triggered for 5 minutes (300 seconds) ONLY FOR THIS IP
+        # Lockout triggered for 5 minutes (300 seconds) ONLY FOR THIS SPECIFIC DEVICE
         locked_until = now_ist + timedelta(minutes=5)
         locked_until_ts = locked_until.timestamp()
         locked_until_iso = locked_until.isoformat()
@@ -1500,9 +1520,9 @@ def admin_login():
         
         if config_col is not None:
             config_col.update_one(
-                {"_id": f"admin_lockout_{client_ip}"},
+                {"_id": f"admin_lockout_dev_{device_id}"},
                 {"$set": {
-                    "ip": client_ip,
+                    "device_id": device_id,
                     "failed_attempts": current_fails,
                     "locked_until_timestamp": locked_until_ts,
                     "locked_until_iso": locked_until_iso,
@@ -1514,6 +1534,7 @@ def admin_login():
                 "$push": {
                     "attempt_history": {
                         "$each": [{
+                            "device_id": device_id,
                             "ip": client_ip,
                             "user_agent": user_agent,
                             "attempted_user": user_id,
@@ -1536,12 +1557,12 @@ def admin_login():
             "alert_sent": alert_sent
         }), 423
     else:
-        # Under 3 attempts: record failure for this IP, show only standard invalid message without disclosing counters
+        # Under 3 attempts: record failure for this device only
         if config_col is not None:
             config_col.update_one(
-                {"_id": f"admin_lockout_{client_ip}"},
+                {"_id": f"admin_lockout_dev_{device_id}"},
                 {"$set": {
-                    "ip": client_ip,
+                    "device_id": device_id,
                     "failed_attempts": current_fails,
                     "last_failed_ip": client_ip,
                     "last_failed_user_agent": user_agent,
@@ -1557,8 +1578,8 @@ def admin_login():
 
 @app.route('/api/admin-verify-otp', methods=['POST'])
 def admin_verify_otp():
-    client_ip = get_client_ip()
-    is_locked, rem_secs, lock_doc = is_admin_locked(client_ip)
+    device_id = get_client_device_id()
+    is_locked, rem_secs, lock_doc = is_admin_locked(device_id)
     if is_locked:
         return jsonify({
             "error": "Access temporarily restricted. Please try again in 5 minutes.",
@@ -1601,8 +1622,8 @@ def admin_verify_otp():
 
 @app.route('/api/admin-resend-otp', methods=['POST'])
 def admin_resend_otp():
-    client_ip = get_client_ip()
-    is_locked, rem_secs, lock_doc = is_admin_locked(client_ip)
+    device_id = get_client_device_id()
+    is_locked, rem_secs, lock_doc = is_admin_locked(device_id)
     if is_locked:
         return jsonify({
             "error": "Access temporarily restricted. Please try again in 5 minutes.",
