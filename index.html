@@ -2509,15 +2509,45 @@ select:focus-visible{
 </div>
 
 
-<!-- =========================================================
-     NAVBAR
-========================================================= -->
+<script>
+window.navToPage = window.navToPage || function(page) {
+    if (typeof window.closeMobileMenu === 'function') window.closeMobileMenu();
+    var aboutEl = document.getElementById('about-fullscreen-view');
+    var expEl = document.getElementById('expertise-fullscreen-view');
+    var staffEl = document.getElementById('staffs-fullscreen-view');
+    var contactEl = document.getElementById('contact-fullscreen-view');
+    var appModal = document.getElementById('appointmentModal');
+    if (appModal) appModal.style.display = 'none';
+
+    if (aboutEl) aboutEl.style.display = 'none';
+    if (expEl) expEl.style.display = 'none';
+    if (staffEl) staffEl.style.display = 'none';
+    if (contactEl) contactEl.style.display = 'none';
+    document.body.style.overflow = '';
+
+    if (page === 'home') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (page === 'about') {
+        if (typeof openAboutFullscreen === 'function') openAboutFullscreen();
+        else if (aboutEl) { aboutEl.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+    } else if (page === 'expertise') {
+        if (typeof openExpertiseFullscreen === 'function') openExpertiseFullscreen();
+        else if (expEl) { expEl.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+    } else if (page === 'staffs') {
+        if (typeof openStaffsFullscreen === 'function') openStaffsFullscreen();
+        else if (staffEl) { staffEl.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+    } else if (page === 'contact') {
+        if (typeof openContactFullscreen === 'function') openContactFullscreen();
+        else if (contactEl) { contactEl.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+    }
+};
+</script>
 
 <header class="navbar">
 
 <div class="container nav-inner">
 
-<a href="#home" class="logo">
+<a href="#home" class="logo" onclick="event.preventDefault(); navToPage('home');">
 
 <div class="logo-mark">
 J
@@ -2543,11 +2573,11 @@ PRIVATE LEGAL ORGANIZATION
 </button>
 
 <nav class="nav-links" id="navLinks">
-    <a href="#home" onclick="closeMobileMenu()">Home</a>
-    <a href="#about" onclick="closeMobileMenu()">About</a>
-    <a href="#expertise" onclick="closeMobileMenu()">Expertise</a>
-    <a href="#staffs" onclick="closeMobileMenu()">Staffs</a>
-    <a href="#contact" onclick="closeMobileMenu()">Contact Us</a>
+    <a href="#home" onclick="event.preventDefault(); navToPage('home');">Home</a>
+    <a href="#about" onclick="event.preventDefault(); navToPage('about');">About</a>
+    <a href="#expertise" onclick="event.preventDefault(); navToPage('expertise');">Expertise</a>
+    <a href="#staffs" onclick="event.preventDefault(); navToPage('staffs');">Staffs</a>
+    <a href="#contact" onclick="event.preventDefault(); navToPage('contact');">Contact Us</a>
     <a href="client-login.html" class="nav-login" onclick="closeMobileMenu()">Client Login</a>
 </nav>
 
@@ -3383,14 +3413,24 @@ Our practitioners emphasize meticulous research, structured documentary review, 
     </div>
 
     <!-- Scrollable Full-Screen Content -->
-    <div class="fullscreen-body">
-        <div class="container" style="max-width: 1300px; padding: 40px 20px;">
-            <div style="text-align: center; margin-bottom: 45px;">
-                <div style="color: #D4AF37; font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 8px;">Interactive 3D Monographs</div>
-                <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2rem, 3.5vw, 2.9rem); color: #0A1628; margin: 0 0 14px 0;">Our Legal Expertise & Monographs</h1>
-                <p style="color: #64748b; font-size: 15.5px; max-width: 700px; margin: 0 auto; line-height: 1.6;">Click "Explore Service →" on any practice area below to open the interactive 3D monograph book with realistic paper page-turning.</p>
+    <div class="fullscreen-body" style="background: #f8fafc; padding: 0 0 80px 0; width: 100%; box-sizing: border-box;">
+        <!-- Full-Width Executive Header Banner -->
+        <div style="background: linear-gradient(135deg, #071322 0%, #0A1628 100%); border-bottom: 3px solid #D4AF37; padding: clamp(35px, 5vw, 60px) 20px; text-align: center; color: #ffffff; width: 100%; box-sizing: border-box;">
+            <div style="max-width: 1200px; margin: 0 auto;">
+                <div style="display: inline-flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: 3px; color: #D4AF37; text-transform: uppercase; margin-bottom: 12px; background: rgba(212,175,55,0.12); border: 1px solid rgba(212,175,55,0.3); padding: 5px 14px; border-radius: 9999px;">
+                    ⚖️ INTERACTIVE 3D MONOGRAPHS & PRACTICE AREAS
+                </div>
+                <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2rem, 4vw, 3.4rem); color: #ffffff; margin: 0 0 14px 0; letter-spacing: 1.5px; font-weight: 700;">
+                    OUR LEGAL EXPERTISE
+                </h1>
+                <div style="width: 70px; height: 3px; background: #D4AF37; margin: 0 auto 16px auto; border-radius: 2px;"></div>
+                <p style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: clamp(0.95rem, 1.4vw, 1.15rem); color: #cbd5e1; max-width: 850px; margin: 0 auto; line-height: 1.65;">
+                    Explore our legal monographs and comprehensive trial, constitutional, and dispute resolution practice areas. Click on any practice area below to open its interactive 3D monograph book with realistic page-turning.
+                </p>
             </div>
+        </div>
 
+        <div class="container" style="max-width: 1350px; width: 100%; margin: 0 auto; padding: clamp(24px, 4vw, 50px) clamp(16px, 3.5vw, 40px); box-sizing: border-box;">
             <div class="service-grid" id="services-grid">
                 <div class="service-card" onclick="openServiceBook(0)" style="cursor: pointer;">
                     <div class="service-number">01</div>
@@ -3431,6 +3471,17 @@ Our practitioners emphasize meticulous research, structured documentary review, 
                         Explore Service →
                     </div>
                 </div>
+            </div>
+
+            <!-- Bottom Back to Dashboard Card -->
+            <div style="text-align: center; padding: 40px 24px; background: #0A1628; border-radius: 14px; border: 1.5px solid #D4AF37; box-shadow: 0 10px 35px rgba(10,22,40,0.3); color: #ffffff; margin-top: 50px;">
+                <h3 style="font-family: 'Playfair Display', Georgia, serif; font-size: 22px; color: #ffffff; margin: 0 0 10px 0;">Return to Main Chamber Portal</h3>
+                <p style="color: #cbd5e1; font-size: 14.5px; max-width: 650px; margin: 0 auto 24px auto; line-height: 1.6;">
+                    Explore our chamber profile, meet our advocate team, or schedule a legal consultation.
+                </p>
+                <button class="fullscreen-back-btn" onclick="closeExpertiseFullscreen()" style="padding: 14px 44px; font-size: 16px; font-weight: 800; border-radius: 10px; background: #D4AF37; color: #0A1628; border: none; box-shadow: 0 6px 22px rgba(212,175,55,0.45); cursor: pointer; display: inline-flex; align-items: center; gap: 10px; transition: all 0.25s ease;" onmouseover="this.style.background='#F3E5AB';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#D4AF37';this.style.transform='none'">
+                    ← Back to Dashboard
+                </button>
             </div>
         </div>
     </div>
@@ -3489,16 +3540,133 @@ Our practitioners emphasize meticulous research, structured documentary review, 
     </div>
 
     <!-- Scrollable Full-Screen Content -->
-    <div class="fullscreen-body">
-        <div class="container" style="max-width: 1300px; padding: 40px 20px;">
-            <div style="text-align: center; margin-bottom: 45px;">
-                <div style="color: #D4AF37; font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 8px;">Chamber Professionals</div>
-                <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2rem, 3.5vw, 2.9rem); color: #0A1628; margin: 0 0 14px 0;">Current Advocates & Legal Staff</h1>
-                <p style="color: #64748b; font-size: 15.5px; max-width: 700px; margin: 0 auto; line-height: 1.6;">Dedicated practitioners equipped with deep jurisdictional insight and extensive trial and appellate experience.</p>
+    <div class="fullscreen-body" style="background: #f8fafc; padding: 0 0 80px 0; width: 100%; box-sizing: border-box;">
+        <!-- Full-Width Executive Header Banner -->
+        <div style="background: linear-gradient(135deg, #071322 0%, #0A1628 100%); border-bottom: 3px solid #D4AF37; padding: clamp(35px, 5vw, 60px) 20px; text-align: center; color: #ffffff; width: 100%; box-sizing: border-box;">
+            <div style="max-width: 1200px; margin: 0 auto;">
+                <div style="display: inline-flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: 3px; color: #D4AF37; text-transform: uppercase; margin-bottom: 12px; background: rgba(212,175,55,0.12); border: 1px solid rgba(212,175,55,0.3); padding: 5px 14px; border-radius: 9999px;">
+                    👥 CHAMBER PROFESSIONALS & COUNSEL
+                </div>
+                <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2rem, 4vw, 3.4rem); color: #ffffff; margin: 0 0 14px 0; letter-spacing: 1.5px; font-weight: 700;">
+                    ADVOCATES & LEGAL STAFF
+                </h1>
+                <div style="width: 70px; height: 3px; background: #D4AF37; margin: 0 auto 16px auto; border-radius: 2px;"></div>
+                <p style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: clamp(0.95rem, 1.4vw, 1.15rem); color: #cbd5e1; max-width: 850px; margin: 0 auto; line-height: 1.65;">
+                    Meet our team of advocates and legal researchers dedicated to professional advocacy, strategic legal consultation, and appellate excellence.
+                </p>
             </div>
+        </div>
 
+        <div class="container" style="max-width: 1350px; width: 100%; margin: 0 auto; padding: clamp(24px, 4vw, 50px) clamp(16px, 3.5vw, 40px); box-sizing: border-box;">
             <div class="advocate-grid" id="advocates-grid">
                 <!-- Dynamically populated from database via /api/advocates -->
+            </div>
+
+            <!-- Bottom Back to Dashboard Card -->
+            <div style="text-align: center; padding: 40px 24px; background: #0A1628; border-radius: 14px; border: 1.5px solid #D4AF37; box-shadow: 0 10px 35px rgba(10,22,40,0.3); color: #ffffff; margin-top: 50px;">
+                <h3 style="font-family: 'Playfair Display', Georgia, serif; font-size: 22px; color: #ffffff; margin: 0 0 10px 0;">Return to Main Chamber Portal</h3>
+                <p style="color: #cbd5e1; font-size: 14.5px; max-width: 650px; margin: 0 auto 24px auto; line-height: 1.6;">
+                    Explore our legal practice monographs, daily opinions, and schedule a consultation.
+                </p>
+                <button class="fullscreen-back-btn" onclick="closeStaffsFullscreen()" style="padding: 14px 44px; font-size: 16px; font-weight: 800; border-radius: 10px; background: #D4AF37; color: #0A1628; border: none; box-shadow: 0 6px 22px rgba(212,175,55,0.45); cursor: pointer; display: inline-flex; align-items: center; gap: 10px; transition: all 0.25s ease;" onmouseover="this.style.background='#F3E5AB';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#D4AF37';this.style.transform='none'">
+                    ← Back to Dashboard
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Full-Screen Contact & Consultation Data View -->
+<div id="contact-fullscreen-view" class="fullscreen-data-overlay">
+    <!-- Top Sticky Navigation Bar with Back to Dashboard Button -->
+    <div class="fullscreen-topbar">
+        <button class="fullscreen-back-btn" onclick="closeContactFullscreen()">
+            ← Back to Dashboard
+        </button>
+        <div class="fullscreen-topbar-title">
+            📞 Contact Us & Consultation Booking
+        </div>
+        <button class="fullscreen-close-btn" onclick="closeContactFullscreen()" title="Close full screen">
+            ✕
+        </button>
+    </div>
+
+    <!-- Scrollable Full-Screen Content -->
+    <div class="fullscreen-body" style="background: #f8fafc; padding: 0 0 80px 0; width: 100%; box-sizing: border-box;">
+        <!-- Full-Width Executive Header Banner -->
+        <div style="background: linear-gradient(135deg, #071322 0%, #0A1628 100%); border-bottom: 3px solid #D4AF37; padding: clamp(35px, 5vw, 60px) 20px; text-align: center; color: #ffffff; width: 100%; box-sizing: border-box;">
+            <div style="max-width: 1200px; margin: 0 auto;">
+                <div style="display: inline-flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: 3px; color: #D4AF37; text-transform: uppercase; margin-bottom: 12px; background: rgba(212,175,55,0.12); border: 1px solid rgba(212,175,55,0.3); padding: 5px 14px; border-radius: 9999px;">
+                    ⚖️ LEGAL CONSULTATION & REGISTRY DIRECTORY
+                </div>
+                <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2rem, 4vw, 3.4rem); color: #ffffff; margin: 0 0 14px 0; letter-spacing: 1.5px; font-weight: 700;">
+                    CONTACT JSM. CHAMBERS
+                </h1>
+                <div style="width: 70px; height: 3px; background: #D4AF37; margin: 0 auto 16px auto; border-radius: 2px;"></div>
+                <p style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: clamp(0.95rem, 1.4vw, 1.15rem); color: #cbd5e1; max-width: 850px; margin: 0 auto; line-height: 1.65;">
+                    Schedule a consultation with JSM. Chambers. All client meetings require prior appointment.
+                </p>
+            </div>
+        </div>
+
+        <div class="container" style="max-width: 1350px; width: 100%; margin: 0 auto; padding: clamp(24px, 4vw, 50px) clamp(16px, 3.5vw, 40px); box-sizing: border-box;">
+            <!-- Appointment Booking CTA Card -->
+            <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-top: 4px solid #D4AF37; border-radius: 14px; box-shadow: 0 10px 30px rgba(10,22,40,0.06); padding: clamp(28px, 4vw, 48px) clamp(20px, 3.5vw, 42px); margin-bottom: 35px; display: flex; flex-direction: column; align-items: center; text-align: center;">
+                <div style="font-size: 32px; margin-bottom: 10px;">📅</div>
+                <h2 style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(1.8rem, 3vw, 2.4rem); color: #0A1628; margin: 0 0 12px 0;">
+                    Ready to Discuss Your Matter?
+                </h2>
+                <p style="color: #475569; font-size: 16px; max-width: 700px; margin: 0 0 24px 0; line-height: 1.7;">
+                    Schedule a private legal consultation with our advocates and senior legal counsel. Our team will review your case briefing and confirm an appointment slot.
+                </p>
+                <button class="btn btn-primary" onclick="openModal('appointmentModal')" style="padding: 14px 38px; font-size: 16px; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 6px 20px rgba(212,175,55,0.35); cursor: pointer;">
+                    <span>Book Appointment</span>
+                    <span style="font-size: 18px;">→</span>
+                </button>
+            </div>
+
+            <!-- Chamber Office & Contact Details Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 35px;">
+                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 28px; box-shadow: 0 6px 20px rgba(0,0,0,0.03);">
+                    <div style="font-size: 28px; margin-bottom: 12px;">🏛️</div>
+                    <h3 style="font-family: 'Playfair Display', Georgia, serif; font-size: 18px; color: #0A1628; margin: 0 0 8px 0;">Chamber Address</h3>
+                    <p style="color: #475569; font-size: 14.5px; line-height: 1.7; margin: 0;">
+                        <strong>JSM. Chambers</strong><br>
+                        Near Orissa High Court, Cuttack, Odisha, 753002<br>
+                        <span style="color: #64748b; font-size: 13px;">Jurisdiction: High Court of Orissa & Supreme Court of India</span>
+                    </p>
+                </div>
+
+                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 28px; box-shadow: 0 6px 20px rgba(0,0,0,0.03);">
+                    <div style="font-size: 28px; margin-bottom: 12px;">✉️</div>
+                    <h3 style="font-family: 'Playfair Display', Georgia, serif; font-size: 18px; color: #0A1628; margin: 0 0 8px 0;">Official Communication</h3>
+                    <p style="color: #475569; font-size: 14.5px; line-height: 1.7; margin: 0;">
+                        <strong>Registry Email:</strong><br>
+                        <a href="mailto:jsmchamberscuttack2026@gmail.com" style="color: #0A1628; font-weight: 600; text-decoration: underline;">jsmchamberscuttack2026@gmail.com</a><br>
+                        <span style="color: #64748b; font-size: 13px;">Confidential inquiries and briefs welcome</span>
+                    </p>
+                </div>
+
+                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 28px; box-shadow: 0 6px 20px rgba(0,0,0,0.03);">
+                    <div style="font-size: 28px; margin-bottom: 12px;">⏱️</div>
+                    <h3 style="font-family: 'Playfair Display', Georgia, serif; font-size: 18px; color: #0A1628; margin: 0 0 8px 0;">Office Hours</h3>
+                    <p style="color: #475569; font-size: 14.5px; line-height: 1.7; margin: 0;">
+                        <strong>Monday – Saturday:</strong> 10:00 AM – 7:30 PM<br>
+                        <strong>Sunday:</strong> Closed / Emergency Filings Only<br>
+                        <span style="color: #b48608; font-weight: 600; font-size: 13px;">All consultations strictly by prior appointment</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Bottom Back to Dashboard Card -->
+            <div style="text-align: center; padding: 40px 24px; background: #0A1628; border-radius: 14px; border: 1.5px solid #D4AF37; box-shadow: 0 10px 35px rgba(10,22,40,0.3); color: #ffffff;">
+                <h3 style="font-family: 'Playfair Display', Georgia, serif; font-size: 22px; color: #ffffff; margin: 0 0 10px 0;">Return to Main Chamber Portal</h3>
+                <p style="color: #cbd5e1; font-size: 14.5px; max-width: 650px; margin: 0 auto 24px auto; line-height: 1.6;">
+                    Explore our legal practice monographs, advocate team, daily opinions, and chamber credentials.
+                </p>
+                <button class="fullscreen-back-btn" onclick="closeContactFullscreen()" style="padding: 14px 44px; font-size: 16px; font-weight: 800; border-radius: 10px; background: #D4AF37; color: #0A1628; border: none; box-shadow: 0 6px 22px rgba(212,175,55,0.45); cursor: pointer; display: inline-flex; align-items: center; gap: 10px; transition: all 0.25s ease;" onmouseover="this.style.background='#F3E5AB';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#D4AF37';this.style.transform='none'">
+                    ← Back to Dashboard
+                </button>
             </div>
         </div>
     </div>
@@ -4087,7 +4255,7 @@ document.addEventListener("keydown", function(event){
 });
 
 </script>
-<script src="js/main.js?v=27"></script>
+<script src="js/main.js?v=28"></script>
 
 <!-- 3D Interactive Legal Book Modal -->
 <div id="service-book-modal" class="book-modal-backdrop">

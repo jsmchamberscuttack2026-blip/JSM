@@ -3221,6 +3221,16 @@ window.deleteNews = async function(id) {
 // ==========================================
 // TODAY'S OPINION ADMIN MANAGEMENT
 // ==========================================
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 window.adminOpinionsCache = [];
 
 window.loadAdminOpinions = async function() {
@@ -3229,11 +3239,17 @@ window.loadAdminOpinions = async function() {
     listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #64748b;">Loading opinions...</div>';
 
     try {
-        const res = await fetch('/api/opinions');
-        const opinions = await res.json();
-        window.adminOpinionsCache = opinions || [];
+        const res = await fetch('/api/opinions?t=' + Date.now(), { cache: 'no-store' });
+        if (!res.ok) {
+            throw new Error('HTTP ' + res.status);
+        }
+        let opinions = await res.json();
+        if (!Array.isArray(opinions)) {
+            opinions = [];
+        }
+        window.adminOpinionsCache = opinions;
 
-        if (!opinions || opinions.length === 0) {
+        if (opinions.length === 0) {
             listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #64748b;">No opinions published yet. Click "Add Today\'s Opinion" to publish.</div>';
             return;
         }

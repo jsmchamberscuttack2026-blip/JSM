@@ -1,4 +1,3 @@
-from datetime import timedelta
 import concurrent.futures
 import os
 from flask import Flask, request, jsonify, send_from_directory, send_file, Response
@@ -12,7 +11,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 from email.utils import formatdate, make_msgid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fpdf import FPDF
 import io
 import math
@@ -20,11 +19,16 @@ import random
 import certifi
 import logging
 import socket
-import random
 import string
 import json
 from dotenv import load_dotenv
 from groq import Groq
+
+# Indian Standard Time (IST = UTC+5:30) for JSM Chambers, Cuttack, Odisha
+IST = timezone(timedelta(hours=5, minutes=30))
+
+def get_now_ist():
+    return datetime.now(IST)
 
 # Load environment variables from .env
 load_dotenv()
@@ -520,15 +524,20 @@ def get_appointment_vacancy():
     available_days = settings.get("available_days", ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
     max_per_day = int(settings.get("max_per_day", 5))
     
-    day_name = parsed_date.strftime("%A")
-    if day_name not in available_days:
-        return jsonify({"available": False, "message": f"Closed on {day_name}s"}), 200
+    now_ist = get_now_ist()
+    if parsed_date.date() < now_ist.date():
+        return jsonify({"available": False, "message": "Past date"}), 200
         
-    if parsed_date.date() == datetime.now().date():
-        sh, sm = map(int, settings.get("start_time", "10:00").split(':'))
-        start_time_dt = datetime.now().replace(hour=sh, minute=sm, second=0, microsecond=0)
-        if datetime.now() > start_time_dt:
-            return jsonify({"available": False, "message": "Booking closed for today"}), 200
+    if parsed_date.date() == now_ist.date():
+        b_end_str = settings.get("booking_end") or settings.get("end_time", "17:00")
+        try:
+            beh, bem = map(int, b_end_str.split(':'))
+            end_m = beh * 60 + bem
+            now_m = now_ist.hour * 60 + now_ist.minute
+            if now_m > end_m:
+                return jsonify({"available": False, "message": "Booking closed for today"}), 200
+        except Exception:
+            pass
             
     count = appointments_col.count_documents({"appointment_date": date_str})
     remaining = max_per_day - count
@@ -617,7 +626,8 @@ def create_appointment():
     except ValueError:
         return jsonify({"error": "Invalid date format."}), 400
         
-    if parsed_date.date() < datetime.now().date():
+    now_ist = get_now_ist()
+    if parsed_date.date() < now_ist.date():
         return jsonify({"error": "Cannot book appointments in the past."}), 400
 
     # Auto-assign logic based on settings
@@ -625,39 +635,42 @@ def create_appointment():
     settings = config.get("appointment_settings", {})
     
     # Booking window check
-    booking_start = settings.get("booking_start", "00:00")
-    booking_end = settings.get("booking_end", "23:59")
+    booking_start = (settings.get("booking_start") or "00:00").strip()
+    booking_end = (settings.get("booking_end") or "23:59").strip()
     
-    now = datetime.now()
     try:
-        b_sh, b_sm = map(int, booking_start.split(':'))
-        b_eh, b_em = map(int, booking_end.split(':'))
-        start_m = b_sh * 60 + b_sm
-        end_m = b_eh * 60 + b_em
-        now_m = now.hour * 60 + now.minute
-        
-        allowed = False
-        if start_m <= end_m:
-            allowed = start_m <= now_m <= end_m
-        else:
-            # Overnight window (e.g. 09:00 PM to 09:00 AM)
-            allowed = now_m >= start_m or now_m <= end_m
+        # If booking window is defined and not 24h
+        if booking_start and booking_end and booking_start != booking_end and not (booking_start == "00:00" and booking_end in ["00:00", "23:59"]):
+            b_sh, b_sm = map(int, booking_start.split(':'))
+            b_eh, b_em = map(int, booking_end.split(':'))
+            start_m = b_sh * 60 + b_sm
+            end_m = b_eh * 60 + b_em
+            now_m = now_ist.hour * 60 + now_ist.minute
             
-        if not allowed:
-            def format_time_12hr(total_m):
-                h = int(total_m // 60)
-                m = int(total_m % 60)
-                ampm = "AM" if h < 12 else "PM"
-                dh = h if h <= 12 else h - 12
-                if dh == 0: dh = 12
-                return f"{dh:02d}:{m:02d} {ampm}"
+            allowed = False
+            if start_m < end_m:
+                allowed = (start_m <= now_m <= end_m)
+            elif start_m > end_m:
+                # Overnight window (e.g. 09:00 PM to 06:00 AM)
+                allowed = (now_m >= start_m or now_m <= end_m)
+            else:
+                allowed = True
                 
-            b_start_str = format_time_12hr(start_m)
-            b_end_str = format_time_12hr(end_m)
-            
-            return jsonify({"error": f"Online booking is only available during our booking window: {b_start_str} to {b_end_str}. Please try again later."}), 400
+            if not allowed:
+                def format_time_12hr(total_m):
+                    h = int(total_m // 60)
+                    m = int(total_m % 60)
+                    ampm = "AM" if h < 12 else "PM"
+                    dh = h if h <= 12 else h - 12
+                    if dh == 0: dh = 12
+                    return f"{dh:02d}:{m:02d} {ampm}"
+                    
+                b_start_str = format_time_12hr(start_m)
+                b_end_str = format_time_12hr(end_m)
+                
+                return jsonify({"error": f"Online booking is only available during our booking window: {b_start_str} to {b_end_str} (IST). Please try again during booking hours."}), 400
     except Exception as e:
-        pass
+        logging.error(f"Error checking booking window: {e}")
         
     available_days = settings.get("available_days", ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
     start_time_str = settings.get("start_time", "10:00")
@@ -668,11 +681,17 @@ def create_appointment():
     if day_name not in available_days:
         return jsonify({"error": f"We do not accept appointments on {day_name}s. Please choose an available day: {', '.join(available_days)}."}), 400
         
-    if parsed_date.date() == datetime.now().date():
-        sh, sm = map(int, start_time_str.split(':'))
-        start_time_dt = datetime.now().replace(hour=sh, minute=sm, second=0, microsecond=0)
-        if datetime.now() > start_time_dt:
-            return jsonify({"error": "Same-day bookings are not allowed after the day's start time has passed. Please select a future date."}), 400
+    if parsed_date.date() == now_ist.date():
+        # For same-day bookings, ensure booking window has not closed
+        b_end_str = settings.get("booking_end") or end_time_str
+        try:
+            beh, bem = map(int, b_end_str.split(':'))
+            end_m = beh * 60 + bem
+            now_m = now_ist.hour * 60 + now_ist.minute
+            if now_m > end_m:
+                return jsonify({"error": "Same-day bookings are closed for today as the booking window has passed. Please select a future date."}), 400
+        except Exception:
+            pass
 
     date_str = requested_date
     
@@ -2312,98 +2331,118 @@ def delete_news(id):
 # TODAY'S OPINION (Day-wise Chamber Editorial & Insights)
 # =========================================================
 
-DEFAULT_OPINIONS = [
-    {
-        "date": datetime.now().strftime("%Y-%m-%d"),
-        "title": "Constitutional Due Process & Institutional Restraint in Judicial Review",
-        "author": "Managing Counsel",
-        "category": "Constitutional Law",
-        "message": "The equilibrium between executive expediency and judicial scrutiny remains the lodestar of our constitutional order. Under Article 226 and Article 32, the High Courts and Supreme Court serve not merely as appellate corrections, but as vigilance posts ensuring that state discretion does not degenerate into administrative arbitrariness.\n\nRecent jurisprudence reinforces that procedural fairness is not an ornamental formality; it is the lifeblood of administrative validity. Where documentary records reveal an absence of reasoned deliberation, judicial intervention is not just permitted—it is constitutionally mandated.",
-        "order": 1
-    },
-    {
-        "date": (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d"),
-        "title": "Minimal Court Intervention & Expedited Enforcement in Commercial Arbitration",
-        "author": "Chamber Arbitration Bench",
-        "category": "Arbitration & Commercial",
-        "message": "The modern commercial landscape demands that arbitration awards be respected as definitive adjudications rather than interim milestones. The narrow aperture of Section 34 of the Arbitration and Conciliation Act mandates that courts refrain from re-evaluating evidentiary conclusions or substituting their own view for that of the arbitral tribunal.\n\nParties drafting commercial pacts must prioritize clear forum selection, institutional rules, and well-defined terms of reference. Precision in the arbitration clause ensures prompt enforcement under Section 36 without multi-year appellate detours.",
-        "order": 2
-    },
-    {
-        "date": (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d"),
-        "title": "Evidentiary Rigor & Forensic Documentary Review in Complex Civil Trials",
-        "author": "Senior Advocate",
-        "category": "Civil Jurisprudence",
-        "message": "Trial advocacy in high-stakes civil and property disputes is fundamentally won during the discovery and documentary admission phases. Oral testimony, however compelling, cannot cure deficits in foundational pleadings or unproven exhibited documents under the Evidence Act.\n\nOur chamber's trial philosophy centers on comprehensive chronological indexing, admissibility scrutiny, and anticipating cross-examination vectors long before the matter reaches final oral arguments.",
-        "order": 3
-    }
-]
+def get_default_opinions():
+    now_ist = get_now_ist()
+    return [
+        {
+            "date": now_ist.strftime("%Y-%m-%d"),
+            "title": "Constitutional Due Process & Institutional Restraint in Judicial Review",
+            "author": "Managing Counsel",
+            "category": "Constitutional Law",
+            "message": "The equilibrium between executive expediency and judicial scrutiny remains the lodestar of our constitutional order. Under Article 226 and Article 32, the High Courts and Supreme Court serve not merely as appellate corrections, but as vigilance posts ensuring that state discretion does not degenerate into administrative arbitrariness.\n\nRecent jurisprudence reinforces that procedural fairness is not an ornamental formality; it is the lifeblood of administrative validity. Where documentary records reveal an absence of reasoned deliberation, judicial intervention is not just permitted—it is constitutionally mandated.",
+            "order": 1
+        },
+        {
+            "date": (now_ist - timedelta(days=1)).strftime("%Y-%m-%d"),
+            "title": "Minimal Court Intervention & Expedited Enforcement in Commercial Arbitration",
+            "author": "Chamber Arbitration Bench",
+            "category": "Arbitration & Commercial",
+            "message": "The modern commercial landscape demands that arbitration awards be respected as definitive adjudications rather than interim milestones. The narrow aperture of Section 34 of the Arbitration and Conciliation Act mandates that courts refrain from re-evaluating evidentiary conclusions or substituting their own view for that of the arbitral tribunal.\n\nParties drafting commercial pacts must prioritize clear forum selection, institutional rules, and well-defined terms of reference. Precision in the arbitration clause ensures prompt enforcement under Section 36 without multi-year appellate detours.",
+            "order": 2
+        },
+        {
+            "date": (now_ist - timedelta(days=2)).strftime("%Y-%m-%d"),
+            "title": "Evidentiary Rigor & Forensic Documentary Review in Complex Civil Trials",
+            "author": "Senior Advocate",
+            "category": "Civil Jurisprudence",
+            "message": "Trial advocacy in high-stakes civil and property disputes is fundamentally won during the discovery and documentary admission phases. Oral testimony, however compelling, cannot cure deficits in foundational pleadings or unproven exhibited documents under the Evidence Act.\n\nOur chamber's trial philosophy centers on comprehensive chronological indexing, admissibility scrutiny, and anticipating cross-examination vectors long before the matter reaches final oral arguments.",
+            "order": 3
+        }
+    ]
 
 @app.route('/api/opinions', methods=['GET'])
 def get_opinions():
-    if opinions_col is None: return jsonify([])
+    if opinions_col is None:
+        return jsonify([])
     try:
         if opinions_col.count_documents({}) == 0:
-            opinions_col.insert_many(DEFAULT_OPINIONS)
+            opinions_col.insert_many(get_default_opinions())
     except Exception as e:
         logging.error(f"Error seeding opinions: {e}")
         
-    date_filter = request.args.get('date')
-    query = {"date": date_filter} if date_filter else {}
-    
-    opinions = list(opinions_col.find(query).sort([("date", -1), ("order", 1)]))
-    for op in opinions:
-        op['_id'] = str(op['_id'])
-        op['category'] = op.get('category') or 'Legal Editorial'
-        op['author'] = op.get('author') or 'Chamber Counsel'
-    return jsonify(opinions), 200
+    try:
+        date_filter = request.args.get('date')
+        query = {"date": date_filter} if date_filter else {}
+        
+        opinions = list(opinions_col.find(query).sort([("date", -1), ("order", 1)]))
+        for op in opinions:
+            op['_id'] = str(op['_id'])
+            op['category'] = op.get('category') or 'Legal Editorial'
+            op['author'] = op.get('author') or 'Chamber Counsel'
+        return jsonify(opinions), 200
+    except Exception as e:
+        logging.error(f"Error fetching opinions: {e}")
+        return jsonify([]), 200
 
 @app.route('/api/opinions', methods=['POST'])
 def add_opinion():
     if opinions_col is None: return jsonify({"error": "DB error"}), 500
-    data = request.get_json(force=True, silent=True) or {}
-    title = data.get('title', '').strip()
-    message = data.get('message', '').strip()
-    date_val = data.get('date', '').strip() or datetime.now().strftime("%Y-%m-%d")
-    
-    if not title:
-        return jsonify({"error": "Opinion title is required"}), 400
-    if not message:
-        return jsonify({"error": "Opinion message content is required"}), 400
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        title = data.get('title', '').strip()
+        message = data.get('message', '').strip()
+        now_ist = get_now_ist()
+        date_val = data.get('date', '').strip() or now_ist.strftime("%Y-%m-%d")
         
-    new_op = {
-        "title": title,
-        "date": date_val,
-        "author": data.get('author', 'Chamber Counsel').strip(),
-        "category": data.get('category', 'Legal Editorial').strip(),
-        "message": message,
-        "order": int(data.get('order', 1)),
-        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    result = opinions_col.insert_one(new_op)
-    new_op['_id'] = str(result.inserted_id)
-    return jsonify(new_op), 201
+        if not title:
+            return jsonify({"error": "Opinion title is required"}), 400
+        if not message:
+            return jsonify({"error": "Opinion message content is required"}), 400
+            
+        new_op = {
+            "title": title,
+            "date": date_val,
+            "author": data.get('author', 'Chamber Counsel').strip(),
+            "category": data.get('category', 'Legal Editorial').strip(),
+            "message": message,
+            "order": int(data.get('order', 1)),
+            "created_at": now_ist.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        result = opinions_col.insert_one(new_op)
+        new_op['_id'] = str(result.inserted_id)
+        return jsonify(new_op), 201
+    except Exception as e:
+        logging.error(f"Error adding opinion: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/opinions/<id>', methods=['PUT'])
 def update_opinion(id):
     if opinions_col is None: return jsonify({"error": "DB error"}), 500
-    data = request.get_json(force=True, silent=True) or {}
-    update_fields = {}
-    if 'title' in data: update_fields['title'] = data['title'].strip()
-    if 'date' in data: update_fields['date'] = data['date'].strip()
-    if 'author' in data: update_fields['author'] = data['author'].strip()
-    if 'category' in data: update_fields['category'] = data['category'].strip()
-    if 'message' in data: update_fields['message'] = data['message'].strip()
-    if 'order' in data: update_fields['order'] = int(data['order'])
-    
-    opinions_col.update_one({"_id": ObjectId(id)}, {"$set": update_fields})
-    return jsonify({"success": True}), 200
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        update_fields = {}
+        if 'title' in data: update_fields['title'] = data['title'].strip()
+        if 'date' in data: update_fields['date'] = data['date'].strip()
+        if 'author' in data: update_fields['author'] = data['author'].strip()
+        if 'category' in data: update_fields['category'] = data['category'].strip()
+        if 'message' in data: update_fields['message'] = data['message'].strip()
+        if 'order' in data: update_fields['order'] = int(data['order'])
+        
+        opinions_col.update_one({"_id": ObjectId(id)}, {"$set": update_fields})
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        logging.error(f"Error updating opinion {id}: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/opinions/<id>', methods=['DELETE'])
 def delete_opinion(id):
     if opinions_col is None: return jsonify({"error": "DB error"}), 500
-    opinions_col.delete_one({"_id": ObjectId(id)})
-    return jsonify({"success": True}), 200
+    try:
+        opinions_col.delete_one({"_id": ObjectId(id)})
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        logging.error(f"Error deleting opinion {id}: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 @app.after_request

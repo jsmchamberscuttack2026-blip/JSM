@@ -1056,6 +1056,9 @@ if (document.readyState === 'loading') {
 window.allNewsData = [];
 
 window.openAboutFullscreen = function() {
+    window.closeExpertiseFullscreen(true);
+    window.closeStaffsFullscreen(true);
+    window.closeContactFullscreen(true);
     const el = document.getElementById('about-fullscreen-view');
     if (el) {
         el.style.display = 'flex';
@@ -1063,17 +1066,21 @@ window.openAboutFullscreen = function() {
     }
 };
 
-window.closeAboutFullscreen = function() {
+window.closeAboutFullscreen = function(skipScroll) {
     const el = document.getElementById('about-fullscreen-view');
     if (el) {
         el.style.display = 'none';
         document.body.style.overflow = '';
-        const home = document.getElementById('home');
-        if (home) home.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (!skipScroll) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     }
 };
 
 window.openExpertiseFullscreen = function() {
+    window.closeAboutFullscreen(true);
+    window.closeStaffsFullscreen(true);
+    window.closeContactFullscreen(true);
     const el = document.getElementById('expertise-fullscreen-view');
     if (el) {
         el.style.display = 'flex';
@@ -1081,17 +1088,21 @@ window.openExpertiseFullscreen = function() {
     }
 };
 
-window.closeExpertiseFullscreen = function() {
+window.closeExpertiseFullscreen = function(skipScroll) {
     const el = document.getElementById('expertise-fullscreen-view');
     if (el) {
         el.style.display = 'none';
         document.body.style.overflow = '';
-        const banner = document.getElementById('expertise-banner');
-        if (banner) banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (!skipScroll) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     }
 };
 
 window.openStaffsFullscreen = function() {
+    window.closeAboutFullscreen(true);
+    window.closeExpertiseFullscreen(true);
+    window.closeContactFullscreen(true);
     const el = document.getElementById('staffs-fullscreen-view');
     if (el) {
         el.style.display = 'flex';
@@ -1099,25 +1110,75 @@ window.openStaffsFullscreen = function() {
     }
 };
 
-window.closeStaffsFullscreen = function() {
+window.closeStaffsFullscreen = function(skipScroll) {
     const el = document.getElementById('staffs-fullscreen-view');
     if (el) {
         el.style.display = 'none';
         document.body.style.overflow = '';
-        const banner = document.getElementById('staff-banner');
-        if (banner) banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (!skipScroll) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+};
+
+window.openContactFullscreen = function() {
+    window.closeAboutFullscreen(true);
+    window.closeExpertiseFullscreen(true);
+    window.closeStaffsFullscreen(true);
+    const el = document.getElementById('contact-fullscreen-view');
+    if (el) {
+        el.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+};
+
+window.closeContactFullscreen = function(skipScroll) {
+    const el = document.getElementById('contact-fullscreen-view');
+    if (el) {
+        el.style.display = 'none';
+        document.body.style.overflow = '';
+        if (!skipScroll) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+};
+
+window.navToPage = function(page) {
+    if (typeof window.closeMobileMenu === 'function') {
+        window.closeMobileMenu();
+    }
+
+    const appModal = document.getElementById('appointmentModal');
+    if (appModal) appModal.style.display = 'none';
+
+    if (page === 'home') {
+        window.closeAboutFullscreen(true);
+        window.closeExpertiseFullscreen(true);
+        window.closeStaffsFullscreen(true);
+        window.closeContactFullscreen(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (page === 'about') {
+        window.openAboutFullscreen();
+    } else if (page === 'expertise') {
+        window.openExpertiseFullscreen();
+    } else if (page === 'staffs') {
+        window.openStaffsFullscreen();
+    } else if (page === 'contact') {
+        window.openContactFullscreen();
     }
 };
 
 window.toggleAboutSection = window.openAboutFullscreen;
 window.toggleExpertiseSection = window.openExpertiseFullscreen;
 window.toggleStaffsSection = window.openStaffsFullscreen;
+window.toggleContactSection = window.openContactFullscreen;
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         window.closeAboutFullscreen();
         window.closeExpertiseFullscreen();
         window.closeStaffsFullscreen();
+        window.closeContactFullscreen();
     }
 });
 
