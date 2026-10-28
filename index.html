@@ -2682,12 +2682,6 @@ PRIVATE LEGAL ORGANIZATION
         <p class="hero-ref-description">
             Welcome to JSM. Chambers — an independent private legal organization dedicated to professional legal consultation, strategic advocacy and comprehensive case-management support for complex matters. JSM. Chambers
         </p>
-        <div class="hero-ref-actions" style="margin-top: 28px;">
-            <button class="btn btn-primary" onclick="openAboutFullscreen()" style="box-shadow: 0 4px 22px rgba(212,175,55,0.4); font-size: 15px; padding: 13px 34px; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 10px; cursor: pointer;">
-                <span>About This Chamber</span>
-                <span style="font-size: 18px;">→</span>
-            </button>
-        </div>
     </div>
 </section>
 
@@ -3177,96 +3171,129 @@ Clear communication
     </div>
 
     <!-- Scrollable Full-Screen Document Content -->
-    <div class="fullscreen-body" style="background: #071322; background-image: radial-gradient(circle at 50% 0%, rgba(212,175,55,0.08) 0%, transparent 60%); padding: 30px 16px 80px 16px;">
-        <div class="container" style="max-width: 1050px; margin: 0 auto;">
+    <div class="fullscreen-body" style="background: #f8fafc; padding: 0 0 80px 0; width: 100%; box-sizing: border-box;">
+        
+        <!-- Full-Width Executive Header Banner -->
+        <div style="background: linear-gradient(135deg, #071322 0%, #0A1628 100%); border-bottom: 3px solid #D4AF37; padding: clamp(35px, 5vw, 60px) 20px; text-align: center; color: #ffffff; width: 100%; box-sizing: border-box;">
+            <div style="max-width: 1200px; margin: 0 auto;">
+                <div style="display: inline-flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: 3px; color: #D4AF37; text-transform: uppercase; margin-bottom: 12px; background: rgba(212,175,55,0.12); border: 1px solid rgba(212,175,55,0.3); padding: 5px 14px; border-radius: 9999px;">
+                    ⚖️ OFFICIAL CHAMBER CHARTER & INSTITUTIONAL PROFILE
+                </div>
+                <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2rem, 4vw, 3.4rem); color: #ffffff; margin: 0 0 14px 0; letter-spacing: 1.5px; font-weight: 700;">
+                    JSM. CHAMBERS
+                </h1>
+                <div style="width: 70px; height: 3px; background: #D4AF37; margin: 0 auto 16px auto; border-radius: 2px;"></div>
+                <p style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: clamp(0.95rem, 1.4vw, 1.15rem); color: #cbd5e1; max-width: 850px; margin: 0 auto; line-height: 1.65;">
+                    Independent Private Legal Organization • Dedicated to Professional Legal Consultation, Strategic Advocacy and Comprehensive Case-Management Support
+                </p>
+            </div>
+        </div>
 
-            <!-- Formal Legal Document Container -->
-            <div style="background: #ffffff; border: 2px solid #D4AF37; box-shadow: 0 20px 50px rgba(0,0,0,0.45); border-radius: 12px; padding: clamp(28px, 5.5vw, 65px); position: relative; color: #1e293b;">
+        <!-- Full-Page Main Content Area (Spacious Full Width) -->
+        <div class="container" style="max-width: 1350px; width: 100%; margin: 0 auto; padding: clamp(24px, 4vw, 50px) clamp(16px, 3.5vw, 40px); box-sizing: border-box;">
 
-                <!-- Double Gold Top Trim -->
-                <div style="position: absolute; top: 0; left: 0; right: 0; height: 6px; background: linear-gradient(90deg, #997520, #F3E5AB, #D4AF37, #997520); border-radius: 10px 10px 0 0;"></div>
-
-                <!-- Section 1: Chamber Owner (Full Uncropped Image in Middle & Owner Name) -->
-                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-top: 4px solid #D4AF37; border-radius: 12px; padding: clamp(26px, 4vw, 38px) 24px; margin-bottom: 35px; box-shadow: 0 4px 18px rgba(0,0,0,0.04); text-align: center;">
-                    <div style="font-size: 13px; font-weight: 800; letter-spacing: 3px; color: #b48608; text-transform: uppercase; margin-bottom: 8px;">
-                        CHAMBER OWNER
+            <!-- Section 1: Chamber Owner & Principal Counsel -->
+            <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-top: 4px solid #D4AF37; border-radius: 14px; box-shadow: 0 10px 30px rgba(10,22,40,0.06); padding: clamp(28px, 4vw, 48px) clamp(20px, 3.5vw, 42px); margin-bottom: 40px;">
+                <div class="about-fullscreen-grid" style="display: grid; grid-template-columns: minmax(280px, 380px) 1fr; gap: 40px; align-items: center;">
+                    <!-- Full Uncropped Owner Image -->
+                    <div style="width: 100%; max-width: 380px; margin: 0 auto; border: 3px solid #D4AF37; border-radius: 12px; box-shadow: 0 12px 35px rgba(10,22,40,0.18); background: #0A1628; padding: 8px; box-sizing: border-box;">
+                        <img id="about-doc-owner-img" src="assets/images/advocate_logo.jpg" alt="Chamber Owner" style="width: 100%; height: auto; max-height: 520px; object-fit: contain; display: block; border-radius: 8px; margin: 0 auto;">
                     </div>
 
-                    <h2 id="about-doc-owner-name" style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(1.6rem, 2.8vw, 2.2rem); color: #0A1628; margin: 0 0 24px 0; font-weight: 700; letter-spacing: 0.5px;">
-                        Chamber Owner
+                    <!-- Owner Credentials & Authority -->
+                    <div>
+                        <div style="font-size: 12px; font-weight: 800; letter-spacing: 3px; color: #b48608; text-transform: uppercase; margin-bottom: 8px;">
+                            CHAMBER OWNER
+                        </div>
+                        <h2 id="about-doc-owner-name" style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(1.8rem, 3vw, 2.6rem); color: #0A1628; margin: 0 0 14px 0; font-weight: 700; letter-spacing: 0.5px;">
+                            Chamber Owner
+                        </h2>
+                        <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(10,22,40,0.05); border: 1px solid rgba(212,175,55,0.4); padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 700; color: #0A1628; margin-bottom: 18px;">
+                            🏛️ Directing Strategic Advocacy & Chamber Jurisprudence
+                        </div>
+                        <p style="font-family: 'Georgia', serif; font-size: 15.5px; line-height: 1.85; color: #475569; margin: 0;">
+                            Directing strategic advocacy, constitutional litigation, complex civil disputes, and trial counsel. Guided by thorough courtroom scholarship, documentary preparation, and uncompromising trial discipline across High Courts and the Supreme Court of India.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Vision & Institutional Goals -->
+            <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-left: 5px solid #D4AF37; border-radius: 10px; padding: clamp(24px, 3.5vw, 36px); margin-bottom: 40px; box-shadow: 0 8px 24px rgba(0,0,0,0.04);">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+                    <span style="font-size: 24px;">🎯</span>
+                    <h2 style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(1.3rem, 2vw, 1.6rem); color: #0A1628; margin: 0; font-weight: 700;">
+                        Institutional Vision & Strategic Goals
                     </h2>
-
-                    <!-- Full Uncropped Owner Image in Middle -->
-                    <div style="margin: 0 auto; max-width: 400px; width: 100%; border: 3px solid #D4AF37; border-radius: 10px; box-shadow: 0 12px 35px rgba(10,22,40,0.22); background: #0A1628; padding: 6px; box-sizing: border-box;">
-                        <img id="about-doc-owner-img" src="assets/images/advocate_logo.jpg" alt="Chamber Owner" style="width: 100%; height: auto; max-height: 520px; object-fit: contain; display: block; border-radius: 6px; margin: 0 auto;">
-                    </div>
                 </div>
-
-                <!-- Section 2: Vision & Institutional Goals -->
-                <div style="background: #f8fafc; border-left: 4px solid #0A1628; border-radius: 0 10px 10px 0; padding: 24px 28px; margin-bottom: 35px; box-shadow: 0 3px 12px rgba(0,0,0,0.03);">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
-                        <span style="font-size: 20px;">🎯</span>
-                        <h2 style="font-family: 'Playfair Display', Georgia, serif; font-size: 1.35rem; color: #0A1628; margin: 0; font-weight: 700;">
-                            Institutional Vision & Goals
-                        </h2>
-                    </div>
-                    <div id="about-doc-vision" style="font-size: 15.5px; line-height: 1.85; color: #334155; font-family: 'Georgia', serif; white-space: pre-wrap;">
+                <div id="about-doc-vision" style="font-size: 16px; line-height: 1.9; color: #334155; font-family: 'Georgia', serif; white-space: pre-wrap;">
 Our vision is to provide unparalleled strategic clarity and fearless legal advocacy. Our goal is to ensure each client matter is backed by thorough documentary preparation, jurisdictional mastery, and uncompromising integrity in every court of law.
-                    </div>
                 </div>
+            </div>
 
-                <!-- Section 3: Full Chamber Profile, History & Case-Management Philosophy -->
-                <div style="margin-bottom: 40px; padding: 0 4px;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
-                        <span style="font-size: 20px;">📜</span>
-                        <h2 style="font-family: 'Playfair Display', Georgia, serif; font-size: 1.45rem; color: #0A1628; margin: 0; font-weight: 700;">
-                            Chamber Background & Jurisprudential Philosophy
-                        </h2>
-                    </div>
-                    <div id="about-doc-text" style="font-size: 16px; line-height: 1.9; color: #2d3748; font-family: 'Georgia', serif; white-space: pre-wrap;">
+            <!-- Section 3: Full Chamber Profile, History & Case-Management Philosophy -->
+            <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: clamp(26px, 4vw, 42px); margin-bottom: 40px; box-shadow: 0 8px 24px rgba(0,0,0,0.04);">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 14px;">
+                    <span style="font-size: 24px;">📜</span>
+                    <h2 style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(1.35rem, 2.2vw, 1.7rem); color: #0A1628; margin: 0; font-weight: 700;">
+                        Chamber Background & Jurisprudential Philosophy
+                    </h2>
+                </div>
+                <div id="about-doc-text" style="font-size: 16px; line-height: 1.95; color: #2d3748; font-family: 'Georgia', serif; white-space: pre-wrap;">
 Welcome to JSM. Chambers — an independent private legal organization dedicated to professional legal consultation, strategic advocacy and comprehensive case-management support for complex matters.
 
 Founded on the timeless principles of precision, integrity, and client-centric representation, our chamber brings together experienced legal minds equipped to handle civil disputes, corporate compliance, writ petitions, and appellate proceedings.
 
 Our practitioners emphasize meticulous research, structured documentary review, and disciplined trial strategy to ensure each matter receives the strategic depth and tactical focus it demands.
-                    </div>
                 </div>
-
-                <!-- Section 5: Institutional Tenets & Seal -->
-                <div style="border-top: 2px solid #e2e8f0; padding-top: 30px; margin-top: 20px;">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 30px;">
-                        <div style="padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
-                            <div style="font-size: 22px; margin-bottom: 6px;">⚖️</div>
-                            <strong style="color: #0A1628; font-size: 14px;">Strategic Advocacy</strong>
-                        </div>
-                        <div style="padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
-                            <div style="font-size: 22px; margin-bottom: 6px;">🔒</div>
-                            <strong style="color: #0A1628; font-size: 14px;">Privilege & Ethics</strong>
-                        </div>
-                        <div style="padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
-                            <div style="font-size: 22px; margin-bottom: 6px;">📜</div>
-                            <strong style="color: #0A1628; font-size: 14px;">Documentary Rigor</strong>
-                        </div>
-                        <div style="padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
-                            <div style="font-size: 22px; margin-bottom: 6px;">🏛️</div>
-                            <strong style="color: #0A1628; font-size: 14px;">Constitutional Law</strong>
-                        </div>
-                    </div>
-                    <div style="text-align: center; font-size: 12px; color: #64748b; font-style: italic;">
-                        “Fiat Justitia Ruat Caelum — Let Justice Be Done Though The Heavens Fall”
-                    </div>
-                </div>
-
-                <!-- Bottom Back Button inside Document -->
-                <div style="text-align: center; margin-top: 35px; padding-top: 25px; border-top: 1px dashed #cbd5e1;">
-                    <button class="fullscreen-back-btn" onclick="closeAboutFullscreen()" style="padding: 13px 40px; font-size: 15px;">
-                        ← Back to Dashboard
-                    </button>
-                </div>
-
             </div>
+
+            <!-- Section 4: Institutional Tenets & Seal -->
+            <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: clamp(26px, 4vw, 42px); margin-bottom: 45px; box-shadow: 0 8px 24px rgba(0,0,0,0.04);">
+                <div style="text-align: center; margin-bottom: 25px;">
+                    <span style="color: #D4AF37; font-size: 11px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase;">Pillars of Practice</span>
+                    <h3 style="font-family: 'Playfair Display', Georgia, serif; font-size: 1.5rem; color: #0A1628; margin: 6px 0 0 0;">Institutional Pillars & Standards</h3>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                    <div style="padding: 22px 18px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                        <div style="font-size: 26px; margin-bottom: 8px;">⚖️</div>
+                        <strong style="color: #0A1628; font-size: 15px; display: block; margin-bottom: 6px;">Strategic Advocacy</strong>
+                        <span style="color: #64748b; font-size: 13px; line-height: 1.5; display: block;">Disciplined preparation and focused representation across every courtroom.</span>
+                    </div>
+                    <div style="padding: 22px 18px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                        <div style="font-size: 26px; margin-bottom: 8px;">🔒</div>
+                        <strong style="color: #0A1628; font-size: 15px; display: block; margin-bottom: 6px;">Privilege & Ethics</strong>
+                        <span style="color: #64748b; font-size: 13px; line-height: 1.5; display: block;">Absolute confidentiality, fiduciary loyalty, and high ethical conduct.</span>
+                    </div>
+                    <div style="padding: 22px 18px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                        <div style="font-size: 26px; margin-bottom: 8px;">📜</div>
+                        <strong style="color: #0A1628; font-size: 15px; display: block; margin-bottom: 6px;">Documentary Rigor</strong>
+                        <span style="color: #64748b; font-size: 13px; line-height: 1.5; display: block;">Meticulous drafting, statutory review, and case-file indexing.</span>
+                    </div>
+                    <div style="padding: 22px 18px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                        <div style="font-size: 26px; margin-bottom: 8px;">🏛️</div>
+                        <strong style="color: #0A1628; font-size: 15px; display: block; margin-bottom: 6px;">Constitutional Law</strong>
+                        <span style="color: #64748b; font-size: 13px; line-height: 1.5; display: block;">Specialized petitioning for fundamental rights and judicial review.</span>
+                    </div>
+                </div>
+                <div style="text-align: center; font-size: 13px; color: #64748b; font-style: italic; border-top: 1px solid #e2e8f0; padding-top: 18px;">
+                    “Fiat Justitia Ruat Caelum — Let Justice Be Done Though The Heavens Fall”
+                </div>
+            </div>
+
+            <!-- Section 5: Prominent Bottom Back to Dashboard Option -->
+            <div style="text-align: center; padding: 40px 24px; background: #0A1628; border-radius: 14px; border: 1.5px solid #D4AF37; box-shadow: 0 10px 35px rgba(10,22,40,0.3); color: #ffffff;">
+                <h3 style="font-family: 'Playfair Display', Georgia, serif; font-size: 22px; color: #ffffff; margin: 0 0 10px 0;">Return to Main Chamber Portal</h3>
+                <p style="color: #cbd5e1; font-size: 14.5px; max-width: 650px; margin: 0 auto 24px auto; line-height: 1.6;">
+                    Explore our legal practice monographs, advocate team, daily opinions, and book a consultation with our litigation team.
+                </p>
+                <button class="fullscreen-back-btn" onclick="closeAboutFullscreen()" style="padding: 14px 44px; font-size: 16px; font-weight: 800; border-radius: 10px; background: #D4AF37; color: #0A1628; border: none; box-shadow: 0 6px 22px rgba(212,175,55,0.45); cursor: pointer; display: inline-flex; align-items: center; gap: 10px; transition: all 0.25s ease;" onmouseover="this.style.background='#F3E5AB';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#D4AF37';this.style.transform='none'">
+                    ← Back to Dashboard
+                </button>
+            </div>
+
         </div>
-</div>
+    </div>
 </div>
 
 <!-- =========================================================
