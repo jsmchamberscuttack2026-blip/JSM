@@ -175,6 +175,34 @@
         .btn-link-action:hover {
             color: var(--accent);
         }
+        .alert-lockout {
+            background: linear-gradient(135deg, #450a0a, #7f1d1d);
+            border: 2px solid #ef4444;
+            color: #ffffff;
+            padding: 16px 18px;
+            border-radius: 12px;
+            margin-bottom: 1.4rem;
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.35);
+            text-align: center;
+            animation: pulseAlert 2s infinite ease-in-out;
+        }
+        @keyframes pulseAlert {
+            0%, 100% { box-shadow: 0 8px 25px rgba(239, 68, 68, 0.35); }
+            50% { box-shadow: 0 8px 35px rgba(239, 68, 68, 0.6); }
+        }
+        .lockout-timer-val {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #ffffff;
+            font-family: monospace;
+            letter-spacing: 3px;
+            background: #991b1b;
+            padding: 5px 16px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-top: 8px;
+            border: 1px solid #fca5a5;
+        }
     </style>
     <meta name="google-site-verification" content="Cb6ak0wetmxY9fGq95lyGFJI2XIfWpdpoZRLJ_e-4RY" />
 </head>
@@ -199,6 +227,16 @@
                     <div class="chamber-badge">⚖️</div>
                     <h2>Admin Portal</h2>
                     <p>Enter Master Credentials to Request 2FA Code</p>
+                </div>
+
+                <div id="alert-lockout-box" class="alert-lockout" style="display: none;">
+                    <div style="font-size: 1.8rem; margin-bottom: 4px;">🚨</div>
+                    <div style="font-weight: 800; font-size: 1.05rem; letter-spacing: 0.5px; text-transform: uppercase;">PORTAL LOCKED DOWN</div>
+                    <p style="margin: 6px 0 10px 0; font-size: 0.85rem; color: #fecaca; line-height: 1.45;">
+                        3 consecutive failed login attempts detected. For security, the admin portal has been locked for 5 minutes. An intruder alert with IP address has been dispatched to official &amp; security officer emails.
+                    </p>
+                    <div style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1.5px; color: #fca5a5; font-weight: 700;">Time Remaining Before Unlock:</div>
+                    <div class="lockout-timer-val" id="lockout-countdown-display">05:00</div>
                 </div>
 
                 <div id="alert-step1" class="alert-box alert-error"></div>
@@ -265,6 +303,8 @@
     <script>
         let countdownInterval = null;
         let timeLeft = 300; // 5 minutes in seconds
+        let lockoutInterval = null;
+        let lockoutTimeLeft = 0;
 
         function showAlert(step, message, type = 'error') {
             const el = document.getElementById(`alert-${step}`);
@@ -277,6 +317,55 @@
         function hideAlert(step) {
             const el = document.getElementById(`alert-${step}`);
             if (el) el.style.display = 'none';
+        }
+
+        function triggerLockdown(seconds = 300) {
+            if (lockoutInterval) clearInterval(lockoutInterval);
+            lockoutTimeLeft = seconds;
+            
+            const box = document.getElementById('alert-lockout-box');
+            const display = document.getElementById('lockout-countdown-display');
+            const btn = document.getElementById('btn-submit-step1');
+            const userIn = document.getElementById('admin-id');
+            const passIn = document.getElementById('password');
+
+            if (box) box.style.display = 'block';
+            if (btn) btn.disabled = true;
+            if (userIn) userIn.disabled = true;
+            if (passIn) passIn.disabled = true;
+
+            const updateLockoutUI = () => {
+                const m = Math.floor(lockoutTimeLeft / 60);
+                const s = lockoutTimeLeft % 60;
+                if (display) display.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            };
+            updateLockoutUI();
+
+            lockoutInterval = setInterval(() => {
+                lockoutTimeLeft--;
+                updateLockoutUI();
+                if (lockoutTimeLeft <= 0) {
+                    clearInterval(lockoutInterval);
+                    lockoutInterval = null;
+                    if (box) box.style.display = 'none';
+                    if (btn) btn.disabled = false;
+                    if (userIn) userIn.disabled = false;
+                    if (passIn) passIn.disabled = false;
+                    showAlert('step1', '✅ Portal lockdown expired. You may now attempt to log in with your master credentials.', 'success');
+                }
+            }, 1000);
+        }
+
+        async function checkLockStatus() {
+            try {
+                const res = await fetch('/api/admin-lock-status');
+                const data = await res.json();
+                if (data.locked && data.remaining_seconds > 0) {
+                    triggerLockdown(data.remaining_seconds);
+                }
+            } catch(e) {
+                console.warn('Could not check admin lock status:', e);
+            }
         }
 
         function startCountdown(seconds = 300) {
@@ -321,6 +410,7 @@
             hideAlert('step2');
             document.getElementById('step-2fa').style.display = 'none';
             document.getElementById('step-credentials').style.display = 'block';
+            checkLockStatus();
         }
 
         // STEP 1: SUBMIT CREDENTIALS
@@ -343,7 +433,11 @@
                 });
                 const data = await response.json();
 
-                if (response.ok && data.requires_2fa) {
+                if (response.status === 423 || data.locked) {
+                    // 3 Failed Attempts Lockout
+                    triggerLockdown(data.lockout_remaining_seconds || 300);
+                    showAlert('step1', data.error || '🚨 Admin portal locked for 5 minutes due to 3 failed login attempts. Security alert dispatched with IP address.');
+                } else if (response.ok && data.requires_2fa) {
                     // Transition to 2FA Step
                     document.getElementById('step-credentials').style.display = 'none';
                     document.getElementById('step-2fa').style.display = 'block';
@@ -353,7 +447,7 @@
                     showAlert('step2', `✅ A 6-digit OTP code has been sent to <strong>${data.target_email || 'jsmchamberscuttack2026@gmail.com'}</strong>. Code is valid for 5 minutes.`, 'info');
                     startCountdown(data.expires_in_seconds || 300);
                 } else if (response.ok && !data.requires_2fa) {
-                    // Direct access fallback (if 2fa disabled)
+                    // Direct access fallback
                     sessionStorage.setItem('adminLoggedIn', 'true');
                     window.location.href = 'admin-dashboard.html';
                 } else {
@@ -363,9 +457,14 @@
                 showAlert('step1', 'Unable to connect to the authentication server. Please try again.');
             } finally {
                 btn.innerHTML = origText;
-                btn.disabled = false;
+                if (!lockoutInterval) {
+                    btn.disabled = false;
+                }
             }
         });
+
+        // Initialize lock check on page load
+        document.addEventListener('DOMContentLoaded', checkLockStatus);
 
         // STEP 2: VERIFY OTP
         document.getElementById('admin-otp-form').addEventListener('submit', async function(e) {

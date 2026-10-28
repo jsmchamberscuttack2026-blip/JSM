@@ -1075,6 +1075,10 @@ if (officeInfoForm) {
         });
     }
             if (data.allow_common_password !== undefined) document.getElementById('admin-allow-common-pwd').checked = data.allow_common_password;
+            if (data.security_officer_email) {
+                const secEl = document.getElementById('admin-security-officer-email');
+                if (secEl) secEl.value = data.security_officer_email;
+            }
             if (data.chamber_name) document.getElementById('admin-chamber-name').value = data.chamber_name;
             if (data.address) document.getElementById('admin-address').value = data.address;
             if (data.phone) document.getElementById('admin-phone').value = data.phone;
@@ -1162,6 +1166,7 @@ if (officeInfoForm) {
     officeInfoForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const allow_common_password = document.getElementById('admin-allow-common-pwd').checked;
+        const security_officer_email = document.getElementById('admin-security-officer-email') ? document.getElementById('admin-security-officer-email').value.trim() : '';
         const chamber_name = document.getElementById('admin-chamber-name').value;
         const address = document.getElementById('admin-address').value;
         const phone = document.getElementById('admin-phone').value;
@@ -1184,6 +1189,7 @@ if (officeInfoForm) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     allow_common_password, 
+                    security_officer_email,
                     chamber_name, 
                     address, 
                     phone, 

@@ -317,6 +317,144 @@ JSM Chambers | Cuttack, Odisha
     msg.attach(MIMEText(html, 'html', 'utf-8'))
     return send_email_core(recipient_email, msg, subject)
 
+def get_client_ip():
+    if request.headers.get('X-Forwarded-For'):
+        return request.headers.get('X-Forwarded-For').split(',')[0].strip()
+    if request.headers.get('X-Real-IP'):
+        return request.headers.get('X-Real-IP').strip()
+    return request.remote_addr or '127.0.0.1'
+
+def get_admin_lockout_doc():
+    if config_col is None:
+        return {}
+    return config_col.find_one({"_id": "admin_security_lockout"}) or {}
+
+def is_admin_locked():
+    lock_doc = get_admin_lockout_doc()
+    locked_until_ts = lock_doc.get("locked_until_timestamp", 0)
+    now_ts = get_now_ist().timestamp()
+    if now_ts < locked_until_ts:
+        remaining_seconds = max(0, int(locked_until_ts - now_ts))
+        return True, remaining_seconds, lock_doc
+    return False, 0, lock_doc
+
+def send_admin_security_alert_email(ip_address, user_agent, attempted_user, expiry_time_str):
+    recipients = ["jsmchamberscuttack2026@gmail.com"]
+    sec_officer = ""
+    try:
+        if settings_col is not None:
+            setting_doc = settings_col.find_one({"_id": "office_info"}) or {}
+            sec_officer = (setting_doc.get("security_officer_email") or "").strip()
+            if sec_officer and "@" in sec_officer and sec_officer.lower() not in [r.lower() for r in recipients]:
+                recipients.append(sec_officer)
+    except Exception as e:
+        logging.error(f"Error fetching security officer email: {e}")
+
+    now_ist_str = get_now_ist().strftime("%d %b %Y, %I:%M:%S %p")
+    subject = f"🚨 [CRITICAL ALERT] Admin Portal Locked - 3 Failed Logins Detected (IP: {ip_address})"
+
+    text = f"""JSM CHAMBERS - CRITICAL SECURITY BREACH ALERT
+=============================================================
+
+ALERT: Administrative Login Portal Locked Down!
+3 consecutive failed login attempts were detected from an unknown or unauthorized user.
+
+INCIDENT REPORT:
+- Intruder IP Address: {ip_address}
+- Incident Timestamp: {now_ist_str} IST
+- Attempted User ID: {attempted_user}
+- Client Device / User Agent: {user_agent}
+- Protective Action: Admin Portal has been LOCKED for 5 MINUTES.
+- Lockout Expiration: {expiry_time_str} IST
+
+All administrative login requests are currently blocked until {expiry_time_str} IST.
+If this attempt was unauthorized, please review server access logs immediately.
+
+Recipients Notified:
+- Chamber Official Email: jsmchamberscuttack2026@gmail.com
+""" + (f"- Security Officer Email: {sec_officer}\n" if sec_officer else "") + """
+JSM Chambers Security Operations | Cuttack, Odisha
+"""
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f19; margin: 0; padding: 24px;">
+  <div style="max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 14px; overflow: hidden; border: 2px solid #dc2626; box-shadow: 0 15px 50px rgba(220, 38, 38, 0.35);">
+    <div style="background: linear-gradient(135deg, #7f1d1d, #991b1b, #450a0a); padding: 28px 30px; text-align: center; border-bottom: 3px solid #f87171;">
+      <div style="font-size: 32px; margin-bottom: 6px;">🚨</div>
+      <h2 style="color: #ffffff; margin: 0; font-family: Georgia, serif; font-size: 23px; letter-spacing: 1px;">CRITICAL SECURITY ALERT</h2>
+      <p style="color: #fca5a5; margin: 6px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700;">Admin Portal Brute-Force Lockout Activated</p>
+    </div>
+    
+    <div style="padding: 30px;">
+      <div style="background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 10px; padding: 16px; margin-bottom: 22px;">
+        <div style="color: #991b1b; font-weight: 800; font-size: 14.5px; margin-bottom: 6px;">⚠️ 3 Consecutive Failed Login Attempts Detected</div>
+        <p style="color: #7f1d1d; font-size: 13.5px; line-height: 1.55; margin: 0;">
+          An unauthorized client or potential intruder repeatedly attempted to access the <strong>JSM Chambers Admin Panel</strong> with incorrect credentials. To safeguard case files and sensitive data, the portal has been <strong>strictly locked for 5 minutes</strong>.
+        </p>
+      </div>
+
+      <div style="font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;">📋 Incident Telemetry & Attacker Details</div>
+      
+      <table style="width: 100%; border-collapse: collapse; font-size: 13.5px; background: #f8fafc; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;">
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 11px 14px; font-weight: 700; color: #334155; width: 38%;">Attacker IP Address:</td>
+          <td style="padding: 11px 14px; font-weight: 800; color: #b91c1c; font-family: monospace; font-size: 14.5px;">{ip_address}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
+          <td style="padding: 11px 14px; font-weight: 700; color: #334155;">Incident Timestamp:</td>
+          <td style="padding: 11px 14px; color: #1e293b; font-weight: 600;">{now_ist_str} IST</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 11px 14px; font-weight: 700; color: #334155;">Attempted Username:</td>
+          <td style="padding: 11px 14px; color: #0f172a; font-weight: 700; font-family: monospace;">{attempted_user}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
+          <td style="padding: 11px 14px; font-weight: 700; color: #334155;">Protection Status:</td>
+          <td style="padding: 11px 14px; color: #991b1b; font-weight: 800;">🔒 LOCKED FOR 5 MINUTES</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 11px 14px; font-weight: 700; color: #334155;">Lockout Expiration:</td>
+          <td style="padding: 11px 14px; color: #15803d; font-weight: 700;">{expiry_time_str} IST</td>
+        </tr>
+        <tr style="background: #ffffff;">
+          <td style="padding: 11px 14px; font-weight: 700; color: #334155; vertical-align: top;">Client User-Agent:</td>
+          <td style="padding: 11px 14px; color: #64748b; font-size: 11.5px; font-family: monospace; word-break: break-all;">{user_agent}</td>
+        </tr>
+      </table>
+
+      <div style="margin-top: 24px; padding: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+        <div style="font-weight: 700; color: #166534; font-size: 13px; margin-bottom: 4px;">🛡️ Automated Defense Activated</div>
+        <p style="margin: 0; color: #15803d; font-size: 12.5px; line-height: 1.5;">
+          All login requests to the Admin Panel will be rejected automatically until {expiry_time_str} IST. If you did not authorize this login attempt, please notify the chamber administrator immediately.
+        </p>
+      </div>
+    </div>
+    
+    <div style="background: #0f172a; padding: 16px 30px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #1e293b;">
+      JSM Chambers Cyber Defense &bull; Dispatched to Official Chamber &amp; Security Officer Inboxes
+    </div>
+  </div>
+</body>
+</html>
+"""
+    results = {}
+    for r in recipients:
+        try:
+            msg = MIMEMultipart('alternative')
+            msg['Date'] = formatdate(localtime=True)
+            msg['Message-ID'] = make_msgid()
+            msg['From'] = f"JSM Security Sentinel <{SMTP_USER}>"
+            msg['To'] = r
+            msg['Subject'] = subject
+            msg.attach(MIMEText(text, 'plain', 'utf-8'))
+            msg.attach(MIMEText(html, 'html', 'utf-8'))
+            results[r] = send_email_core(r, msg, subject)
+        except Exception as e:
+            results[r] = {"success": False, "error": str(e)}
+    return results
+
 def send_appointment_received_email(recipient_email, name):
     msg = MIMEMultipart('alternative')
     msg['Date'] = formatdate(localtime=True)
@@ -1276,14 +1414,47 @@ def delete_staff_email_logs(email):
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/admin-lock-status', methods=['GET'])
+def admin_lock_status():
+    is_locked, remaining_seconds, lock_doc = is_admin_locked()
+    return jsonify({
+        "locked": is_locked,
+        "remaining_seconds": remaining_seconds,
+        "failed_attempts": lock_doc.get("failed_attempts", 0),
+        "locked_until": lock_doc.get("locked_until_iso")
+    }), 200
+
 @app.route('/api/admin-login', methods=['POST'])
 def admin_login():
     data = request.get_json(force=True, silent=True) or {}
     user_id = (data.get('email') or data.get('admin_id') or '').strip()
     password = data.get('password', '').strip()
     
-    # Check both the User ID and the Password
+    # 1. Enforce active lockout
+    is_locked, rem_secs, lock_doc = is_admin_locked()
+    if is_locked:
+        rem_min = (rem_secs + 59) // 60
+        return jsonify({
+            "error": f"Security Lockdown Active: Admin portal is locked for {rem_min} minute(s) due to multiple failed login attempts. No requests accepted.",
+            "locked": True,
+            "lockout_remaining_seconds": rem_secs,
+            "locked_until": lock_doc.get("locked_until_iso")
+        }), 423
+    
+    # 2. Check credentials
     if user_id == 'JSM' and password == 'JAYA@CDA11':
+        # Valid login: reset failed attempts counter
+        if config_col is not None:
+            config_col.update_one(
+                {"_id": "admin_security_lockout"},
+                {"$set": {
+                    "failed_attempts": 0,
+                    "locked_until_timestamp": 0,
+                    "last_successful_login": get_now_ist().isoformat()
+                }},
+                upsert=True
+            )
+
         # Generate 6-digit OTP valid for 5 minutes
         otp = str(random.randint(100000, 999999))
         now_ist = get_now_ist()
@@ -1314,10 +1485,89 @@ def admin_login():
             "email_sent": email_sent
         }), 200
     
-    return jsonify({"error": "Invalid credentials"}), 401
+    # 3. Failed attempt handling
+    client_ip = get_client_ip()
+    user_agent = request.headers.get('User-Agent', 'Unknown Device')
+    now_ist = get_now_ist()
+    current_fails = int(lock_doc.get("failed_attempts", 0)) + 1
+    
+    if current_fails >= 3:
+        # Lockout triggered for 5 minutes (300 seconds)
+        locked_until = now_ist + timedelta(minutes=5)
+        locked_until_ts = locked_until.timestamp()
+        locked_until_iso = locked_until.isoformat()
+        expiry_str = locked_until.strftime("%I:%M %p")
+        
+        if config_col is not None:
+            config_col.update_one(
+                {"_id": "admin_security_lockout"},
+                {"$set": {
+                    "failed_attempts": current_fails,
+                    "locked_until_timestamp": locked_until_ts,
+                    "locked_until_iso": locked_until_iso,
+                    "last_failed_ip": client_ip,
+                    "last_failed_user_agent": user_agent,
+                    "last_failed_time": now_ist.isoformat(),
+                    "last_attempted_user": user_id
+                },
+                "$push": {
+                    "attempt_history": {
+                        "$each": [{
+                            "ip": client_ip,
+                            "user_agent": user_agent,
+                            "attempted_user": user_id,
+                            "timestamp": now_ist.isoformat()
+                        }],
+                        "$slice": -10
+                    }
+                }},
+                upsert=True
+            )
+            
+        # Dispatch emergency security breach alert with IP address to official email + security officer
+        alert_sent = send_admin_security_alert_email(client_ip, user_agent, user_id or "Anonymous/Blank", expiry_str)
+        
+        return jsonify({
+            "error": "🚨 CRITICAL SECURITY ALERT: 3 consecutive failed login attempts detected. The admin portal has been locked for 5 minutes. Security alert dispatched with IP address.",
+            "locked": True,
+            "lockout_remaining_seconds": 300,
+            "locked_until": expiry_str,
+            "attempts_left": 0,
+            "alert_sent": alert_sent
+        }), 423
+    else:
+        # Under 3 attempts: record failure and warn user
+        if config_col is not None:
+            config_col.update_one(
+                {"_id": "admin_security_lockout"},
+                {"$set": {
+                    "failed_attempts": current_fails,
+                    "last_failed_ip": client_ip,
+                    "last_failed_user_agent": user_agent,
+                    "last_failed_time": now_ist.isoformat(),
+                    "last_attempted_user": user_id
+                }},
+                upsert=True
+            )
+        attempts_left = 3 - current_fails
+        return jsonify({
+            "error": f"Invalid Admin ID or Password. Warning: {attempts_left} attempt(s) remaining before security lockout (5 minutes).",
+            "attempts_left": attempts_left,
+            "failed_attempts": current_fails,
+            "locked": False
+        }), 401
 
 @app.route('/api/admin-verify-otp', methods=['POST'])
 def admin_verify_otp():
+    is_locked, rem_secs, lock_doc = is_admin_locked()
+    if is_locked:
+        rem_min = (rem_secs + 59) // 60
+        return jsonify({
+            "error": f"Security Lockdown Active: Admin portal is locked for {rem_min} minute(s). No requests accepted.",
+            "locked": True,
+            "lockout_remaining_seconds": rem_secs
+        }), 423
+
     data = request.get_json(force=True, silent=True) or {}
     otp = str(data.get('otp', '')).strip()
     
@@ -1353,6 +1603,15 @@ def admin_verify_otp():
 
 @app.route('/api/admin-resend-otp', methods=['POST'])
 def admin_resend_otp():
+    is_locked, rem_secs, lock_doc = is_admin_locked()
+    if is_locked:
+        rem_min = (rem_secs + 59) // 60
+        return jsonify({
+            "error": f"Security Lockdown Active: Admin portal is locked for {rem_min} minute(s). No requests accepted.",
+            "locked": True,
+            "lockout_remaining_seconds": rem_secs
+        }), 423
+
     if config_col is None:
         return jsonify({"error": "DB error"}), 500
         
