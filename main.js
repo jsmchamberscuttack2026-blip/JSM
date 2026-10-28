@@ -1161,16 +1161,19 @@ window.navToPage = function(page) {
         window.openAboutFullscreen();
     } else if (page === 'expertise') {
         window.openExpertiseFullscreen();
-    } else if (page === 'staffs') {
+    } else if (page === 'staffs' || page === 'members') {
         window.openStaffsFullscreen();
     } else if (page === 'contact') {
         window.openContactFullscreen();
     }
 };
 
+window.openMembersFullscreen = window.openStaffsFullscreen;
+window.closeMembersFullscreen = window.closeStaffsFullscreen;
 window.toggleAboutSection = window.openAboutFullscreen;
 window.toggleExpertiseSection = window.openExpertiseFullscreen;
 window.toggleStaffsSection = window.openStaffsFullscreen;
+window.toggleMembersSection = window.openStaffsFullscreen;
 window.toggleContactSection = window.openContactFullscreen;
 
 document.addEventListener('keydown', (e) => {

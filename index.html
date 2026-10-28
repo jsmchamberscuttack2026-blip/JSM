@@ -2533,7 +2533,7 @@ window.navToPage = window.navToPage || function(page) {
     } else if (page === 'expertise') {
         if (typeof openExpertiseFullscreen === 'function') openExpertiseFullscreen();
         else if (expEl) { expEl.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
-    } else if (page === 'staffs') {
+    } else if (page === 'staffs' || page === 'members') {
         if (typeof openStaffsFullscreen === 'function') openStaffsFullscreen();
         else if (staffEl) { staffEl.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
     } else if (page === 'contact') {
@@ -2576,7 +2576,7 @@ PRIVATE LEGAL ORGANIZATION
     <a href="#home" onclick="event.preventDefault(); navToPage('home');">Home</a>
     <a href="#about" onclick="event.preventDefault(); navToPage('about');">About</a>
     <a href="#expertise" onclick="event.preventDefault(); navToPage('expertise');">Expertise</a>
-    <a href="#staffs" onclick="event.preventDefault(); navToPage('staffs');">Staffs</a>
+    <a href="#members" onclick="event.preventDefault(); navToPage('members');">Members</a>
     <a href="#contact" onclick="event.preventDefault(); navToPage('contact');">Contact Us</a>
     <a href="client-login.html" class="nav-login" onclick="closeMobileMenu()">Client Login</a>
 </nav>
@@ -3236,13 +3236,10 @@ Clear communication
                             CHAMBER OWNER
                         </div>
                         <h2 id="about-doc-owner-name" style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(1.8rem, 3vw, 2.6rem); color: #0A1628; margin: 0 0 14px 0; font-weight: 700; letter-spacing: 0.5px;">
-                            Chamber Owner
+                            Adv. Jayasankar Mishra
                         </h2>
-                        <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(10,22,40,0.05); border: 1px solid rgba(212,175,55,0.4); padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 700; color: #0A1628; margin-bottom: 18px;">
-                            🏛️ Directing Strategic Advocacy & Chamber Jurisprudence
-                        </div>
-                        <p style="font-family: 'Georgia', serif; font-size: 15.5px; line-height: 1.85; color: #475569; margin: 0;">
-                            Directing strategic advocacy, constitutional litigation, complex civil disputes, and trial counsel. Guided by thorough courtroom scholarship, documentary preparation, and uncompromising trial discipline across High Courts and the Supreme Court of India.
+                        <p style="font-family: 'Georgia', serif; font-size: 16px; line-height: 1.85; color: #334155; margin: 0;">
+                            35 years of advocacy; specialized in Constitutional Law, Civil Law, Insurance and Banking Law, Education and Technical Education Law, Service and Industrial Law, Land.
                         </p>
                     </div>
                 </div>
@@ -3349,7 +3346,7 @@ Our practitioners emphasize meticulous research, structured documentary review, 
             <h2 class="split-banner-title">ABOUT THIS CHAMBER</h2>
             <div class="split-banner-line"></div>
             <p class="split-banner-desc" id="about-banner-short-desc">
-                An independent private legal organization committed to professional consultation, strategic advocacy, and comprehensive case-management support for complex legal matters. Guided by courtroom scholarship and trial discipline.
+                An independent legal practitioner committed to professional legal consultation, strategic advocacy, and comprehensive case-management support for complex legal matters. Adv. Jayasankar Mishra is dedicated to upholding the principles of justice, legal integrity, and professional excellence, guided by courtroom expertise, meticulous case preparation, and disciplined trial practice.
             </p>
             <div>
                 <button class="btn btn-primary" onclick="openAboutFullscreen()" style="box-shadow: 0 4px 20px rgba(212,175,55,0.35); font-size: 15px; padding: 13px 32px; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 10px; cursor: pointer;">
@@ -3509,14 +3506,14 @@ Our practitioners emphasize meticulous research, structured documentary review, 
         <!-- Right Side: Content & Action Button -->
         <div class="split-banner-content-side">
             <div class="split-banner-kicker">Legal Counsel & Chamber Team</div>
-            <h2 class="split-banner-title">OUR STAFFS</h2>
+            <h2 class="split-banner-title">OUR MEMBERS</h2>
             <div class="split-banner-line"></div>
             <p class="split-banner-desc">
-                Distinguished advocates, senior counsel, partners, and chamber legal staff committed to courtroom excellence, strategic litigation, and dedicated client representation.
+                Distinguished advocates, senior counsel, partners, and chamber legal members committed to courtroom excellence, strategic litigation, and dedicated client representation.
             </p>
             <div>
                 <button class="btn btn-primary" onclick="openStaffsFullscreen()" style="box-shadow: 0 4px 20px rgba(212,175,55,0.35); font-size: 15px; padding: 13px 32px; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 10px;">
-                    <span>Meet Our Staffs</span>
+                    <span>Meet Our Members</span>
                     <span style="font-size: 18px;">→</span>
                 </button>
             </div>
@@ -3532,7 +3529,7 @@ Our practitioners emphasize meticulous research, structured documentary review, 
             ← Back to Dashboard
         </button>
         <div class="fullscreen-topbar-title">
-            👥 Advocates & Legal Staff
+            👥 Advocates & Chamber Members
         </div>
         <button class="fullscreen-close-btn" onclick="closeStaffsFullscreen()" title="Close full screen">
             ✕
@@ -3545,10 +3542,10 @@ Our practitioners emphasize meticulous research, structured documentary review, 
         <div style="background: linear-gradient(135deg, #071322 0%, #0A1628 100%); border-bottom: 3px solid #D4AF37; padding: clamp(35px, 5vw, 60px) 20px; text-align: center; color: #ffffff; width: 100%; box-sizing: border-box;">
             <div style="max-width: 1200px; margin: 0 auto;">
                 <div style="display: inline-flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: 3px; color: #D4AF37; text-transform: uppercase; margin-bottom: 12px; background: rgba(212,175,55,0.12); border: 1px solid rgba(212,175,55,0.3); padding: 5px 14px; border-radius: 9999px;">
-                    👥 CHAMBER PROFESSIONALS & COUNSEL
+                    👥 CHAMBER MEMBERS & ADVOCATES
                 </div>
                 <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2rem, 4vw, 3.4rem); color: #ffffff; margin: 0 0 14px 0; letter-spacing: 1.5px; font-weight: 700;">
-                    ADVOCATES & LEGAL STAFF
+                    ADVOCATES & CHAMBER MEMBERS
                 </h1>
                 <div style="width: 70px; height: 3px; background: #D4AF37; margin: 0 auto 16px auto; border-radius: 2px;"></div>
                 <p style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: clamp(0.95rem, 1.4vw, 1.15rem); color: #cbd5e1; max-width: 850px; margin: 0 auto; line-height: 1.65;">
@@ -4255,7 +4252,7 @@ document.addEventListener("keydown", function(event){
 });
 
 </script>
-<script src="js/main.js?v=28"></script>
+<script src="js/main.js?v=29"></script>
 
 <!-- 3D Interactive Legal Book Modal -->
 <div id="service-book-modal" class="book-modal-backdrop">
