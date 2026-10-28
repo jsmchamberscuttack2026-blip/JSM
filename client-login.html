@@ -196,7 +196,10 @@ input:focus{
 
 <!-- VERIFY CODE FORM -->
 <form id="verify-form" style="display: none;">
-    <div class="subtitle">We sent a 6-digit code to your email. Enter it below to access your portal.</div>
+    <div class="subtitle" style="margin-bottom: 15px;">We sent a 6-digit verification code to your email. Enter it below to access your case file.</div>
+    
+    <div id="client-security-report" style="display: none; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 9px; padding: 12px; margin-bottom: 18px; font-size: 13px; color: #1e40af; text-align: center; line-height: 1.45;">
+    </div>
     
     <label>Verification Code</label>
     <input type="text" id="verify-code" placeholder="123456" required style="text-align: center; font-size: 1.5rem; letter-spacing: 5px;">
@@ -244,8 +247,9 @@ input:focus{
     // 2. Request Verification Code
     forgotForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        tempEmail = document.getElementById('forgot-email').value;
+        tempEmail = document.getElementById('forgot-email').value.trim();
         const btn = document.getElementById('request-code-btn');
+        const reportBox = document.getElementById('client-security-report');
         btn.innerText = 'Sending Code...';
         btn.disabled = true;
         errorMsg.style.display = 'none';
@@ -261,9 +265,17 @@ input:focus{
             if (response.ok) {
                 forgotForm.style.display = 'none';
                 verifyForm.style.display = 'block';
+                if (reportBox) {
+                    reportBox.style.display = 'block';
+                    const rem = data.attempts_left !== undefined ? data.attempts_left : 2;
+                    reportBox.innerHTML = `<strong>📊 Security Activity Report:</strong><br>Verification code sent to <strong>${tempEmail}</strong>.<br>You have <strong style="color: #1e3a8a;">${rem} login(s) remaining for today</strong> (Policy: Max 3 logins/day).`;
+                }
+            } else if (response.status === 429 || data.limit_reached) {
+                errorMsg.style.display = 'block';
+                errorMsg.innerHTML = `🚫 <strong>Daily Login Limit Reached:</strong><br>${data.error || 'You have exhausted your 3 logins for today. Access will be unlocked tomorrow.'}`;
             } else {
                 errorMsg.style.display = 'block';
-                errorMsg.innerText = data.error || 'Failed to send code';
+                errorMsg.innerText = data.error || 'Failed to send code. Please verify your email.';
             }
         } catch (err) {
             errorMsg.style.display = 'block';
@@ -276,7 +288,7 @@ input:focus{
     // 3. Verify Code and Login
     verifyForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const code = document.getElementById('verify-code').value;
+        const code = document.getElementById('verify-code').value.trim();
         const btn = document.getElementById('verify-code-btn');
         btn.innerText = 'Verifying...';
         btn.disabled = true;
@@ -293,9 +305,12 @@ input:focus{
             if (response.ok) {
                 localStorage.setItem('clientCaseId', data.case._id);
                 window.location.href = 'client-dashboard.html';
+            } else if (response.status === 429 || data.limit_reached) {
+                errorMsg.style.display = 'block';
+                errorMsg.innerHTML = `🚫 <strong>Daily Login Limit Reached:</strong><br>${data.error || 'You cannot log in again today. Maximum 3 logins reached.'}`;
             } else {
                 errorMsg.style.display = 'block';
-                errorMsg.innerText = data.error || 'Invalid verification code';
+                errorMsg.innerText = data.error || 'Invalid verification code. Please check your email.';
             }
         } catch (err) {
             errorMsg.style.display = 'block';

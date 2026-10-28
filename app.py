@@ -179,32 +179,142 @@ JSM Chambers"""
     
     return send_email_core(recipient_email, msg, subject)
 
-def send_verification_email(recipient_email, code):
+def send_verification_email(recipient_email, code, attempts_left=None, total_logins_today=0):
     msg = MIMEMultipart('alternative')
     msg['Date'] = formatdate(localtime=True)
     msg['Message-ID'] = make_msgid()
     msg['From'] = f"JSM Chambers <{SMTP_USER}>"
     msg['To'] = recipient_email
-    subject = "JSM. Chambers - Login Verification Code"
+    
+    today_str = get_now_ist().strftime("%d %b %Y")
+    attempt_num = (total_logins_today or 0) + 1
+    rem = attempts_left if attempts_left is not None else max(0, 3 - (total_logins_today or 0))
+    
+    subject = f"JSM. Chambers - Login Verification Code (Attempt #{attempt_num}/3)"
     msg['Subject'] = subject
     
-    text = f"""You requested a verification code to access your case file.
+    text = f"""JSM CHAMBERS - CLIENT PORTAL VERIFICATION
+===============================================
 
-Your Verification Code is: {code}
+Your 6-Digit Verification Code is: {code}
 
-If you did not request this, please ignore this email."""
+DAILY LOGIN SECURITY REPORT:
+- Date: {today_str}
+- Login Attempt: #{attempt_num} of 3
+- Logins Remaining Today: {rem} left
+- Daily Policy: Maximum 3 logins per day per client
+
+Please enter this verification code on the portal to access your case file.
+If you did not request this login code, please contact JSM Chambers immediately.
+
+JSM Chambers | Cuttack, Odisha
+"""
     html = f"""
-    <html><body style="font-family: Arial, sans-serif; color: #333;">
-    <h2 style="color: #0A192F;">Login Verification</h2>
-    <p>You requested a verification code to securely access your case file.</p>
-    <h1 style="letter-spacing: 5px; color: #D4AF37;">{code}</h1>
-    <p style="font-size: 0.9rem; color: #666;">If you did not request this code, please ignore this email.</p>
-    <p>Thank you,<br><strong>JSM Chambers</strong></p>
-    </body></html>
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"></head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px;">
+      <div style="max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+        <div style="background: #0A1628; padding: 24px 30px; border-bottom: 3px solid #D4AF37; text-align: center;">
+          <h2 style="color: #ffffff; margin: 0; font-family: Georgia, serif; font-size: 22px;">JSM CHAMBERS</h2>
+          <p style="color: #D4AF37; margin: 4px 0 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700;">Client Portal Verification</p>
+        </div>
+        <div style="padding: 30px;">
+          <p style="color: #334155; font-size: 15px; margin: 0 0 16px 0;">You requested a verification code to securely access your legal case file on the client portal.</p>
+          <div style="background: #f8fafc; border: 2px dashed #D4AF37; border-radius: 10px; padding: 18px; text-align: center; margin: 20px 0;">
+            <div style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; margin-bottom: 6px;">Your 6-Digit OTP</div>
+            <div style="font-size: 34px; font-weight: 800; color: #0A1628; letter-spacing: 8px; font-family: monospace;">{code}</div>
+          </div>
+          
+          <!-- Daily Login Security Report -->
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin: 20px 0;">
+            <div style="font-weight: 700; font-size: 13px; color: #1e40af; margin-bottom: 8px;">📊 DAILY LOGIN REPORT ({today_str})</div>
+            <table style="width: 100%; font-size: 13px; color: #1e3a8a;">
+              <tr>
+                <td style="padding: 4px 0;">Current Attempt:</td>
+                <td style="padding: 4px 0; font-weight: 700; text-align: right;">#{attempt_num} of 3</td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 0;">Remaining Logins Today:</td>
+                <td style="padding: 4px 0; font-weight: 700; text-align: right; color: {'#15803d' if rem > 0 else '#b91c1c'};">{rem} login(s) left</td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 0;">Daily Limit Policy:</td>
+                <td style="padding: 4px 0; font-weight: 700; text-align: right;">Max 3 Logins / Day</td>
+              </tr>
+            </table>
+          </div>
+          
+          <p style="color: #64748b; font-size: 12.5px; line-height: 1.5; margin: 16px 0 0 0;">If you did not initiate this login request, please ignore this email or notify JSM Chambers immediately.</p>
+        </div>
+        <div style="background: #f8fafc; padding: 14px 30px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 11.5px; color: #94a3b8;">
+          🔒 JSM Chambers Legal Operations · Confidential Client Notification
+        </div>
+      </div>
+    </body>
+    </html>
     """
     msg.attach(MIMEText(text, 'plain', 'utf-8'))
     msg.attach(MIMEText(html, 'html', 'utf-8'))
     
+    return send_email_core(recipient_email, msg, subject)
+
+def send_admin_2fa_email(otp, expiry_time_str):
+    recipient_email = "jsmchamberscuttack2026@gmail.com"
+    msg = MIMEMultipart('alternative')
+    msg['Date'] = formatdate(localtime=True)
+    msg['Message-ID'] = make_msgid()
+    msg['From'] = f"JSM Chambers Security <{SMTP_USER}>"
+    msg['To'] = recipient_email
+    subject = f"🔒 JSM Chambers - Admin 2FA Login OTP: {otp} (Valid 5 Mins)"
+    msg['Subject'] = subject
+    
+    text = f"""JSM CHAMBERS - ADMINISTRATIVE 2FA VERIFICATION
+===============================================
+
+Admin Login Verification Code: {otp}
+
+SECURITY & EXPIRATION NOTICE:
+- Code is valid for 5 MINUTES ONLY (expires at {expiry_time_str} IST).
+- Do NOT share this code with anyone.
+- If you did not initiate this login request, your admin credentials may be compromised.
+
+JSM Chambers | Cuttack, Odisha
+"""
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"></head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #071522; margin: 0; padding: 24px;">
+      <div style="max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 14px; overflow: hidden; border: 2px solid #D4AF37; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+        <div style="background: #0A1628; padding: 26px 30px; border-bottom: 3px solid #D4AF37; text-align: center;">
+          <h2 style="color: #ffffff; margin: 0; font-family: Georgia, serif; font-size: 24px;">⚖️ JSM CHAMBERS</h2>
+          <p style="color: #D4AF37; margin: 5px 0 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700;">Admin 2FA Verification Portal</p>
+        </div>
+        <div style="padding: 32px 30px;">
+          <p style="color: #1e293b; font-size: 15px; margin: 0 0 16px 0; font-weight: 500;">An administrator login attempt was initiated with valid credentials. Enter the verification code below to authorize dashboard access:</p>
+          
+          <div style="background: linear-gradient(135deg, #0A1628, #1E293B); border-radius: 12px; padding: 22px; text-align: center; margin: 24px 0; border: 1px solid #D4AF37;">
+            <div style="font-size: 11px; color: #D4AF37; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-bottom: 8px;">2FA Security OTP (Valid 5 Mins)</div>
+            <div style="font-size: 38px; font-weight: 900; color: #ffffff; letter-spacing: 10px; font-family: monospace;">{otp}</div>
+            <div style="color: #94a3b8; font-size: 12px; margin-top: 8px;">⏱️ Expires at <strong>{expiry_time_str} IST</strong> (5 minutes validity)</div>
+          </div>
+          
+          <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px; padding: 14px; margin-top: 20px;">
+            <p style="margin: 0; color: #92400e; font-size: 12.5px; line-height: 1.5;">
+              <strong>⚠️ Security Alert:</strong> This code provides full administrative control over cases, appointments, and client directories. If you did not make this login attempt, please change the administrative password immediately.
+            </p>
+          </div>
+        </div>
+        <div style="background: #f8fafc; padding: 14px 30px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 11.5px; color: #94a3b8;">
+          🔒 JSM Chambers Legal Operations · Confidential Administrative Authentication
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+    msg.attach(MIMEText(text, 'plain', 'utf-8'))
+    msg.attach(MIMEText(html, 'html', 'utf-8'))
     return send_email_core(recipient_email, msg, subject)
 
 def send_appointment_received_email(recipient_email, name):
@@ -1169,14 +1279,110 @@ def delete_staff_email_logs(email):
 @app.route('/api/admin-login', methods=['POST'])
 def admin_login():
     data = request.get_json(force=True, silent=True) or {}
-    user_id = data.get('email', '').strip()
+    user_id = (data.get('email') or data.get('admin_id') or '').strip()
     password = data.get('password', '').strip()
     
-    # Check both the User ID (which frontend sends as 'email') and the Password
+    # Check both the User ID and the Password
     if user_id == 'JSM' and password == 'JAYA@CDA11':
-        return jsonify({"success": True}), 200
+        # Generate 6-digit OTP valid for 5 minutes
+        otp = str(random.randint(100000, 999999))
+        now_ist = get_now_ist()
+        expires_at = now_ist + timedelta(minutes=5)
+        
+        if config_col is not None:
+            config_col.update_one(
+                {"_id": "admin_2fa_otp"},
+                {"$set": {
+                    "otp": otp,
+                    "created_at": now_ist.isoformat(),
+                    "expires_at": expires_at.isoformat(),
+                    "expires_timestamp": expires_at.timestamp(),
+                    "target_email": "jsmchamberscuttack2026@gmail.com",
+                    "verified": False
+                }},
+                upsert=True
+            )
+            
+        expiry_str = expires_at.strftime("%I:%M %p")
+        email_sent = send_admin_2fa_email(otp, expiry_str)
+        
+        return jsonify({
+            "requires_2fa": True,
+            "target_email": "jsmchamberscuttack2026@gmail.com",
+            "expires_in_seconds": 300,
+            "message": "Admin credentials verified. A 6-digit 2FA code has been dispatched to jsmchamberscuttack2026@gmail.com (valid for 5 minutes).",
+            "email_sent": email_sent
+        }), 200
     
     return jsonify({"error": "Invalid credentials"}), 401
+
+@app.route('/api/admin-verify-otp', methods=['POST'])
+def admin_verify_otp():
+    data = request.get_json(force=True, silent=True) or {}
+    otp = str(data.get('otp', '')).strip()
+    
+    if not otp:
+        return jsonify({"error": "Please enter the 6-digit verification code"}), 400
+        
+    if config_col is None:
+        return jsonify({"error": "DB error"}), 500
+        
+    doc = config_col.find_one({"_id": "admin_2fa_otp"})
+    if not doc or not doc.get("otp"):
+        return jsonify({"error": "No pending 2FA verification found. Please login again."}), 400
+        
+    now_ist = get_now_ist()
+    expires_ts = doc.get("expires_timestamp", 0)
+    
+    if now_ist.timestamp() > expires_ts:
+        return jsonify({"error": "The verification code has expired (valid for 5 minutes). Please click 'Resend Code'."}), 400
+        
+    if doc.get("otp") != otp:
+        return jsonify({"error": "Invalid verification code. Please check your email and try again."}), 400
+        
+    # Mark verified & invalidate OTP
+    config_col.update_one(
+        {"_id": "admin_2fa_otp"},
+        {"$set": {"verified": True, "otp": "", "used_at": now_ist.isoformat()}}
+    )
+    
+    return jsonify({
+        "success": True,
+        "message": "Admin 2FA verification successful. Access granted."
+    }), 200
+
+@app.route('/api/admin-resend-otp', methods=['POST'])
+def admin_resend_otp():
+    if config_col is None:
+        return jsonify({"error": "DB error"}), 500
+        
+    otp = str(random.randint(100000, 999999))
+    now_ist = get_now_ist()
+    expires_at = now_ist + timedelta(minutes=5)
+    
+    config_col.update_one(
+        {"_id": "admin_2fa_otp"},
+        {"$set": {
+            "otp": otp,
+            "created_at": now_ist.isoformat(),
+            "expires_at": expires_at.isoformat(),
+            "expires_timestamp": expires_at.timestamp(),
+            "target_email": "jsmchamberscuttack2026@gmail.com",
+            "verified": False
+        }},
+        upsert=True
+    )
+    
+    expiry_str = expires_at.strftime("%I:%M %p")
+    email_sent = send_admin_2fa_email(otp, expiry_str)
+    
+    return jsonify({
+        "success": True,
+        "target_email": "jsmchamberscuttack2026@gmail.com",
+        "expires_in_seconds": 300,
+        "message": "A fresh 6-digit verification code has been dispatched to jsmchamberscuttack2026@gmail.com (valid for 5 minutes).",
+        "email_sent": email_sent
+    }), 200
 
 @app.route('/api/cases', methods=['POST'])
 def create_case():
@@ -1703,48 +1909,146 @@ def get_my_case(id):
 @app.route('/api/client-login', methods=['POST'])
 def client_login():
     data = request.get_json(force=True, silent=True) or {}
-    email = data.get('email')
-    code = data.get('password')
+    email = data.get('email', '').strip().lower()
+    code = data.get('password', '').strip()
     case = cases_col.find_one({
-        "email": email, 
+        "email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}, 
         "reset_code": code,
         "status": {"$ne": "Finished & Archived"}
     })
-    if case:
-        cases_col.update_one({"_id": case['_id']}, {"$set": {"reset_code": ""}})
-        return jsonify({"success": True, "case": {"_id": str(case['_id'])}}), 200
-    return jsonify({"error": "Invalid verification code or case closed"}), 401
+    if not case:
+        return jsonify({"error": "Invalid verification code or case closed"}), 401
+        
+    today_str = get_now_ist().strftime("%Y-%m-%d")
+    daily = case.get("daily_logins") or {}
+    count = int(daily.get("count", 0)) if daily.get("date") == today_str else 0
+    
+    if count >= 3:
+        return jsonify({
+            "error": "Daily login limit reached (3/3 used). You have exhausted your allowed 3 logins for today. Access will be unlocked tomorrow.",
+            "limit_reached": True,
+            "attempts_left": 0,
+            "count_today": count
+        }), 429
+        
+    new_count = count + 1
+    new_rem = max(0, 3 - new_count)
+    cases_col.update_one(
+        {"_id": case['_id']}, 
+        {"$set": {
+            "reset_code": "",
+            "daily_logins": {
+                "date": today_str,
+                "count": new_count,
+                "last_login": get_now_ist().isoformat()
+            }
+        }}
+    )
+    return jsonify({
+        "success": True, 
+        "case": {"_id": str(case['_id'])},
+        "logins_used": new_count,
+        "attempts_left": new_rem,
+        "daily_max": 3,
+        "message": f"Login successful! You have {new_rem} login(s) remaining for today."
+    }), 200
 
 @app.route('/api/forgot-password', methods=['POST'])
 def forgot_password():
     try:
         data = request.get_json(force=True, silent=True) or {}
-        email = data.get('email')
+        email = data.get('email', '').strip().lower()
+        if not email:
+            return jsonify({"error": "Email is required"}), 400
+            
         case = cases_col.find_one({
-            "email": email,
+            "email": {"$regex": f"^{re.escape(email)}$", "$options": "i"},
             "status": {"$ne": "Finished & Archived"}
         })
         if not case:
-            return jsonify({"error": "No active case found for this email"}), 404
+            return jsonify({"error": "No active case found for this email address."}), 404
+            
+        today_str = get_now_ist().strftime("%Y-%m-%d")
+        daily = case.get("daily_logins") or {}
+        count = int(daily.get("count", 0)) if daily.get("date") == today_str else 0
+        
+        if count >= 3:
+            return jsonify({
+                "error": f"Daily login limit reached (3/3 used). You have reached the maximum allowed 3 logins per day for your client portal. Access will reopen tomorrow.",
+                "limit_reached": True,
+                "attempts_left": 0,
+                "count_today": count,
+                "daily_max": 3
+            }), 429
+            
+        attempts_left = 3 - count
         code = ''.join(random.choices(string.digits, k=6))
         cases_col.update_one({"_id": case['_id']}, {"$set": {"reset_code": code}})
-        send_verification_email(email, code)
-        return jsonify({"message": "Verification code sent"}), 200
+        
+        email_sent = send_verification_email(case['email'], code, attempts_left=attempts_left, total_logins_today=count)
+        
+        return jsonify({
+            "message": f"Verification code sent to your email. Security Report: You have {attempts_left} login(s) remaining for today.",
+            "attempts_left": attempts_left,
+            "count_today": count,
+            "daily_max": 3,
+            "email_sent": email_sent
+        }), 200
     except Exception as e:
         logging.error(f"Forgot password crash: {e}")
-        return jsonify({"message": "Verification code sent but logging error"}), 200
+        return jsonify({"error": "Server error while sending verification code"}), 500
 
 @app.route('/api/verify-code', methods=['POST'])
 def verify_code():
     data = request.get_json(force=True, silent=True) or {}
+    email = data.get('email', '').strip().lower()
+    code = data.get('code', '').strip()
+    
+    if not email or not code:
+        return jsonify({"error": "Email and verification code are required"}), 400
+        
     case = cases_col.find_one({
-        "email": data.get('email'), 
-        "reset_code": data.get('code'),
+        "email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}, 
+        "reset_code": code,
         "status": {"$ne": "Finished & Archived"}
     })
-    if case:
-        return jsonify({"success": True, "password": case.get('password'), "case": {"_id": str(case['_id'])}}), 200
-    return jsonify({"error": "Invalid code"}), 400
+    if not case:
+        return jsonify({"error": "Invalid verification code. Please check your email."}), 400
+        
+    today_str = get_now_ist().strftime("%Y-%m-%d")
+    daily = case.get("daily_logins") or {}
+    count = int(daily.get("count", 0)) if daily.get("date") == today_str else 0
+    
+    if count >= 3:
+        return jsonify({
+            "error": "Daily login limit reached (3/3 used). You cannot log in again today. Please try again tomorrow.",
+            "limit_reached": True,
+            "attempts_left": 0,
+            "count_today": count
+        }), 429
+        
+    new_count = count + 1
+    new_rem = max(0, 3 - new_count)
+    cases_col.update_one(
+        {"_id": case['_id']},
+        {"$set": {
+            "reset_code": "",
+            "daily_logins": {
+                "date": today_str,
+                "count": new_count,
+                "last_login": get_now_ist().isoformat()
+            }
+        }}
+    )
+    return jsonify({
+        "success": True, 
+        "password": case.get('password'), 
+        "case": {"_id": str(case['_id'])},
+        "logins_used": new_count,
+        "attempts_left": new_rem,
+        "daily_max": 3,
+        "message": f"Login successful! You have {new_rem} login(s) remaining for today."
+    }), 200
 
 
 def ensure_chamber_owner_advocate():
@@ -2707,13 +3011,31 @@ def get_default_opinions():
         }
     ]
 
+def is_opinions_seeded():
+    if config_col is None: return False
+    doc = config_col.find_one({"_id": "opinions_seeded_flag"})
+    return doc is not None and doc.get("seeded") is True
+
+def mark_opinions_seeded():
+    if config_col is not None:
+        try:
+            config_col.update_one(
+                {"_id": "opinions_seeded_flag"},
+                {"$set": {"seeded": True, "updated_at": get_now_ist().isoformat()}},
+                upsert=True
+            )
+        except Exception:
+            pass
+
 @app.route('/api/opinions', methods=['GET'])
 def get_opinions():
     if opinions_col is None:
         return jsonify([])
     try:
-        if opinions_col.count_documents({}) == 0:
-            opinions_col.insert_many(get_default_opinions())
+        if not is_opinions_seeded():
+            if opinions_col.count_documents({}) == 0:
+                opinions_col.insert_many(get_default_opinions())
+            mark_opinions_seeded()
     except Exception as e:
         logging.error(f"Error seeding opinions: {e}")
         
@@ -2786,6 +3108,7 @@ def delete_opinion(id):
     if opinions_col is None: return jsonify({"error": "DB error"}), 500
     try:
         opinions_col.delete_one({"_id": ObjectId(id)})
+        mark_opinions_seeded()
         return jsonify({"success": True}), 200
     except Exception as e:
         logging.error(f"Error deleting opinion {id}: {e}")

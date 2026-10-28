@@ -3,51 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login | JSM. Chambers</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <title>Admin Login (2FA Secured) | JSM. Chambers</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <style>
+        :root {
+            --primary: #0A1628;
+            --accent: #D4AF37;
+            --accent-hover: #b89326;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
         body {
             display: flex;
             flex-direction: column;
             min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            background: #071522;
         }
         .login-wrapper {
             flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 2rem;
-            background: linear-gradient(rgba(10, 25, 47, 0.95), rgba(10, 25, 47, 0.95)), url('assets/images/hero-bg.jpg') center/cover;
+            padding: 2rem 1rem;
+            background: radial-gradient(circle at 50% 20%, #152c42 0%, #071522 70%);
         }
         .login-card {
-            background: var(--color-white);
-            padding: 3rem;
-            border-radius: var(--radius);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            background: #ffffff;
+            padding: 2.8rem 2.4rem;
+            border-radius: 18px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.45);
             width: 100%;
-            max-width: 400px;
-            border-top: 5px solid #4CAF50; /* Different color for admin distinction */
+            max-width: 440px;
+            border-top: 5px solid var(--accent);
+            position: relative;
         }
-        .login-card h2 {
+        .card-header {
             text-align: center;
             margin-bottom: 2rem;
         }
-        .form-check {
+        .chamber-badge {
+            width: 58px;
+            height: 58px;
+            margin: 0 auto 15px;
+            background: linear-gradient(135deg, #0A1628, #1E293B);
+            border: 2px solid var(--accent);
+            border-radius: 14px;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        .login-links {
-            display: flex;
             justify-content: center;
-            margin-top: 1.5rem;
-            font-size: 0.9rem;
+            font-size: 26px;
+            box-shadow: 0 6px 18px rgba(212, 175, 55, 0.25);
         }
-        .login-links a {
-            color: var(--color-primary);
-            font-weight: 500;
+        .card-header h2 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 1.7rem;
+            color: var(--primary);
+            margin: 0 0 6px 0;
+        }
+        .card-header p {
+            font-size: 0.88rem;
+            color: #64748b;
+            margin: 0;
+        }
+        .form-group {
+            margin-bottom: 1.3rem;
+        }
+        .form-label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.86rem;
+            color: #334155;
+            margin-bottom: 6px;
+        }
+        .form-control {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 9px;
+            font-size: 0.95rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: #0A1628;
+            box-shadow: 0 0 0 3px rgba(10, 22, 40, 0.12);
+        }
+        .btn-submit {
+            width: 100%;
+            padding: 0.95rem;
+            border: none;
+            border-radius: 9px;
+            background: linear-gradient(135deg, #0A1628, #172a45);
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 0.98rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(10, 22, 40, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-submit:hover {
+            background: linear-gradient(135deg, #102138, #1f3758);
+            transform: translateY(-1px);
+        }
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .alert-box {
+            display: none;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            margin-bottom: 1.2rem;
+            line-height: 1.45;
+        }
+        .alert-error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+        }
+        .alert-success {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #15803d;
+        }
+        .alert-info {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1d4ed8;
+        }
+        .otp-input-field {
+            font-size: 1.9rem !important;
+            letter-spacing: 8px !important;
+            text-align: center !important;
+            font-weight: 800 !important;
+            font-family: monospace !important;
+            color: #0A1628 !important;
+            background: #f8fafc !important;
+        }
+        .timer-badge {
+            background: #fef3c7;
+            border: 1px solid #fde68a;
+            color: #92400e;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 1.2rem;
+        }
+        .btn-link-action {
+            background: none;
+            border: none;
+            color: #0A1628;
+            font-weight: 600;
+            font-size: 0.86rem;
+            cursor: pointer;
+            padding: 6px 10px;
+            text-decoration: underline;
+        }
+        .btn-link-action:hover {
+            color: var(--accent);
         }
     </style>
     <meta name="google-site-verification" content="Cb6ak0wetmxY9fGq95lyGFJI2XIfWpdpoZRLJ_e-4RY" />
@@ -55,52 +181,158 @@
 <body>
 
     <!-- Navbar -->
-    <nav class="navbar">
-        <div class="container">
-            <a href="index.html" class="logo">
-                <h1>JSM. <span>Chambers</span></h1>
+    <nav class="navbar" style="background: rgba(10, 22, 40, 0.95); border-bottom: 1px solid rgba(212, 175, 55, 0.2);">
+        <div class="container" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem;">
+            <a href="index.html" class="logo" style="text-decoration: none;">
+                <h1 style="color: white; margin: 0; font-size: 1.4rem; font-family: 'Playfair Display', serif;">JSM. <span style="color: var(--accent);">Chambers</span></h1>
             </a>
-            <a href="index.html" class="btn btn-outline" style="padding: 0.5rem 1rem;">Back to Home</a>
+            <a href="index.html" class="btn btn-outline" style="padding: 0.5rem 1rem; color: #cbd5e1; border-color: rgba(255,255,255,0.2); text-decoration: none; font-size: 0.88rem;">← Back to Home</a>
         </div>
     </nav>
 
     <div class="login-wrapper">
         <div class="login-card">
-            <h2>Admin Portal</h2>
-            <form id="admin-login-form">
-                <div class="form-group">
-                    <label class="form-label" for="admin-id">Admin ID / Email</label>
-                    <input type="text" id="admin-id" class="form-control" required placeholder="e.g. admin@jsmchambers.demo">
+            
+            <!-- STEP 1: CREDENTIALS (Admin ID & Password) -->
+            <div id="step-credentials">
+                <div class="card-header">
+                    <div class="chamber-badge">⚖️</div>
+                    <h2>Admin Portal</h2>
+                    <p>Enter Master Credentials to Request 2FA Code</p>
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="password">Password</label>
-                    <input type="password" id="password" class="form-control" required placeholder="Enter password">
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" id="remember">
-                    <label for="remember" style="font-size: 0.9rem;">Remember Me</label>
-                </div>
-                
-                <button type="submit" class="btn btn-primary w-100" style="width: 100%; margin-top: 1rem; background-color: #172A45;">Admin Login</button>
 
-                <div class="login-links">
-                    <a href="#">Forgot Password?</a>
+                <div id="alert-step1" class="alert-box alert-error"></div>
+
+                <form id="admin-login-form">
+                    <div class="form-group">
+                        <label class="form-label" for="admin-id">Admin Username / ID</label>
+                        <input type="text" id="admin-id" class="form-control" required placeholder="Enter Admin ID" autocomplete="username">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="password">Password</label>
+                        <input type="password" id="password" class="form-control" required placeholder="Enter Master Password" autocomplete="current-password">
+                    </div>
+                    
+                    <button type="submit" id="btn-submit-step1" class="btn-submit" style="margin-top: 1.4rem;">
+                        <span>🔐</span> Authenticate & Send 2FA Code
+                    </button>
+                </form>
+
+                <div style="margin-top: 1.8rem; text-align: center; font-size: 0.78rem; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 1rem;">
+                    🛡️ Multi-Factor Authentication Required · Restricted Chamber Access
                 </div>
-            </form>
-            <div style="margin-top: 2rem; font-size: 0.8rem; color: #999; text-align: center;">
-                
             </div>
+
+            <!-- STEP 2: 2FA OTP VERIFICATION -->
+            <div id="step-2fa" style="display: none;">
+                <div class="card-header">
+                    <div class="chamber-badge" style="background: linear-gradient(135deg, #102a43, #D4AF37);">🛡️</div>
+                    <h2>Two-Factor Auth</h2>
+                    <p>Enter the 6-digit security code sent to:</p>
+                    <div style="font-weight: 700; color: #0A1628; margin-top: 4px; font-size: 0.95rem; word-break: break-all;">
+                        jsmchamberscuttack2026@gmail.com
+                    </div>
+                </div>
+
+                <div style="text-align: center;">
+                    <div class="timer-badge" id="timer-badge">
+                        <span>⏱️</span> Code valid for: <strong id="countdown-display">05:00</strong>
+                    </div>
+                </div>
+
+                <div id="alert-step2" class="alert-box"></div>
+
+                <form id="admin-otp-form">
+                    <div class="form-group" style="text-align: center;">
+                        <label class="form-label" for="admin-otp-input">6-Digit Verification Code</label>
+                        <input type="text" id="admin-otp-input" class="form-control otp-input-field" maxlength="6" pattern="[0-9]{6}" required placeholder="••••••" autofocus inputmode="numeric" autocomplete="one-time-code">
+                    </div>
+
+                    <button type="submit" id="btn-verify-otp" class="btn-submit" style="background: linear-gradient(135deg, #D4AF37, #AA771C); color: #0A1628; font-weight: 800;">
+                        <span>🚀</span> Verify & Open Dashboard
+                    </button>
+                </form>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; border-top: 1px solid #f1f5f9; padding-top: 1.2rem;">
+                    <button type="button" class="btn-link-action" onclick="backToStep1()">← Back</button>
+                    <button type="button" class="btn-link-action" id="btn-resend-otp" onclick="resendOtp()">🔄 Resend Code</button>
+                </div>
+            </div>
+
         </div>
     </div>
 
     <script>
+        let countdownInterval = null;
+        let timeLeft = 300; // 5 minutes in seconds
+
+        function showAlert(step, message, type = 'error') {
+            const el = document.getElementById(`alert-${step}`);
+            if (!el) return;
+            el.className = `alert-box alert-${type}`;
+            el.innerHTML = message;
+            el.style.display = 'block';
+        }
+
+        function hideAlert(step) {
+            const el = document.getElementById(`alert-${step}`);
+            if (el) el.style.display = 'none';
+        }
+
+        function startCountdown(seconds = 300) {
+            if (countdownInterval) clearInterval(countdownInterval);
+            timeLeft = seconds;
+            updateCountdownUI();
+
+            const verifyBtn = document.getElementById('btn-verify-otp');
+            const resendBtn = document.getElementById('btn-resend-otp');
+            const badge = document.getElementById('timer-badge');
+            if (verifyBtn) verifyBtn.disabled = false;
+
+            countdownInterval = setInterval(() => {
+                timeLeft--;
+                updateCountdownUI();
+                if (timeLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                    if (badge) {
+                        badge.style.background = '#fef2f2';
+                        badge.style.color = '#b91c1c';
+                        badge.style.borderColor = '#fecaca';
+                        badge.innerHTML = '⚠️ OTP has expired (5 mins). Request a new code.';
+                    }
+                    if (verifyBtn) verifyBtn.disabled = true;
+                    showAlert('step2', 'Your verification code has expired. Please click <strong>Resend Code</strong> to receive a fresh OTP.', 'error');
+                }
+            }, 1000);
+        }
+
+        function updateCountdownUI() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            const str = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            const display = document.getElementById('countdown-display');
+            if (display) display.innerText = str;
+        }
+
+        function backToStep1() {
+            if (countdownInterval) clearInterval(countdownInterval);
+            hideAlert('step1');
+            hideAlert('step2');
+            document.getElementById('step-2fa').style.display = 'none';
+            document.getElementById('step-credentials').style.display = 'block';
+        }
+
+        // STEP 1: SUBMIT CREDENTIALS
         document.getElementById('admin-login-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            const email = document.getElementById('admin-id').value;
-            const password = document.getElementById('password').value;
-            
-            const btn = e.target.querySelector('button[type="submit"]');
-            btn.innerText = 'Authenticating...';
+            hideAlert('step1');
+
+            const email = document.getElementById('admin-id').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const btn = document.getElementById('btn-submit-step1');
+            const origText = btn.innerHTML;
+            btn.innerHTML = '<span>⏳</span> Verifying credentials...';
             btn.disabled = true;
 
             try {
@@ -109,20 +341,102 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
                 });
-                
-                if (response.ok) {
+                const data = await response.json();
+
+                if (response.ok && data.requires_2fa) {
+                    // Transition to 2FA Step
+                    document.getElementById('step-credentials').style.display = 'none';
+                    document.getElementById('step-2fa').style.display = 'block';
+                    document.getElementById('admin-otp-input').value = '';
+                    document.getElementById('admin-otp-input').focus();
+                    hideAlert('step2');
+                    showAlert('step2', `✅ A 6-digit OTP code has been sent to <strong>${data.target_email || 'jsmchamberscuttack2026@gmail.com'}</strong>. Code is valid for 5 minutes.`, 'info');
+                    startCountdown(data.expires_in_seconds || 300);
+                } else if (response.ok && !data.requires_2fa) {
+                    // Direct access fallback (if 2fa disabled)
                     sessionStorage.setItem('adminLoggedIn', 'true');
                     window.location.href = 'admin-dashboard.html';
                 } else {
-                    alert('Invalid Admin credentials.');
+                    showAlert('step1', data.error || 'Invalid Admin ID or Password. Access denied.');
                 }
             } catch(error) {
-                alert('Server connection error.');
+                showAlert('step1', 'Unable to connect to the authentication server. Please try again.');
+            } finally {
+                btn.innerHTML = origText;
+                btn.disabled = false;
             }
-            
-            btn.innerText = 'Admin Login';
-            btn.disabled = false;
         });
+
+        // STEP 2: VERIFY OTP
+        document.getElementById('admin-otp-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            hideAlert('step2');
+
+            const otp = document.getElementById('admin-otp-input').value.trim();
+            if (otp.length !== 6) {
+                showAlert('step2', 'Please enter the complete 6-digit verification code.');
+                return;
+            }
+
+            const btn = document.getElementById('btn-verify-otp');
+            const origText = btn.innerHTML;
+            btn.innerHTML = '<span>⏳</span> Authorizing...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/admin-verify-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ otp })
+                });
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    if (countdownInterval) clearInterval(countdownInterval);
+                    showAlert('step2', '✅ 2FA Verified Successfully! Opening Admin Dashboard...', 'success');
+                    sessionStorage.setItem('adminLoggedIn', 'true');
+                    setTimeout(() => {
+                        window.location.href = 'admin-dashboard.html';
+                    }, 800);
+                } else {
+                    showAlert('step2', data.error || 'Invalid verification code. Please check your email.');
+                    btn.innerHTML = origText;
+                    btn.disabled = false;
+                }
+            } catch(error) {
+                showAlert('step2', 'Authentication server error. Please try again.');
+                btn.innerHTML = origText;
+                btn.disabled = false;
+            }
+        });
+
+        // RESEND OTP
+        async function resendOtp() {
+            const resendBtn = document.getElementById('btn-resend-otp');
+            resendBtn.innerText = 'Sending...';
+            resendBtn.disabled = true;
+            hideAlert('step2');
+
+            try {
+                const response = await fetch('/api/admin-resend-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showAlert('step2', `✅ A fresh 6-digit OTP code has been dispatched to <strong>${data.target_email || 'jsmchamberscuttack2026@gmail.com'}</strong> (valid for 5 minutes).`, 'success');
+                    startCountdown(data.expires_in_seconds || 300);
+                } else {
+                    showAlert('step2', data.error || 'Failed to resend OTP.');
+                }
+            } catch (err) {
+                showAlert('step2', 'Server error while resending OTP.');
+            } finally {
+                resendBtn.innerText = '🔄 Resend Code';
+                resendBtn.disabled = false;
+            }
+        }
     </script>
 </body>
 </html>
