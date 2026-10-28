@@ -2489,6 +2489,10 @@ def get_news():
 def add_news():
     if news_col is None: return jsonify({"error": "DB error"}), 500
     data = request.get_json(force=True, silent=True) or {}
+    
+    if data.get('is_staff'):
+        return add_staff_news()
+        
     title = data.get('title', '').strip()
     if not title:
         return jsonify({"error": "Article title is required"}), 400
@@ -2496,13 +2500,16 @@ def add_news():
     new_article = {
         "title": title,
         "category": data.get('category', 'Judicial Update').strip(),
-        "date": data.get('date', datetime.now().strftime("%Y-%m-%d")),
+        "date": data.get('date', get_now_ist().strftime("%Y-%m-%d")),
         "author": data.get('author', 'JSM Chambers').strip(),
+        "author_email": data.get('author_email', '').strip().lower(),
+        "staff_id": data.get('staff_id', '').strip(),
         "summary": data.get('summary', '').strip(),
         "content": data.get('content', '').strip(),
         "icon": data.get('icon', '⚖️').strip(),
         "image": (data.get('image') or data.get('image_url') or '').strip(),
-        "order": int(data.get('order', 99))
+        "order": int(data.get('order', 99)),
+        "created_at": get_now_ist().isoformat()
     }
     result = news_col.insert_one(new_article)
     new_article['_id'] = str(result.inserted_id)
@@ -2533,6 +2540,139 @@ def delete_news(id):
     if news_col is None: return jsonify({"error": "DB error"}), 500
     news_col.delete_one({"_id": ObjectId(id)})
     return jsonify({"success": True}), 200
+
+# =========================================================
+# STAFF DASHBOARD NEWS & INSIGHTS (1 Per Day Limit)
+# =========================================================
+@app.route('/api/staff/news-status', methods=['GET'])
+def get_staff_news_status():
+    if news_col is None: return jsonify({"error": "DB error"}), 500
+    email = request.args.get('email', '').strip().lower()
+    staff_id = request.args.get('staff_id', '').strip()
+    
+    if not email and not staff_id:
+        return jsonify({"error": "Staff email or staff_id is required"}), 400
+        
+    today_str = get_now_ist().strftime("%Y-%m-%d")
+    
+    # Query for articles matching this staff member
+    or_clauses = []
+    if email:
+        or_clauses.append({"author_email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}})
+    if staff_id:
+        or_clauses.append({"staff_id": staff_id})
+        
+    query_identity = {"$or": or_clauses} if len(or_clauses) > 1 else or_clauses[0]
+    
+    # Check if article already uploaded today
+    today_query = {
+        "$and": [
+            query_identity,
+            {"date": today_str}
+        ]
+    }
+    
+    today_article = news_col.find_one(today_query)
+    if today_article:
+        today_article['_id'] = str(today_article['_id'])
+        today_article['image_url'] = today_article.get('image') or today_article.get('image_url') or ''
+        return jsonify({
+            "can_upload": False,
+            "limit_reached": True,
+            "today": today_str,
+            "today_article": today_article,
+            "message": f"Daily limit reached: You have already published your 1 News & Insights article for today ({today_str}). Next submission opens tomorrow."
+        }), 200
+        
+    # Get past articles by this staff member
+    try:
+        past_articles = list(news_col.find(query_identity).sort("date", -1).limit(20))
+        for a in past_articles:
+            a['_id'] = str(a['_id'])
+            a['image_url'] = a.get('image') or a.get('image_url') or ''
+    except Exception as e:
+        past_articles = []
+        
+    return jsonify({
+        "can_upload": True,
+        "limit_reached": False,
+        "today": today_str,
+        "today_article": None,
+        "past_articles": past_articles,
+        "message": f"Daily quota available: You are allowed to upload 1 article today ({today_str})."
+    }), 200
+
+@app.route('/api/staff/news', methods=['POST'])
+def add_staff_news():
+    if news_col is None: return jsonify({"error": "DB error"}), 500
+    data = request.get_json(force=True, silent=True) or {}
+    
+    email = data.get('author_email', '').strip().lower()
+    staff_id = data.get('staff_id', '').strip()
+    author_name = data.get('author', '').strip() or 'Staff Advocate'
+    
+    if not email and not staff_id:
+        return jsonify({"error": "Author email or staff_id is required"}), 400
+        
+    title = data.get('title', '').strip()
+    if not title:
+        return jsonify({"error": "Article title is required"}), 400
+        
+    summary = data.get('summary', '').strip()
+    content = data.get('content', '').strip()
+    if not summary and not content:
+        return jsonify({"error": "Article summary or content is required"}), 400
+        
+    today_str = get_now_ist().strftime("%Y-%m-%d")
+    
+    # 1-per-day enforcement
+    or_clauses = []
+    if email:
+        or_clauses.append({"author_email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}})
+    if staff_id:
+        or_clauses.append({"staff_id": staff_id})
+    query_identity = {"$or": or_clauses} if len(or_clauses) > 1 else or_clauses[0]
+    
+    existing_today = news_col.find_one({
+        "$and": [
+            query_identity,
+            {"date": today_str}
+        ]
+    })
+    
+    if existing_today:
+        return jsonify({
+            "error": f"Daily limit reached: You have already published 1 News & Insights article today ({today_str}). Only 1 article per staff member per day is allowed. Please try again tomorrow.",
+            "limit_reached": True,
+            "today": today_str,
+            "published_title": existing_today.get('title', '')
+        }), 429
+        
+    new_article = {
+        "title": title,
+        "category": data.get('category', 'Chamber Insights').strip() or 'Chamber Insights',
+        "date": today_str,
+        "author": author_name,
+        "author_email": email,
+        "staff_id": staff_id,
+        "summary": summary,
+        "content": content or summary,
+        "icon": data.get('icon', '⚖️').strip() or '⚖️',
+        "image": (data.get('image') or data.get('image_url') or '').strip(),
+        "order": 1,
+        "is_staff_post": True,
+        "created_at": get_now_ist().isoformat()
+    }
+    
+    result = news_col.insert_one(new_article)
+    new_article['_id'] = str(result.inserted_id)
+    new_article['image_url'] = new_article['image']
+    
+    return jsonify({
+        "success": True,
+        "message": "News & Insights article published successfully! (Daily quota: 1/1 used for today)",
+        "article": new_article
+    }), 201
 
 # =========================================================
 # TODAY'S OPINION (Day-wise Chamber Editorial & Insights)

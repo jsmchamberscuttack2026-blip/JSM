@@ -91,24 +91,15 @@ if (sessionStorage.getItem('adminLoggedIn') !== 'true') {
 
 document.addEventListener('DOMContentLoaded', () => {
     // Navigation Logic
-    const navLinks = document.querySelectorAll('.sidebar ul li a');
-    const sections = document.querySelectorAll('.admin-section');
-
+    const navLinks = document.querySelectorAll('.sidebar-nav-link, .sidebar ul li a');
     checkEmailPasswordButtons();
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
-            if (link.getAttribute('href') === 'index.html') return;
-            
+            if (link.getAttribute('href') === 'index.html' || link.getAttribute('target') === '_blank') return;
             e.preventDefault();
-            navLinks.forEach(l => l.classList.remove('active'));
-            link.classList.add('active');
-
-            const targetId = link.id.replace('nav-', 'section-');
-            sections.forEach(sec => sec.classList.remove('active'));
-            
-            const targetSection = document.getElementById(targetId);
-            if (targetSection) {
-                targetSection.classList.add('active');
+            const sectionId = link.getAttribute('data-section') || link.id.replace('nav-', '');
+            if (sectionId && typeof window.showSection === 'function') {
+                window.showSection(sectionId);
             }
         });
     });
@@ -2003,7 +1994,40 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAppointmentSettings();
 });
 
-// Added for grid menu navigation
+// ==========================================
+// ADMIN NAVIGATION & SIDEBAR CONTROLS
+// ==========================================
+const ADMIN_SECTION_META = {
+    'dashboard': { title: 'Admin Dashboard', desc: 'Chamber Operations & Analytics Overview' },
+    'consultations': { title: 'Appointments Gateway', desc: 'Incoming consultation bookings & emergency calendar shifts' },
+    'clients': { title: 'Clients Directory', desc: 'Historical directory of concluded and active clients' },
+    'advocates': { title: 'Advocates & Staff Members', desc: 'Chamber legal associates, access credentials, and welcome mail' },
+    'cases-manage': { title: 'Active Chamber Cases', desc: 'Hearing calendar tracking, updates, and client alerts' },
+    'cases-add': { title: 'Add New Case File', desc: 'Register a client case file and email client security credentials' },
+    'case-payments': { title: 'Fee Payments Audit', desc: 'Fee structures, consultation charges, and client invoices' },
+    'news': { title: 'News & Insights Manager', desc: 'Articles, statutory updates, and chamber publications' },
+    'opinions': { title: "Today's Legal Opinion", desc: 'Day-by-day chamber opinions with calendar archive' },
+    'services': { title: 'Legal Expertise & 3D Books', desc: 'Practice areas and interactive 3D turn-page monographs' },
+    'settings': { title: 'Chamber Settings & Banner', desc: 'Chamber identity, credentials, banner images, and logo' },
+    'emails': { title: 'Staff Email Audit Logs', desc: 'Login codes, dispatches, and system transaction logs' }
+};
+
+window.toggleAdminSidebar = function(open) {
+    const sidebar = document.getElementById('admin-sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    if (!sidebar) return;
+    if (open === undefined) {
+        open = !sidebar.classList.contains('open');
+    }
+    if (open) {
+        sidebar.classList.add('open');
+        if (overlay) overlay.classList.add('active');
+    } else {
+        sidebar.classList.remove('open');
+        if (overlay) overlay.classList.remove('active');
+    }
+};
+
 window.showSection = function(sectionId) {
     // Hide all sections
     document.querySelectorAll('.admin-section').forEach(sec => sec.classList.remove('active'));
@@ -2013,26 +2037,37 @@ window.showSection = function(sectionId) {
     if (targetSection) {
         targetSection.classList.add('active');
     }
-    
-    // Toggle back button visibility
-    const backBtn = document.getElementById('back-home-btn');
-    if (backBtn) {
-        if (sectionId === 'dashboard') {
-            backBtn.style.display = 'none';
-        } else {
-            backBtn.style.display = 'flex';
+
+    // Sync active highlight on Left Sidebar navigation links
+    document.querySelectorAll('.sidebar-nav-link, .sidebar a').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('data-section') === sectionId || link.id === 'nav-' + sectionId) {
+            link.classList.add('active');
         }
-    }
+    });
+
+    // Update Header title & subtitle
+    const meta = ADMIN_SECTION_META[sectionId] || { title: 'Admin Dashboard', desc: 'System Overview' };
+    const titleEl = document.getElementById('current-section-title');
+    const descEl = document.getElementById('current-section-desc');
+    if (titleEl) titleEl.innerText = meta.title;
+    if (descEl) descEl.innerText = meta.desc;
     
-    // Toggle AI Voice button visibility
+    // Toggle AI Voice button visibility (only for active cases)
     const aiBtn = document.getElementById('ai-voice-btn');
     if (aiBtn) {
-        if (sectionId === 'cases-manage') {
-            aiBtn.style.display = 'flex';
-        } else {
-            aiBtn.style.display = 'none';
-        }
+        aiBtn.style.display = (sectionId === 'cases-manage') ? 'flex' : 'none';
     }
+
+    // Auto-close mobile drawer if open
+    window.toggleAdminSidebar(false);
+
+    // Scroll right content pane smoothly to top
+    const mainPane = document.getElementById('main-content-pane');
+    if (mainPane) {
+        mainPane.scrollTop = 0;
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     
     // Trigger section-specific reloads
     if (sectionId === 'services' && typeof window.loadAdminServices === 'function') {
@@ -2043,6 +2078,15 @@ window.showSection = function(sectionId) {
     }
     if (sectionId === 'opinions' && typeof window.loadAdminOpinions === 'function') {
         window.loadAdminOpinions();
+    }
+    if (sectionId === 'advocates' && typeof window.loadAdvocates === 'function') {
+        window.loadAdvocates();
+    }
+    if (sectionId === 'consultations' && typeof window.loadAppointments === 'function') {
+        window.loadAppointments();
+    }
+    if (sectionId === 'cases-manage' && typeof window.loadCases === 'function') {
+        window.loadCases();
     }
 };
 

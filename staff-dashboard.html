@@ -247,6 +247,7 @@
             </div>
             <nav id="staff-nav" style="display: flex; gap: 10px; align-items: center; overflow-x: auto; padding-bottom: 5px;">
                 <a class="nav-btn" id="nav-dashboard" onclick="showSection('dashboard')">📁 Cases</a>
+                <a class="nav-btn" id="nav-news" onclick="showSection('news')">📰 News & Insights</a>
                 <a class="nav-btn active" id="nav-about" onclick="showSection('about')">👤 About</a>
                 <button id="staff-ai-voice-btn" class="nav-btn" onclick="startAiVoice()" style="display: none; background: linear-gradient(135deg, #102a43, #D4AF37); color: white; border: none; font-weight: bold; cursor: pointer; align-items: center; gap: 5px;">
                     🎙️ AI Voice Update
@@ -334,6 +335,126 @@
             </div>
         </section>
 
+        <!-- ================= NEWS & INSIGHTS SECTION (1 Article Per Day Limit) ================= -->
+        <section id="section-news" class="admin-section">
+            <div style="max-width: 900px; margin: 0 auto;">
+                
+                <!-- Quota Alert Banner -->
+                <div id="staff-news-quota-banner" class="card" style="border-left: 5px solid var(--color-secondary); padding: 1.5rem 2rem; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                            <h3 style="margin: 0; font-size: 1.25rem; color: var(--color-primary);">📰 Chamber News & Insights</h3>
+                            <span id="staff-news-quota-pill" class="badge active" style="font-size: 0.8rem; padding: 4px 10px; background: #e0f2fe; color: #0284c7;">Checking Quota...</span>
+                        </div>
+                        <p id="staff-news-quota-desc" style="color: var(--color-text-light); margin: 0; font-size: 0.92rem;">
+                            Daily Policy: Each chamber staff member is allowed to upload <strong>at most 1 article per calendar day</strong>.
+                        </p>
+                    </div>
+                    <div id="staff-news-today-date" style="font-size: 0.85rem; color: #475569; background: #f1f5f9; padding: 6px 14px; border-radius: 20px; font-weight: 600;">
+                        Date: Today
+                    </div>
+                </div>
+
+                <!-- If already posted today, show Today's Article Preview Card -->
+                <div id="staff-news-today-posted-card" class="card" style="display: none; border-left: 5px solid #10b981; background: #f0fdf4; margin-bottom: 2rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <div>
+                            <span class="badge" style="background: #dcfce7; color: #15803d; font-weight: 700; margin-bottom: 8px; display: inline-block;">✅ TODAY'S ARTICLE PUBLISHED (1/1 USED)</span>
+                            <h4 id="today-posted-title" style="margin: 0; font-size: 1.2rem; color: #166534;">Article Title</h4>
+                            <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #4b5563;">
+                                Category: <strong id="today-posted-category">Judicial Update</strong> | Published on: <span id="today-posted-date">-</span>
+                            </p>
+                        </div>
+                        <a href="index.html#news-section" target="_blank" class="btn btn-outline" style="font-size: 0.85rem; padding: 6px 14px; background: white; border: 1px solid #86efac; color: #166534;">
+                            🌐 View on Live Site →
+                        </a>
+                    </div>
+                    <p id="today-posted-summary" style="color: #374151; font-size: 0.95rem; line-height: 1.5; margin: 0 0 10px 0;"></p>
+                    <div style="background: #bbf7d0; height: 1px; margin: 12px 0;"></div>
+                    <p style="margin: 0; font-size: 0.85rem; color: #15803d; font-weight: 500;">
+                        🔒 You have reached your limit of 1 article for today. Tomorrow you will be eligible to upload your next article.
+                    </p>
+                </div>
+
+                <!-- Upload Form Card -->
+                <div id="staff-news-form-card" class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <h3 style="margin: 0; color: var(--color-primary);">Publish Today's Article</h3>
+                            <p style="margin: 4px 0 0 0; font-size: 0.88rem; color: var(--color-text-light);">Share legal updates, case analyses, or insights on behalf of JSM Chambers.</p>
+                        </div>
+                        <span id="form-quota-counter" style="background: #eff6ff; color: #1d4ed8; font-weight: 700; padding: 5px 12px; border-radius: 20px; font-size: 0.82rem; border: 1px solid #bfdbfe;">Quota: 1 Article Allowed Today</span>
+                    </div>
+
+                    <form id="staff-news-upload-form" onsubmit="handleStaffNewsSubmit(event)">
+                        <div class="form-group">
+                            <label class="form-label" for="staff-news-title">Article Title *</label>
+                            <input type="text" id="staff-news-title" class="form-control" placeholder="e.g. Recent High Court Precedents on Criminal Revision & Quashing" required>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label" for="staff-news-category">Legal Category *</label>
+                                <select id="staff-news-category" class="form-control" required>
+                                    <option value="Judicial Update">Judicial Update</option>
+                                    <option value="High Court Ruling">High Court Ruling</option>
+                                    <option value="Constitutional Law">Constitutional Law</option>
+                                    <option value="Criminal Defense">Criminal Defense</option>
+                                    <option value="Civil & Commercial">Civil & Commercial</option>
+                                    <option value="Chamber Insights" selected>Chamber Insights</option>
+                                    <option value="Legal Commentary">Legal Commentary</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Article Image / Thumbnail</label>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <label class="btn btn-outline" style="flex: 1; cursor: pointer; text-align: center; margin: 0; padding: 0.75rem; font-size: 0.85rem; border-color: #cbd5e1;">
+                                        📁 Choose Image
+                                        <input type="file" id="staff-news-file" accept="image/*" style="display: none;" onchange="handleStaffNewsImageSelect(this)">
+                                    </label>
+                                    <input type="text" id="staff-news-image-url" class="form-control" placeholder="or Image URL..." style="flex: 1;" oninput="updateStaffNewsImagePreview(this.value)">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Image Preview Box -->
+                        <div id="staff-news-image-preview-wrapper" style="display: none; margin-bottom: 1.5rem; text-align: center;">
+                            <div style="position: relative; display: inline-block; max-width: 320px; border-radius: 8px; overflow: hidden; border: 2px solid var(--border); box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                                <img id="staff-news-img-preview" src="" style="width: 100%; max-height: 180px; object-fit: cover; display: block;">
+                                <button type="button" onclick="clearStaffNewsImage()" style="position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.7); color: white; border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; font-size: 14px; line-height: 26px; text-align: center;">✕</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="staff-news-summary">Short Summary / Excerpt * (1 - 3 sentences)</label>
+                            <textarea id="staff-news-summary" class="form-control" rows="2" placeholder="Brief summary of the article that will be displayed on the website card feed..." required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="staff-news-content">Full Article Content *</label>
+                            <textarea id="staff-news-content" class="form-control" rows="6" placeholder="Detailed legal analysis, statutory references, citations, case laws, and chamber observations..." required></textarea>
+                        </div>
+
+                        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
+                            <button type="submit" id="staff-news-submit-btn" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px; padding: 0.85rem 1.8rem; font-size: 1rem; background: linear-gradient(135deg, #102a43, #1e3a8a);">
+                                🚀 Publish Article (1/day allowed)
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- My Past Published Articles History -->
+                <div class="card" style="margin-top: 2rem;">
+                    <h3 style="margin-bottom: 0.5rem; color: var(--color-primary);">My Published Articles</h3>
+                    <p style="color: var(--color-text-light); font-size: 0.9rem; margin-bottom: 1.5rem;">Historical archive of articles published by you through the chamber portal.</p>
+                    
+                    <div id="staff-news-history-list">
+                        <p style="color: #64748b; font-style: italic;">Loading articles...</p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
 
         <section id="section-addcase" class="admin-section">
             
@@ -628,7 +749,8 @@
             }
             
             document.getElementById('nav-dashboard').addEventListener('click', () => showSection('dashboard'));
-
+            const navNewsBtn = document.getElementById('nav-news');
+            if (navNewsBtn) navNewsBtn.addEventListener('click', () => showSection('news'));
         }
 
         document.getElementById('staff-logout').addEventListener('click', (e) => {
@@ -855,8 +977,255 @@
                 loadStaffAppointments();
             } else if (sectionId === 'clients') {
                 loadStaffClients();
+            } else if (sectionId === 'news') {
+                loadStaffNewsSection();
             }
         }
+
+        // ==========================================
+        // STAFF NEWS & INSIGHTS (1 Per Day Limit)
+        // ==========================================
+        let staffNewsImageBase64 = '';
+
+        window.compressImage = function(file, maxSize = 800) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        let w = img.width, h = img.height;
+                        if (w > h) { if (w > maxSize) { h = Math.round(h * maxSize / w); w = maxSize; } }
+                        else { if (h > maxSize) { w = Math.round(h * maxSize / h); h = maxSize; } }
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, w, h);
+                        resolve(canvas.toDataURL('image/jpeg', 0.82));
+                    };
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        };
+
+        window.handleStaffNewsImageSelect = async function(input) {
+            if (input.files && input.files[0]) {
+                try {
+                    const compressed = await compressImage(input.files[0], 800);
+                    staffNewsImageBase64 = compressed;
+                    document.getElementById('staff-news-image-url').value = '';
+                    const preview = document.getElementById('staff-news-img-preview');
+                    preview.src = compressed;
+                    document.getElementById('staff-news-image-preview-wrapper').style.display = 'block';
+                } catch (e) {
+                    console.error('Image compression error:', e);
+                    showToast('Failed to process image', 'error');
+                }
+            }
+        };
+
+        window.updateStaffNewsImagePreview = function(url) {
+            if (url && (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/'))) {
+                staffNewsImageBase64 = '';
+                const preview = document.getElementById('staff-news-img-preview');
+                preview.src = url;
+                document.getElementById('staff-news-image-preview-wrapper').style.display = 'block';
+            } else if (!url && !staffNewsImageBase64) {
+                document.getElementById('staff-news-image-preview-wrapper').style.display = 'none';
+            }
+        };
+
+        window.clearStaffNewsImage = function() {
+            staffNewsImageBase64 = '';
+            document.getElementById('staff-news-file').value = '';
+            document.getElementById('staff-news-image-url').value = '';
+            document.getElementById('staff-news-img-preview').src = '';
+            document.getElementById('staff-news-image-preview-wrapper').style.display = 'none';
+        };
+
+        window.loadStaffNewsSection = async function() {
+            const email = staffData.email || '';
+            const staffId = staffData._id || '';
+            const quotaPill = document.getElementById('staff-news-quota-pill');
+            const quotaDesc = document.getElementById('staff-news-quota-desc');
+            const todayBadge = document.getElementById('staff-news-today-date');
+            const todayPostedCard = document.getElementById('staff-news-today-posted-card');
+            const submitBtn = document.getElementById('staff-news-submit-btn');
+            const formCounter = document.getElementById('form-quota-counter');
+            const historyList = document.getElementById('staff-news-history-list');
+
+            if (!email) {
+                if (quotaDesc) quotaDesc.innerText = 'Please login with a valid staff email to manage News & Insights.';
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/staff/news-status?email=${encodeURIComponent(email)}&staff_id=${encodeURIComponent(staffId)}`);
+                const data = await res.json();
+                
+                if (todayBadge && data.today) {
+                    todayBadge.innerText = `Date (IST): ${data.today}`;
+                }
+
+                if (data.limit_reached || !data.can_upload) {
+                    // Quota Used
+                    if (quotaPill) {
+                        quotaPill.style.background = '#fef3c7';
+                        quotaPill.style.color = '#b45309';
+                        quotaPill.innerText = '⚠️ 1/1 Quota Used Today';
+                    }
+                    if (quotaDesc) {
+                        quotaDesc.innerHTML = `You have already published your <strong>1 allowed article</strong> for today (${data.today}). Next submission opens tomorrow.`;
+                    }
+                    if (formCounter) {
+                        formCounter.style.background = '#fef2f2';
+                        formCounter.style.color = '#b91c1c';
+                        formCounter.style.borderColor = '#fecaca';
+                        formCounter.innerText = 'Limit Reached (0 remaining today)';
+                    }
+                    
+                    // Show Today's Article Card
+                    if (data.today_article) {
+                        todayPostedCard.style.display = 'block';
+                        document.getElementById('today-posted-title').innerText = data.today_article.title || 'Untitled';
+                        document.getElementById('today-posted-category').innerText = data.today_article.category || 'Chamber Insights';
+                        document.getElementById('today-posted-date').innerText = data.today_article.date || data.today;
+                        document.getElementById('today-posted-summary').innerText = data.today_article.summary || '';
+                    }
+
+                    // Disable inputs and button
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.style.opacity = '0.6';
+                        submitBtn.style.cursor = 'not-allowed';
+                        submitBtn.innerHTML = '🔒 Daily Limit Reached (Next allowed tomorrow)';
+                    }
+                    ['staff-news-title', 'staff-news-category', 'staff-news-image-url', 'staff-news-summary', 'staff-news-content'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.disabled = true;
+                    });
+                } else {
+                    // Quota Available
+                    if (quotaPill) {
+                        quotaPill.style.background = '#dcfce7';
+                        quotaPill.style.color = '#15803d';
+                        quotaPill.innerText = '🟢 Quota Available (1/1 Remaining)';
+                    }
+                    if (quotaDesc) {
+                        quotaDesc.innerHTML = `You are allowed to publish <strong>1 News & Insights article</strong> today (${data.today || 'IST'}). Your article will be shown on the live chamber website.`;
+                    }
+                    if (formCounter) {
+                        formCounter.style.background = '#eff6ff';
+                        formCounter.style.color = '#1d4ed8';
+                        formCounter.style.borderColor = '#bfdbfe';
+                        formCounter.innerText = 'Quota: 1 Article Allowed Today';
+                    }
+                    if (todayPostedCard) {
+                        todayPostedCard.style.display = 'none';
+                    }
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.style.opacity = '1';
+                        submitBtn.style.cursor = 'pointer';
+                        submitBtn.innerHTML = '🚀 Publish Article (1/day allowed)';
+                    }
+                    ['staff-news-title', 'staff-news-category', 'staff-news-image-url', 'staff-news-summary', 'staff-news-content'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.disabled = false;
+                    });
+                }
+
+                // Render Past Articles List
+                if (historyList) {
+                    const articles = (data.past_articles && data.past_articles.length > 0) 
+                        ? data.past_articles 
+                        : (data.today_article ? [data.today_article] : []);
+                    
+                    if (articles.length === 0) {
+                        historyList.innerHTML = '<p style="color: #94a3b8; font-style: italic;">No articles published yet by your account.</p>';
+                    } else {
+                        historyList.innerHTML = articles.map(art => `
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.2rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;">
+                                <div style="flex: 1; min-width: 250px;">
+                                    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
+                                        <span class="badge" style="background: #e2e8f0; color: #1e293b; font-size: 0.75rem;">${art.category || 'Update'}</span>
+                                        <span style="font-size: 0.82rem; color: #64748b;">📅 ${art.date}</span>
+                                    </div>
+                                    <h4 style="margin: 0 0 6px 0; color: var(--color-primary); font-size: 1.05rem;">${art.title}</h4>
+                                    <p style="margin: 0; color: #475569; font-size: 0.88rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${art.summary || ''}</p>
+                                </div>
+                                <div>
+                                    <a href="index.html#news-section" target="_blank" class="btn btn-outline" style="font-size: 0.82rem; padding: 6px 12px; white-space: nowrap;">
+                                        View Live ↗
+                                    </a>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching staff news status:', err);
+                if (quotaPill) quotaPill.innerText = 'Status Offline';
+            }
+        };
+
+        window.handleStaffNewsSubmit = async function(e) {
+            e.preventDefault();
+            const submitBtn = document.getElementById('staff-news-submit-btn');
+            const title = document.getElementById('staff-news-title').value.trim();
+            const category = document.getElementById('staff-news-category').value.trim();
+            const summary = document.getElementById('staff-news-summary').value.trim();
+            const content = document.getElementById('staff-news-content').value.trim();
+            const imageUrl = document.getElementById('staff-news-image-url').value.trim();
+            const finalImage = staffNewsImageBase64 || imageUrl;
+
+            if (!title) return showToast('Please enter an article title', 'error');
+            if (!summary && !content) return showToast('Please enter summary and content', 'error');
+
+            const origHtml = submitBtn.innerHTML;
+            submitBtn.innerText = 'Publishing...';
+            submitBtn.disabled = true;
+
+            try {
+                const res = await fetch('/api/staff/news', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        author_email: staffData.email,
+                        staff_id: staffData._id || '',
+                        author: staffData.name || 'Staff Advocate',
+                        title: title,
+                        category: category,
+                        summary: summary,
+                        content: content,
+                        image: finalImage,
+                        icon: '⚖️'
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(data.message || 'Article published successfully!', 'success');
+                    document.getElementById('staff-news-upload-form').reset();
+                    clearStaffNewsImage();
+                    // Immediately re-load to enforce the daily 1-article limit lock and show preview!
+                    await loadStaffNewsSection();
+                } else {
+                    showToast(data.error || 'Failed to publish article', 'error');
+                    await loadStaffNewsSection();
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Server connection error. Please try again.', 'error');
+            } finally {
+                if (!submitBtn.disabled) {
+                    submitBtn.innerHTML = origHtml;
+                }
+            }
+        };
 
         // Initialize
         loadMyCases();
