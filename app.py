@@ -1716,10 +1716,49 @@ def verify_code():
     return jsonify({"error": "Invalid code"}), 400
 
 
+def ensure_chamber_owner_advocate():
+    try:
+        setting_doc = settings_col.find_one({"_id": "office_info"}) or {}
+        owner_name = str(setting_doc.get("about_chamber_owner_name", "") or "").strip() or "Adv. Jayasankar Mishra"
+        owner_email = str(setting_doc.get("email", "") or "").strip() or "jsmchamberscuttack2026@gmail.com"
+        owner_phone = str(setting_doc.get("phone", "") or "").strip() or "+91 736353763"
+        owner_img = setting_doc.get("about_chamber_owner_image") or setting_doc.get("about_chamber_image1") or "assets/images/advocate_logo.jpg"
+        owner_specialty = "35 years of advocacy; specialized in Constitutional Law, Civil Law, Insurance and Banking Law, Education and Technical Education Law, Service and Industrial Law, Land."
+        owner_role = "Chamber Owner & Lead Counsel"
+        owner_location = str(setting_doc.get("address", "") or "").strip() or "High Court of Orissa, Cuttack"
+
+        owner_adv = advocates_col.find_one({"is_owner": True})
+        if not owner_adv:
+            owner_adv = advocates_col.find_one({"name": owner_name})
+            
+        if not owner_adv:
+            advocates_col.insert_one({
+                "is_owner": True,
+                "name": owner_name,
+                "email": owner_email,
+                "phone": owner_phone,
+                "specialty": owner_specialty,
+                "role": owner_role,
+                "location": owner_location,
+                "linkedin": "",
+                "imageUrl": owner_img,
+                "access_appointments": True,
+                "access_clients": True,
+                "access_add_case": True,
+                "access_voice": True,
+                "welcome_mail_sent": True
+            })
+        else:
+            if not owner_adv.get("is_owner"):
+                advocates_col.update_one({"_id": owner_adv["_id"]}, {"$set": {"is_owner": True}})
+    except Exception as e:
+        logging.error(f"Error ensuring chamber owner advocate: {e}")
+
 @app.route('/api/advocates', methods=['GET'])
 def get_advocates():
+    ensure_chamber_owner_advocate()
     advocates = []
-    for adv in advocates_col.find():
+    for adv in advocates_col.find().sort([("is_owner", -1), ("_id", 1)]):
         adv['_id'] = str(adv['_id'])
         advocates.append(adv)
     return jsonify(advocates), 200
@@ -1878,7 +1917,7 @@ def staff_login():
 
 @app.route('/api/advocates/<id>', methods=['PUT'])
 def update_advocate(id):
-    data = request.json
+    data = request.json or {}
     update_fields = {}
     if 'name' in data:
         update_fields['name'] = data['name']
@@ -1898,17 +1937,44 @@ def update_advocate(id):
         update_fields['imageUrl'] = data['imageUrl']
     if not update_fields:
         return jsonify({"error": "No fields to update"}), 400
-    result = advocates_col.update_one({"_id": ObjectId(id)}, {"$set": update_fields})
-    if result.matched_count:
-        return jsonify({"message": "Advocate updated"}), 200
-    return jsonify({"error": "Advocate not found"}), 404
+        
+    try:
+        adv = advocates_col.find_one({"_id": ObjectId(id)})
+        if not adv:
+            return jsonify({"error": "Advocate not found"}), 404
+            
+        advocates_col.update_one({"_id": ObjectId(id)}, {"$set": update_fields})
+        
+        # If updating chamber owner, sync relevant fields with office_info
+        if adv.get('is_owner'):
+            office_update = {}
+            if 'name' in update_fields:
+                office_update['about_chamber_owner_name'] = update_fields['name']
+            if 'imageUrl' in update_fields and update_fields['imageUrl']:
+                office_update['about_chamber_owner_image'] = update_fields['imageUrl']
+            if 'phone' in update_fields:
+                office_update['phone'] = update_fields['phone']
+            if 'email' in update_fields:
+                office_update['email'] = update_fields['email']
+            if office_update:
+                settings_col.update_one({"_id": "office_info"}, {"$set": office_update}, upsert=True)
+                
+        return jsonify({"message": "Advocate updated successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 @app.route('/api/advocates/<id>', methods=['DELETE'])
 def delete_advocate(id):
-    result = advocates_col.delete_one({"_id": ObjectId(id)})
-    if result.deleted_count:
-        return jsonify({"message": "Advocate deleted"}), 200
-    return jsonify({"error": "Advocate not found"}), 404
+    try:
+        adv = advocates_col.find_one({"_id": ObjectId(id)})
+        if adv and adv.get('is_owner'):
+            return jsonify({"error": "Chamber Owner is permanent and cannot be deleted."}), 400
+        result = advocates_col.delete_one({"_id": ObjectId(id)})
+        if result.deleted_count:
+            return jsonify({"message": "Advocate deleted"}), 200
+        return jsonify({"error": "Advocate not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 @app.route('/api/settings', methods=['GET'])
 def get_settings():

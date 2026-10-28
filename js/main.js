@@ -334,13 +334,25 @@ document.addEventListener('DOMContentLoaded', () => {
                   advocates.forEach(adv => {
                       const div = document.createElement('div');
                       div.className = 'advocate';
-                      const role = adv.role || 'Partner - Legal Practice';
+                      const isOwner = !!adv.is_owner;
+                      if (isOwner) {
+                          div.style.border = '2px solid #D4AF37';
+                          div.style.boxShadow = '0 12px 30px rgba(212,175,55,0.18)';
+                          div.style.borderRadius = '12px';
+                          div.style.background = '#ffffff';
+                      }
+                      const role = adv.role || (isOwner ? 'Chamber Owner & Lead Counsel' : 'Partner - Legal Practice');
                       const location = adv.location || 'High Court of Orissa, Cuttack';
-                      const specialty = adv.specialty || 'Litigation & Legal Advisory';
+                      const specialty = adv.specialty || (isOwner ? '35 years of advocacy; specialized in Constitutional Law, Civil Law, Insurance and Banking Law, Education and Technical Education Law, Service and Industrial Law, Land.' : 'Litigation & Legal Advisory');
                       
                       let imageHtml = '';
-                      if (adv.imageUrl && adv.imageUrl.length > 20) {
-                          imageHtml = `<div class="advocate-image" style="background-image: url('${adv.imageUrl}');"></div>`;
+                      let photoSrc = adv.imageUrl;
+                      if ((!photoSrc || photoSrc.length < 20) && isOwner) {
+                          photoSrc = 'assets/images/advocate_logo.jpg';
+                      }
+
+                      if (photoSrc && photoSrc.length > 20) {
+                          imageHtml = `<div class="advocate-image" style="background-image: url('${photoSrc}');"></div>`;
                       } else {
                           const initial = (adv.name || '⚖').trim().charAt(0).toUpperCase();
                           imageHtml = `
@@ -357,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
                       }
                       if (adv.linkedin) {
                           contactIcons += `<a href="${adv.linkedin}" target="_blank" rel="noopener noreferrer" class="advocate-contact-btn" title="LinkedIn Profile" style="font-weight: 800; font-family: sans-serif; font-size: 13px;">in</a>`;
-                      } else {
+                      } else if (!isOwner) {
                           contactIcons += `<a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" class="advocate-contact-btn" title="Professional Profile" style="font-weight: 800; font-family: sans-serif; font-size: 13px;">in</a>`;
                       }
                       if (adv.phone) {
@@ -367,8 +379,9 @@ document.addEventListener('DOMContentLoaded', () => {
                       div.innerHTML = `
                           ${imageHtml}
                           <div class="advocate-info">
+                              ${isOwner ? '<div style="margin-bottom: 6px;"><span style="background: linear-gradient(135deg, #071322 0%, #0A1628 100%); color: #D4AF37; border: 1px solid #D4AF37; padding: 3px 10px; border-radius: 4px; font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; display: inline-flex; align-items: center; gap: 5px;">👑 CHAMBER OWNER</span></div>' : ''}
                               <h3 style="margin: 0 0 4px 0; font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 700; color: #0A1628; line-height: 1.3;">${adv.name}</h3>
-                              <div class="advocate-role">${role}</div>
+                              <div class="advocate-role" style="${isOwner ? 'color: #b45309; font-weight: 700;' : ''}">${role}</div>
                               <div class="advocate-specialty">${specialty}</div>
                               <div class="advocate-location">
                                   <svg style="width: 13px; height: 13px; fill: #64748b; flex-shrink: 0;" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
@@ -378,7 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                   <div style="display: flex; gap: 8px;">
                                       ${contactIcons}
                                   </div>
-                                  <button onclick="openModal('appointmentModal')" style="background: transparent; border: 1px solid #D4AF37; color: #0A1628; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#0A1628';this.style.color='#D4AF37';" onmouseout="this.style.background='transparent';this.style.color='#0A1628';">
+                                  <button onclick="openModal('appointmentModal')" style="background: ${isOwner ? '#0A1628' : 'transparent'}; border: 1px solid #D4AF37; color: ${isOwner ? '#D4AF37' : '#0A1628'}; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#D4AF37';this.style.color='#0A1628';" onmouseout="this.style.background='${isOwner ? '#0A1628' : 'transparent'}';this.style.color='${isOwner ? '#D4AF37' : '#0A1628'}';">
                                       Consult →
                                   </button>
                               </div>

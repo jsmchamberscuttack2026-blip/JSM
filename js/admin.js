@@ -678,6 +678,12 @@ async function loadAdvocates() {
         advocates.forEach((adv) => {
             const card = document.createElement('div');
             card.className = 'advocate-card';
+            const isOwner = !!adv.is_owner;
+            if (isOwner) {
+                card.style.border = '2px solid #D4AF37';
+                card.style.boxShadow = '0 6px 20px rgba(212,175,55,0.2)';
+                card.style.background = '#fffdfa';
+            }
             
             const initial = (adv.name || '⚖').trim().charAt(0).toUpperCase();
             const photoHtml = adv.imageUrl && adv.imageUrl.length > 20
@@ -688,8 +694,11 @@ async function loadAdvocates() {
                 <div style="display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 1rem;">
                     ${photoHtml}
                     <div style="overflow: hidden; flex: 1;">
-                        <h4 style="margin: 0; font-size: 1.15rem; color: #0f172a; font-weight: 700;">${adv.name}</h4>
-                        <div style="margin: 2px 0; font-size: 0.82rem; color: #b45309; font-weight: 600;">${adv.role || 'Legal Professional'}</div>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <h4 style="margin: 0; font-size: 1.15rem; color: #0f172a; font-weight: 700;">${adv.name}</h4>
+                            ${isOwner ? '<span style="background: #0A1628; color: #D4AF37; border: 1px solid #D4AF37; font-size: 0.68rem; padding: 2px 7px; border-radius: 4px; font-weight: 800; letter-spacing: 1px;">👑 OWNER</span>' : ''}
+                        </div>
+                        <div style="margin: 2px 0; font-size: 0.82rem; color: #b45309; font-weight: 600;">${adv.role || (isOwner ? 'Chamber Owner & Lead Counsel' : 'Legal Professional')}</div>
                         <p style="margin: 0; font-size: 0.85rem; color: #475569; font-weight: 500;">${adv.specialty || ''}</p>
                         <div style="margin-top: 4px; font-size: 0.8rem; color: #64748b;">📧 ${adv.email || 'N/A'}</div>
                         <div style="margin-top: 2px; font-size: 0.8rem; color: #64748b;">📞 ${adv.phone || 'N/A'}</div>
@@ -726,7 +735,10 @@ async function loadAdvocates() {
                     <button class="btn" style="width: 100%; background: #D4AF37; color: #0A1628; font-weight: bold; border: none; padding: 0.5rem;" onclick="showIdCard('${adv._id}')">🪪 Show & Email ID Card</button>
                     <div style="display: flex; gap: 0.5rem;">
                         <button class="btn" style="flex: 1; background: var(--primary); color: white; border: none;" onclick="openEditAdvocateModal('${adv._id}')">✏️ Edit</button>
-                        <button class="btn btn-error" style="flex: 1; border: none;" onclick="deleteAdvocate('${adv._id}')">🗑️ Delete</button>
+                        ${isOwner 
+                            ? `<button class="btn" style="flex: 1; background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; cursor: not-allowed; font-size: 0.85rem;" title="Chamber Owner is permanent and cannot be deleted" disabled>🛡️ Permanent</button>`
+                            : `<button class="btn btn-error" style="flex: 1; border: none;" onclick="deleteAdvocate('${adv._id}')">🗑️ Delete</button>`
+                        }
                     </div>
                 </div>
             `;
