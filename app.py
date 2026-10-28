@@ -324,13 +324,15 @@ def get_client_ip():
         return request.headers.get('X-Real-IP').strip()
     return request.remote_addr or '127.0.0.1'
 
-def get_admin_lockout_doc():
+def get_admin_lockout_doc(ip=None):
     if config_col is None:
         return {}
-    return config_col.find_one({"_id": "admin_security_lockout"}) or {}
+    client_ip = (ip or get_client_ip() or '127.0.0.1').strip()
+    return config_col.find_one({"_id": f"admin_lockout_{client_ip}"}) or {}
 
-def is_admin_locked():
-    lock_doc = get_admin_lockout_doc()
+def is_admin_locked(ip=None):
+    client_ip = (ip or get_client_ip() or '127.0.0.1').strip()
+    lock_doc = get_admin_lockout_doc(client_ip)
     locked_until_ts = lock_doc.get("locked_until_timestamp", 0)
     now_ts = get_now_ist().timestamp()
     if now_ts < locked_until_ts:
@@ -1416,12 +1418,11 @@ def delete_staff_email_logs(email):
 
 @app.route('/api/admin-lock-status', methods=['GET'])
 def admin_lock_status():
-    is_locked, remaining_seconds, lock_doc = is_admin_locked()
+    client_ip = get_client_ip()
+    is_locked, remaining_seconds, lock_doc = is_admin_locked(client_ip)
     return jsonify({
         "locked": is_locked,
-        "remaining_seconds": remaining_seconds,
-        "failed_attempts": lock_doc.get("failed_attempts", 0),
-        "locked_until": lock_doc.get("locked_until_iso")
+        "remaining_seconds": remaining_seconds
     }), 200
 
 @app.route('/api/admin-login', methods=['POST'])
@@ -1429,13 +1430,13 @@ def admin_login():
     data = request.get_json(force=True, silent=True) or {}
     user_id = (data.get('email') or data.get('admin_id') or '').strip()
     password = data.get('password', '').strip()
+    client_ip = get_client_ip()
     
-    # 1. Enforce active lockout
-    is_locked, rem_secs, lock_doc = is_admin_locked()
+    # 1. Enforce active lockout for THIS specific device/IP only
+    is_locked, rem_secs, lock_doc = is_admin_locked(client_ip)
     if is_locked:
-        rem_min = (rem_secs + 59) // 60
         return jsonify({
-            "error": f"Security Lockdown Active: Admin portal is locked for {rem_min} minute(s) due to multiple failed login attempts. No requests accepted.",
+            "error": "Access temporarily restricted due to repeated failed login attempts. Please try again in 5 minutes.",
             "locked": True,
             "lockout_remaining_seconds": rem_secs,
             "locked_until": lock_doc.get("locked_until_iso")
@@ -1443,10 +1444,10 @@ def admin_login():
     
     # 2. Check credentials
     if user_id == 'JSM' and password == 'JAYA@CDA11':
-        # Valid login: reset failed attempts counter
+        # Valid login: reset failed attempts counter for this device/IP
         if config_col is not None:
             config_col.update_one(
-                {"_id": "admin_security_lockout"},
+                {"_id": f"admin_lockout_{client_ip}"},
                 {"$set": {
                     "failed_attempts": 0,
                     "locked_until_timestamp": 0,
@@ -1485,14 +1486,13 @@ def admin_login():
             "email_sent": email_sent
         }), 200
     
-    # 3. Failed attempt handling
-    client_ip = get_client_ip()
+    # 3. Failed attempt handling for THIS specific device/IP
     user_agent = request.headers.get('User-Agent', 'Unknown Device')
     now_ist = get_now_ist()
     current_fails = int(lock_doc.get("failed_attempts", 0)) + 1
     
     if current_fails >= 3:
-        # Lockout triggered for 5 minutes (300 seconds)
+        # Lockout triggered for 5 minutes (300 seconds) ONLY FOR THIS IP
         locked_until = now_ist + timedelta(minutes=5)
         locked_until_ts = locked_until.timestamp()
         locked_until_iso = locked_until.isoformat()
@@ -1500,8 +1500,9 @@ def admin_login():
         
         if config_col is not None:
             config_col.update_one(
-                {"_id": "admin_security_lockout"},
+                {"_id": f"admin_lockout_{client_ip}"},
                 {"$set": {
+                    "ip": client_ip,
                     "failed_attempts": current_fails,
                     "locked_until_timestamp": locked_until_ts,
                     "locked_until_iso": locked_until_iso,
@@ -1524,23 +1525,23 @@ def admin_login():
                 upsert=True
             )
             
-        # Dispatch emergency security breach alert with IP address to official email + security officer
+        # Dispatch emergency security breach alert with IP address to official email + security officer in background
         alert_sent = send_admin_security_alert_email(client_ip, user_agent, user_id or "Anonymous/Blank", expiry_str)
         
         return jsonify({
-            "error": "🚨 CRITICAL SECURITY ALERT: 3 consecutive failed login attempts detected. The admin portal has been locked for 5 minutes. Security alert dispatched with IP address.",
+            "error": "Access restricted due to repeated failed attempts. Please try again in 5 minutes.",
             "locked": True,
             "lockout_remaining_seconds": 300,
             "locked_until": expiry_str,
-            "attempts_left": 0,
             "alert_sent": alert_sent
         }), 423
     else:
-        # Under 3 attempts: record failure and warn user
+        # Under 3 attempts: record failure for this IP, show only standard invalid message without disclosing counters
         if config_col is not None:
             config_col.update_one(
-                {"_id": "admin_security_lockout"},
+                {"_id": f"admin_lockout_{client_ip}"},
                 {"$set": {
+                    "ip": client_ip,
                     "failed_attempts": current_fails,
                     "last_failed_ip": client_ip,
                     "last_failed_user_agent": user_agent,
@@ -1549,21 +1550,18 @@ def admin_login():
                 }},
                 upsert=True
             )
-        attempts_left = 3 - current_fails
         return jsonify({
-            "error": f"Invalid Admin ID or Password. Warning: {attempts_left} attempt(s) remaining before security lockout (5 minutes).",
-            "attempts_left": attempts_left,
-            "failed_attempts": current_fails,
+            "error": "Invalid username or password.",
             "locked": False
         }), 401
 
 @app.route('/api/admin-verify-otp', methods=['POST'])
 def admin_verify_otp():
-    is_locked, rem_secs, lock_doc = is_admin_locked()
+    client_ip = get_client_ip()
+    is_locked, rem_secs, lock_doc = is_admin_locked(client_ip)
     if is_locked:
-        rem_min = (rem_secs + 59) // 60
         return jsonify({
-            "error": f"Security Lockdown Active: Admin portal is locked for {rem_min} minute(s). No requests accepted.",
+            "error": "Access temporarily restricted. Please try again in 5 minutes.",
             "locked": True,
             "lockout_remaining_seconds": rem_secs
         }), 423
@@ -1603,11 +1601,11 @@ def admin_verify_otp():
 
 @app.route('/api/admin-resend-otp', methods=['POST'])
 def admin_resend_otp():
-    is_locked, rem_secs, lock_doc = is_admin_locked()
+    client_ip = get_client_ip()
+    is_locked, rem_secs, lock_doc = is_admin_locked(client_ip)
     if is_locked:
-        rem_min = (rem_secs + 59) // 60
         return jsonify({
-            "error": f"Security Lockdown Active: Admin portal is locked for {rem_min} minute(s). No requests accepted.",
+            "error": "Access temporarily restricted. Please try again in 5 minutes.",
             "locked": True,
             "lockout_remaining_seconds": rem_secs
         }), 423
