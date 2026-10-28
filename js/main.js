@@ -222,6 +222,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (info.about_chamber_text && info.about_chamber_text.trim()) {
           const textEl = document.getElementById('about-doc-text');
           if (textEl) textEl.innerText = info.about_chamber_text.trim();
+          const bannerDesc = document.getElementById('about-banner-short-desc');
+          if (bannerDesc) bannerDesc.innerText = info.about_chamber_text.trim();
+      }
+      if (ownerImgUrl) {
+          const bannerBg = document.getElementById('about-banner-bg');
+          if (bannerBg) bannerBg.style.backgroundImage = `url('${ownerImgUrl}')`;
       }
       
       // Dynamic Quick Links
@@ -1010,6 +1016,33 @@ document.addEventListener('click', (e) => {
     }
 });
 
+// Mobile touch swipe listener for 3D Book
+let bookTouchStartX = 0;
+let bookTouchEndX = 0;
+document.addEventListener('DOMContentLoaded', () => {
+    const serviceBookModal = document.getElementById('service-book-modal');
+    if (serviceBookModal) {
+        serviceBookModal.addEventListener('touchstart', (e) => {
+            if (e.changedTouches && e.changedTouches.length > 0) {
+                bookTouchStartX = e.changedTouches[0].screenX;
+            }
+        }, { passive: true });
+        serviceBookModal.addEventListener('touchend', (e) => {
+            if (e.changedTouches && e.changedTouches.length > 0) {
+                bookTouchEndX = e.changedTouches[0].screenX;
+                const diff = bookTouchStartX - bookTouchEndX;
+                if (Math.abs(diff) > 40) {
+                    if (diff > 0) {
+                        window.turnBookPageRight();
+                    } else {
+                        window.turnBookPageLeft();
+                    }
+                }
+            }
+        }, { passive: true });
+    }
+});
+
 // Auto-load services on page load
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', loadPublicServices);
@@ -1103,20 +1136,20 @@ window.loadPublicNews = async function() {
                         : `<span style="margin-right: 6px;">${item.icon || '⚖️'}</span>`;
 
                     const imgHtml = item.image_url
-                        ? `<div class="news-card-img" style="height: 190px; width: 100%; overflow: hidden;"><img src="${item.image_url}" alt="${item.title}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'"></div>`
-                        : `<div class="news-card-img" style="height: 130px; width: 100%; background: linear-gradient(135deg, #071322, #102138); display: flex; align-items: center; justify-content: center; color: #D4AF37; font-size: 2.2rem; border-bottom: 1px solid rgba(212,175,55,0.2);">${item.icon && !item.icon.startsWith('data:') && !item.icon.startsWith('http') ? item.icon : '📰'}</div>`;
+                        ? `<div class="news-card-img"><img src="${item.image_url}" alt="${item.title}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'"></div>`
+                        : `<div class="news-card-img" style="background: linear-gradient(135deg, #071322, #102138); display: flex; align-items: center; justify-content: center; color: #D4AF37; font-size: 2rem; border-bottom: 1px solid rgba(212,175,55,0.2);">${item.icon && !item.icon.startsWith('data:') && !item.icon.startsWith('http') ? item.icon : '📰'}</div>`;
 
                     return `
-                        <article class="news-card news-train-card" onclick="openNewsArticleModal('${item._id}')" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(212, 175, 55, 0.25); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; cursor: pointer; transition: all 0.35s ease; box-shadow: 0 10px 25px rgba(0,0,0,0.35); width: 350px; flex-shrink: 0;" onmouseover="this.style.transform='translateY(-6px)';this.style.borderColor='#D4AF37';this.style.boxShadow='0 15px 35px rgba(212,175,55,0.2)';" onmouseout="this.style.transform='none';this.style.borderColor='rgba(212, 175, 55, 0.25)';this.style.boxShadow='0 10px 25px rgba(0,0,0,0.35)';">
+                        <article class="news-card news-train-card" onclick="openNewsArticleModal('${item._id}')" onmouseover="this.style.transform='translateY(-6px)';this.style.borderColor='#D4AF37';this.style.boxShadow='0 15px 35px rgba(212,175,55,0.2)';" onmouseout="this.style.transform='none';this.style.borderColor='rgba(212, 175, 55, 0.25)';this.style.boxShadow='0 10px 25px rgba(0,0,0,0.35)';">
                             ${imgHtml}
-                            <div style="padding: 20px; display: flex; flex-direction: column; flex: 1;">
+                            <div class="news-card-content" style="padding: 18px; display: flex; flex-direction: column; flex: 1;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
                                     <span class="news-badge" style="background: rgba(212, 175, 55, 0.15); color: #D4AF37; border: 1px solid rgba(212, 175, 55, 0.3); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: inline-flex; align-items: center;">${iconHtml} ${item.category || 'Legal Update'}</span>
                                     <span style="color: #94a3b8; font-size: 11.5px;">📅 ${item.date || ''}</span>
                                 </div>
-                                <h3 style="font-family: 'Playfair Display', Georgia, serif; font-size: 18px; color: #ffffff; margin: 0 0 10px 0; line-height: 1.35; white-space: normal;">${item.title}</h3>
-                                <p style="color: #cbd5e1; font-size: 13px; line-height: 1.55; margin: 0 0 14px 0; flex: 1; white-space: normal; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${item.summary || ''}</p>
-                                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                                <h3 style="font-family: 'Playfair Display', Georgia, serif; font-size: 17px; color: #ffffff; margin: 0 0 8px 0; line-height: 1.35; white-space: normal;">${item.title}</h3>
+                                <p style="color: #cbd5e1; font-size: 12.8px; line-height: 1.55; margin: 0 0 12px 0; flex: 1; white-space: normal; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${item.summary || ''}</p>
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: auto;">
                                     <span style="color: #94a3b8; font-size: 11.5px; font-style: italic;">By ${item.author || 'Chamber Editorial'}</span>
                                     <span style="color: #D4AF37; font-weight: 700; font-size: 11.5px;">Read Article →</span>
                                 </div>
@@ -1205,25 +1238,26 @@ window.loadPublicOpinions = async function() {
                     return `
                         <article class="opinion-train-card" onclick="openOpinionArticleModal('${item._id}')">
                             <div>
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
-                                    <span style="background: rgba(212, 175, 55, 0.15); color: #D4AF37; border: 1px solid rgba(212, 175, 55, 0.35); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: inline-flex; align-items: center; gap: 4px;">
-                                        ⚖️ ${item.category || 'Legal Editorial'}
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                                    <span style="background: rgba(212, 175, 55, 0.15); color: #D4AF37; border: 1px solid rgba(212, 175, 55, 0.35); padding: 3px 8px; border-radius: 6px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: inline-flex; align-items: center; gap: 4px;">
+                                        ⚖️ ${item.category || 'Editorial Opinion'}
                                     </span>
-                                    <span style="color: #94a3b8; font-size: 11.5px; font-weight: 600;">📅 ${item.date || ''}</span>
+                                    <span style="color: #94a3b8; font-size: 11px; font-weight: 600;">📅 ${item.date || ''}</span>
                                 </div>
-                                <h3 style="font-family: 'Playfair Display', Georgia, serif; font-size: 18.5px; color: #ffffff; margin: 0 0 10px 0; line-height: 1.35; font-weight: 700; white-space: normal;">
+                                <div style="color: #D4AF37; font-size: 26px; line-height: 1; font-family: Georgia, serif; margin: 2px 0 -4px 0; opacity: 0.85;">“</div>
+                                <h3 style="font-family: 'Playfair Display', Georgia, serif; font-size: 16.5px; color: #ffffff; margin: 0 0 6px 0; line-height: 1.35; font-weight: 700; white-space: normal;">
                                     ${item.title || ''}
                                 </h3>
-                                <div style="color: #cbd5e1; font-size: 12px; margin-bottom: 12px; font-weight: 600;">
-                                    ✍️ By <span style="color: #D4AF37;">${item.author || 'Chamber Counsel'}</span>
+                                <div style="color: #94a3b8; font-size: 11.5px; margin-bottom: 8px; font-weight: 500;">
+                                    ✍️ By <span style="color: #D4AF37; font-weight: 600;">${item.author || 'Chamber Counsel'}</span>
                                 </div>
-                                <p style="color: #cbd5e1; font-size: 13.5px; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Georgia', serif; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; opacity: 0.9; white-space: normal;">
+                                <p style="color: #cbd5e1; font-size: 12.8px; line-height: 1.55; margin: 0 0 12px 0; font-family: 'Georgia', serif; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; opacity: 0.92; white-space: normal;">
                                     "${item.message || ''}"
                                 </p>
                             </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; margin-top: auto;">
-                                <span style="color: #94a3b8; font-size: 11.5px; font-style: italic;">JSM Editorial</span>
-                                <span style="color: #D4AF37; font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">Read Full Opinion →</span>
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: auto;">
+                                <span style="color: #94a3b8; font-size: 11px; font-style: italic;">JSM Perspective</span>
+                                <span style="color: #D4AF37; font-weight: 700; font-size: 11.5px; display: inline-flex; align-items: center; gap: 4px;">Read Full Opinion →</span>
                             </div>
                         </article>
                     `;
