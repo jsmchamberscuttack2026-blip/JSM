@@ -47,22 +47,24 @@
       "url": "https://jsm-chamber-cuttack-odisha-30.vercel.app/",
       "logo": "https://jsm-chamber-cuttack-odisha-30.vercel.app/assets/images/advocate_logo.jpg",
       "image": "https://jsm-chamber-cuttack-odisha-30.vercel.app/chamber-owner.jpg",
-      "description": "Welcome to JSM. Chambers — an independent private legal organization founded and owned by Adv. Jayasankar Mishra. Dedicated to professional legal consultation, strategic advocacy and comprehensive case management.",
-      "telephone": "+91 94370 00000",
-      "email": "jsmchamberscuttack2026@gmail.com",
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "High Court of Orissa",
-        "addressLocality": "Cuttack",
-        "addressRegion": "Odisha",
-        "addressCountry": "IN"
-      },
       "founder": {
         "@id": "https://jsm-chamber-cuttack-odisha-30.vercel.app/#owner"
       },
       "employee": [
         {
           "@id": "https://jsm-chamber-cuttack-odisha-30.vercel.app/#owner"
+        },
+        {
+          "@id": "https://jsm-chamber-cuttack-odisha-30.vercel.app/#member-6ae19bc0bc46657be3375652"
+        },
+        {
+          "@id": "https://jsm-chamber-cuttack-odisha-30.vercel.app/#member-6ae19eccbc46657be3375653"
+        },
+        {
+          "@id": "https://jsm-chamber-cuttack-odisha-30.vercel.app/#member-6ae19f9afcb1c10b070e8782"
+        },
+        {
+          "@id": "https://jsm-chamber-cuttack-odisha-30.vercel.app/#member-6ae1a465fcb1c10b070e8783"
         }
       ],
       "knowsAbout": [
@@ -81,12 +83,45 @@
         "Adv. Jayasankar Mishra - Chamber Owner",
         "JSM Chambers Owner",
         "Owner of JSM Chambers",
-        "JSM Chamber Founder",
-        "Managing Counsel Jayasankar Mishra"
+        "JSM Chamber Founder"
       ],
-      "jobTitle": "Chamber Owner & Principal Counsel",
-      "description": "Chamber Owner and Principal Counsel of JSM. Chambers, directing strategic litigation, constitutional briefs, and comprehensive client advocacy.",
       "image": "https://jsm-chamber-cuttack-odisha-30.vercel.app/chamber-owner.jpg",
+      "worksFor": {
+        "@id": "https://jsm-chamber-cuttack-odisha-30.vercel.app/#organization"
+      }
+    },
+    {
+      "@type": "Person",
+      "@id": "https://jsm-chamber-cuttack-odisha-30.vercel.app/#member-6ae19bc0bc46657be3375652",
+      "name": "Adv. Harisankar Mishra",
+      "image": "https://jsm-chamber-cuttack-odisha-30.vercel.app/assets/images/members/6ae19bc0bc46657be3375652.jpg",
+      "worksFor": {
+        "@id": "https://jsm-chamber-cuttack-odisha-30.vercel.app/#organization"
+      }
+    },
+    {
+      "@type": "Person",
+      "@id": "https://jsm-chamber-cuttack-odisha-30.vercel.app/#member-6ae19eccbc46657be3375653",
+      "name": "Adv. Chaitanya Nayak",
+      "image": "https://jsm-chamber-cuttack-odisha-30.vercel.app/assets/images/members/6ae19eccbc46657be3375653.jpg",
+      "worksFor": {
+        "@id": "https://jsm-chamber-cuttack-odisha-30.vercel.app/#organization"
+      }
+    },
+    {
+      "@type": "Person",
+      "@id": "https://jsm-chamber-cuttack-odisha-30.vercel.app/#member-6ae19f9afcb1c10b070e8782",
+      "name": "Adv. Susil Das",
+      "image": "https://jsm-chamber-cuttack-odisha-30.vercel.app/assets/images/members/6ae19f9afcb1c10b070e8782.jpg",
+      "worksFor": {
+        "@id": "https://jsm-chamber-cuttack-odisha-30.vercel.app/#organization"
+      }
+    },
+    {
+      "@type": "Person",
+      "@id": "https://jsm-chamber-cuttack-odisha-30.vercel.app/#member-6ae1a465fcb1c10b070e8783",
+      "name": "Tabasmiti Mishra",
+      "image": "https://jsm-chamber-cuttack-odisha-30.vercel.app/assets/images/members/6ae1a465fcb1c10b070e8783.jpg",
       "worksFor": {
         "@id": "https://jsm-chamber-cuttack-odisha-30.vercel.app/#organization"
       }
@@ -1216,12 +1251,15 @@ section{
 .advocate-image {
     height: 300px;
     width: 100%;
+    object-fit: cover;
+    object-position: top center;
     background-size: cover;
     background-position: top center;
     background-repeat: no-repeat;
     border-bottom: 1px solid #f1f5f9;
     position: relative;
     overflow: hidden;
+    display: block;
 }
 
 .advocate-info {
@@ -3558,7 +3596,7 @@ Our practitioners emphasize meticulous research, structured documentary review, 
             <div class="advocate-grid" id="advocates-grid">
                 <!-- Permanent Chamber Owner Lead Card -->
                 <div class="advocate" style="border: 2px solid #D4AF37; box-shadow: 0 12px 30px rgba(212,175,55,0.18); border-radius: 12px; overflow: hidden; background: #ffffff;">
-                    <div class="advocate-image" style="background-image: url('assets/images/advocate_logo.jpg');"></div>
+                    <img src="assets/images/advocate_logo.jpg" alt="Adv. Jayasankar Mishra - Chamber Owner" class="advocate-image" loading="eager" width="400" height="300">
                     <div class="advocate-info">
                         <div style="margin-bottom: 6px;">
                             <span style="background: linear-gradient(135deg, #071322 0%, #0A1628 100%); color: #D4AF37; border: 1px solid #D4AF37; padding: 3px 10px; border-radius: 4px; font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; display: inline-flex; align-items: center; gap: 5px;">👑 CHAMBER OWNER</span>
@@ -4276,7 +4314,7 @@ document.addEventListener("keydown", function(event){
 });
 
 </script>
-<script src="js/main.js?v=30"></script>
+<script src="js/main.js?v=31"></script>
 
 <!-- 3D Interactive Legal Book Modal -->
 <div id="service-book-modal" class="book-modal-backdrop">

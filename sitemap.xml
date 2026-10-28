@@ -3,18 +3,33 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://jsm-chamber-cuttack-odisha-30.vercel.app/</loc>
-    <lastmod>2026-10-27</lastmod>
+    <lastmod>2026-10-28</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
       <image:loc>https://jsm-chamber-cuttack-odisha-30.vercel.app/chamber-owner.jpg</image:loc>
       <image:title>Adv. Jayasankar Mishra - Chamber Owner | JSM. Chambers</image:title>
-      <image:caption>Official photograph of Adv. Jayasankar Mishra, Chamber Owner of JSM. Chambers</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://jsm-chamber-cuttack-odisha-30.vercel.app/assets/images/members/6ae19bc0bc46657be3375652.jpg</image:loc>
+      <image:title>Adv. Harisankar Mishra | JSM. Chambers</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://jsm-chamber-cuttack-odisha-30.vercel.app/assets/images/members/6ae19eccbc46657be3375653.jpg</image:loc>
+      <image:title>Adv. Chaitanya Nayak | JSM. Chambers</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://jsm-chamber-cuttack-odisha-30.vercel.app/assets/images/members/6ae19f9afcb1c10b070e8782.jpg</image:loc>
+      <image:title>Adv. Susil Das | JSM. Chambers</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://jsm-chamber-cuttack-odisha-30.vercel.app/assets/images/members/6ae1a465fcb1c10b070e8783.jpg</image:loc>
+      <image:title>Tabasmiti Mishra | JSM. Chambers</image:title>
     </image:image>
   </url>
   <url>
     <loc>https://jsm-chamber-cuttack-odisha-30.vercel.app/client-portal.html</loc>
-    <lastmod>2026-10-27</lastmod>
+    <lastmod>2026-10-28</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>

@@ -352,7 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
                       }
 
                       if (photoSrc && photoSrc.length > 20) {
-                          imageHtml = `<div class="advocate-image" style="background-image: url('${photoSrc}');"></div>`;
+                          imageHtml = `<img src="${photoSrc}" alt="${adv.name} - Chamber Member" class="advocate-image" loading="eager" width="400" height="300">`;
                       } else {
                           const initial = (adv.name || '⚖').trim().charAt(0).toUpperCase();
                           imageHtml = `

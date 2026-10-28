@@ -2,6 +2,7 @@ User-agent: *
 Allow: /
 Allow: /chamber-owner.jpg
 Allow: /assets/images/
+Allow: /assets/images/members/
 Disallow: /admin-dashboard.html
 Disallow: /admin-login.html
 Disallow: /api/

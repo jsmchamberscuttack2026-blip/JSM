@@ -332,7 +332,48 @@ def serve_index():
         html = re.sub(r'<meta\s+name=["\']description["\'][^>]*>', '', html, flags=re.DOTALL)
         html = re.sub(r'<meta\s+name=["\']robots["\'][^>]*>', '', html, flags=re.DOTALL)
         
-        # 3. Dynamic JSON-LD Structured Data for Google Knowledge Graph & Entity Search
+        # 3. Dynamic JSON-LD Structured Data for Google Search & Console Verification
+        # For all ADVOCATES & CHAMBER MEMBERS: Include ONLY name and image (no email, no about/description)
+        employee_refs = []
+        member_person_schemas = []
+        
+        all_advocates = list(advocates_col.find().sort([("is_owner", -1), ("_id", 1)]))
+        for adv in all_advocates:
+            adv_id = str(adv["_id"])
+            adv_name = adv.get("name", "").strip()
+            if not adv_name:
+                continue
+                
+            is_owner = bool(adv.get("is_owner"))
+            local_img = f"assets/images/members/{adv_id}.jpg"
+            if is_owner:
+                member_img = f"{base_url}/chamber-owner.jpg"
+            elif os.path.exists(local_img):
+                member_img = f"{base_url}/assets/images/members/{adv_id}.jpg"
+            else:
+                member_img = f"{base_url}/assets/images/advocate_logo.jpg"
+                
+            member_id = f"{base_url}/#owner" if is_owner else f"{base_url}/#member-{adv_id}"
+            employee_refs.append({"@id": member_id})
+            
+            p_schema = {
+                "@type": "Person",
+                "@id": member_id,
+                "name": adv_name,
+                "image": member_img,
+                "worksFor": {
+                    "@id": f"{base_url}/#organization"
+                }
+            }
+            if is_owner:
+                p_schema["alternateName"] = [
+                    f"{adv_name} - Chamber Owner",
+                    "JSM Chambers Owner",
+                    "Owner of JSM Chambers",
+                    "JSM Chamber Founder"
+                ]
+            member_person_schemas.append(p_schema)
+
         json_ld_schema = {
             "@context": "https://schema.org",
             "@graph": [
@@ -349,24 +390,10 @@ def serve_index():
                     "url": f"{base_url}/",
                     "logo": logo_url,
                     "image": owner_img_url,
-                    "description": f"Welcome to {chamber_name} — an independent private legal organization founded and owned by {owner_name}. Dedicated to strategic advocacy and consultation.",
-                    "telephone": phone,
-                    "email": email,
-                    "address": {
-                        "@type": "PostalAddress",
-                        "streetAddress": address,
-                        "addressLocality": "Cuttack",
-                        "addressRegion": "Odisha",
-                        "addressCountry": "IN"
-                    },
                     "founder": {
                         "@id": f"{base_url}/#owner"
                     },
-                    "employee": [
-                        {
-                            "@id": f"{base_url}/#owner"
-                        }
-                    ],
+                    "employee": employee_refs,
                     "knowsAbout": [
                         "Constitutional Law & Writ Petitions",
                         "Civil Litigation & Title Disputes",
@@ -374,26 +401,8 @@ def serve_index():
                         "Criminal Defense & Bail Matters",
                         "Appellate Courtroom Advocacy"
                     ]
-                },
-                {
-                    "@type": "Person",
-                    "@id": f"{base_url}/#owner",
-                    "name": owner_name,
-                    "alternateName": [
-                        f"{owner_name} - Chamber Owner",
-                        "JSM Chambers Owner",
-                        "Owner of JSM Chambers",
-                        "JSM Chamber Founder",
-                        "Managing Counsel"
-                    ],
-                    "jobTitle": "Chamber Owner & Principal Counsel",
-                    "description": f"Chamber Owner and Principal Counsel of JSM. Chambers, directing strategic litigation, constitutional briefs, and comprehensive client advocacy.",
-                    "image": owner_img_url,
-                    "worksFor": {
-                        "@id": f"{base_url}/#organization"
-                    }
                 }
-            ]
+            ] + member_person_schemas
         }
         json_ld_str = json.dumps(json_ld_schema, indent=2, ensure_ascii=False)
         json_ld_tag = f'<script type="application/ld+json">\n{json_ld_str}\n</script>'
@@ -475,8 +484,34 @@ Sitemap: {base_url}/sitemap.xml
 def serve_sitemap_xml():
     base = request.url_root.rstrip('/')
     now = datetime.utcnow().strftime('%Y-%m-%d')
-    setting_doc = settings_col.find_one({"_id": "office_info"}) or {}
-    owner_name = str(setting_doc.get("about_chamber_owner_name", "") or "").strip() or "Adv. Jayasankar Mishra"
+    
+    # Generate image entries for all advocates & chamber members
+    all_advocates = list(advocates_col.find().sort([("is_owner", -1), ("_id", 1)]))
+    image_entries = []
+    
+    for adv in all_advocates:
+        adv_id = str(adv["_id"])
+        adv_name = adv.get("name", "").strip()
+        if not adv_name:
+            continue
+        is_owner = bool(adv.get("is_owner"))
+        local_file = f"assets/images/members/{adv_id}.jpg"
+        if is_owner:
+            img_url = f"{base}/chamber-owner.jpg"
+            title = f"{adv_name} - Chamber Owner | JSM. Chambers"
+        elif os.path.exists(local_file):
+            img_url = f"{base}/assets/images/members/{adv_id}.jpg"
+            title = f"{adv_name} | JSM. Chambers"
+        else:
+            img_url = f"{base}/assets/images/advocate_logo.jpg"
+            title = f"{adv_name} | JSM. Chambers"
+            
+        image_entries.append(f"""    <image:image>
+      <image:loc>{img_url}</image:loc>
+      <image:title>{title}</image:title>
+    </image:image>""")
+        
+    images_xml = "\n".join(image_entries)
     
     sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
@@ -486,11 +521,7 @@ def serve_sitemap_xml():
     <lastmod>{now}</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
-    <image:image>
-      <image:loc>{base}/chamber-owner.jpg</image:loc>
-      <image:title>{owner_name} - Chamber Owner | JSM. Chambers</image:title>
-      <image:caption>Official photograph of {owner_name}, Chamber Owner of JSM. Chambers</image:caption>
-    </image:image>
+{images_xml}
   </url>
   <url>
     <loc>{base}/client-portal.html</loc>
@@ -1763,6 +1794,44 @@ def get_advocates():
         advocates.append(adv)
     return jsonify(advocates), 200
 
+def save_advocate_image_file(adv_id, img_data):
+    try:
+        if img_data and 'base64,' in img_data:
+            _, encoded = img_data.split('base64,', 1)
+            raw = base64.b64decode(encoded)
+            os.makedirs('assets/images/members', exist_ok=True)
+            path = f'assets/images/members/{adv_id}.jpg'
+            with open(path, 'wb') as f:
+                f.write(raw)
+    except Exception as e:
+        logging.error(f"Error saving advocate image file {adv_id}: {e}")
+
+@app.route('/advocates/<id>/photo.jpg')
+@app.route('/api/advocates/<id>/photo.jpg')
+def serve_advocate_photo(id):
+    try:
+        local_file = f"assets/images/members/{id}.jpg"
+        if os.path.exists(local_file):
+            return send_file(local_file, mimetype='image/jpeg', max_age=86400)
+            
+        adv = advocates_col.find_one({"_id": ObjectId(id)})
+        if not adv:
+            return send_from_directory('assets/images', 'advocate_logo.jpg')
+            
+        img_data = adv.get('imageUrl') or ""
+        if 'base64,' in img_data:
+            save_advocate_image_file(id, img_data)
+            if os.path.exists(local_file):
+                return send_file(local_file, mimetype='image/jpeg', max_age=86400)
+                
+        if adv.get('is_owner'):
+            return serve_chamber_owner_image()
+            
+        return send_from_directory('assets/images', 'advocate_logo.jpg')
+    except Exception as e:
+        logging.error(f"Error serving advocate photo {id}: {e}")
+        return send_from_directory('assets/images', 'advocate_logo.jpg')
+
 @app.route('/api/advocates', methods=['POST'])
 def add_advocate():
     data = request.json
@@ -1796,7 +1865,11 @@ def add_advocate():
         "imageUrl": image_url
     })
     
-    return jsonify({"message": "Advocate added", "id": str(result.inserted_id), "password": "OTP Only"}), 201
+    adv_id = str(result.inserted_id)
+    if image_url:
+        save_advocate_image_file(adv_id, image_url)
+    
+    return jsonify({"message": "Advocate added", "id": adv_id, "password": "OTP Only"}), 201
 
 @app.route('/api/advocates/<id>/send-welcome-mail', methods=['POST'])
 def send_advocate_welcome_mail(id):
@@ -1944,6 +2017,9 @@ def update_advocate(id):
             return jsonify({"error": "Advocate not found"}), 404
             
         advocates_col.update_one({"_id": ObjectId(id)}, {"$set": update_fields})
+        
+        if 'imageUrl' in update_fields and update_fields['imageUrl']:
+            save_advocate_image_file(id, update_fields['imageUrl'])
         
         # If updating chamber owner, sync relevant fields with office_info
         if adv.get('is_owner'):
