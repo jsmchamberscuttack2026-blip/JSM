@@ -5281,6 +5281,1459 @@ window.showToast = function(message, type = 'success') {
 }
 </style>
 
+<!-- =========================================================
+     JSM CHAMBERS VIRTUAL LEGAL AI ASSISTANT (CHATBOT)
+========================================================= -->
+<style>
+/* Chatbot Floating Launcher Button */
+#jsm-chat-launcher {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 99998;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px 10px 14px;
+    background: linear-gradient(135deg, #051426 0%, #0d2847 100%);
+    border: 1.5px solid #D4AF37;
+    border-radius: 9999px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 20px rgba(212, 175, 55, 0.35);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    user-select: none;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+#jsm-chat-launcher:hover {
+    transform: translateY(-4px) scale(1.03);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55), 0 0 28px rgba(212, 175, 55, 0.55);
+    border-color: #ffd700;
+}
+.jsm-chat-launcher-badge {
+    position: relative;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #D4AF37 0%, #AA7C11 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #051426;
+    font-size: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    flex-shrink: 0;
+}
+.jsm-chat-pulse-ring {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 2px solid #D4AF37;
+    animation: jsmPulseRing 2s infinite cubic-bezier(0.2, 0.8, 0.2, 1);
+    opacity: 0.8;
+}
+@keyframes jsmPulseRing {
+    0% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.4); opacity: 0; }
+    100% { transform: scale(1.4); opacity: 0; }
+}
+.jsm-chat-launcher-text {
+    color: #ffffff;
+    font-size: 14.5px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+.jsm-chat-launcher-sub {
+    font-size: 10px;
+    color: #D4AF37;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+.jsm-chat-live-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+    margin-left: 2px;
+}
+
+/* Chat Window Modal */
+#jsm-chat-window {
+    position: fixed;
+    bottom: 90px;
+    right: 24px;
+    width: 430px;
+    max-width: calc(100vw - 32px);
+    height: 640px;
+    max-height: calc(100vh - 120px);
+    background: #071526;
+    border: 1.5px solid rgba(212, 175, 55, 0.35);
+    border-radius: 20px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7), 0 0 35px rgba(212, 175, 55, 0.18);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 99999;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    transform: translateY(20px) scale(0.96);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#jsm-chat-window.jsm-active {
+    display: flex;
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+/* Header */
+.jsm-chat-header {
+    background: linear-gradient(135deg, #051426 0%, #0d2745 100%);
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+.jsm-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.jsm-header-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #D4AF37 0%, #8c6708 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: #051426;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+}
+.jsm-header-info h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+    font-family: 'Playfair Display', serif;
+    letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.jsm-header-info p {
+    margin: 2px 0 0;
+    font-size: 11px;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.jsm-header-info .online-badge {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10b981;
+    display: inline-block;
+}
+.jsm-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.jsm-header-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #cbd5e1;
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+.jsm-header-btn:hover {
+    background: rgba(212, 175, 55, 0.2);
+    color: #D4AF37;
+    border-color: #D4AF37;
+}
+.jsm-header-btn.voice-active {
+    background: rgba(212, 175, 55, 0.25);
+    color: #D4AF37;
+    border-color: #D4AF37;
+}
+
+/* Chat Messages Container */
+.jsm-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: radial-gradient(circle at top, rgba(13, 39, 69, 0.35) 0%, #071526 80%);
+    scroll-behavior: smooth;
+}
+.jsm-chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+.jsm-chat-messages::-webkit-scrollbar-thumb {
+    background: rgba(212, 175, 55, 0.3);
+    border-radius: 4px;
+}
+
+/* Message Bubbles */
+.jsm-msg-wrapper {
+    display: flex;
+    flex-direction: column;
+    max-width: 90%;
+    animation: jsmFadeIn 0.3s ease forwards;
+}
+@keyframes jsmFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.jsm-msg-wrapper.user {
+    align-self: flex-end;
+}
+.jsm-msg-wrapper.bot {
+    align-self: flex-start;
+}
+.jsm-msg-bubble {
+    padding: 12px 15px;
+    border-radius: 14px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    position: relative;
+    word-break: break-word;
+}
+.jsm-msg-wrapper.user .jsm-msg-bubble {
+    background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
+    color: #ffffff;
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-bottom-right-radius: 3px;
+}
+.jsm-msg-wrapper.bot .jsm-msg-bubble {
+    background: #0d2038;
+    color: #f1f5f9;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom-left-radius: 3px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+}
+
+.jsm-msg-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 10.5px;
+    color: #64748b;
+    padding: 0 4px;
+}
+.jsm-msg-wrapper.user .jsm-msg-footer {
+    justify-content: flex-end;
+}
+.jsm-speech-btn {
+    background: none;
+    border: none;
+    color: #D4AF37;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+.jsm-speech-btn:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+/* Quick Suggestion Chips */
+.jsm-quick-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+.jsm-chip-btn {
+    background: rgba(212, 175, 55, 0.08);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    color: #e2e8f0;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+.jsm-chip-btn:hover {
+    background: rgba(212, 175, 55, 0.2);
+    border-color: #D4AF37;
+    color: #D4AF37;
+    transform: translateY(-1px);
+}
+
+/* Rich Cards */
+/* Owner Card */
+.jsm-owner-card {
+    margin-top: 10px;
+    background: linear-gradient(135deg, #091c33 0%, #051426 100%);
+    border: 1.5px solid #D4AF37;
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.jsm-owner-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.jsm-owner-img-wrap {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.jsm-owner-img {
+    width: 72px;
+    height: 72px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 2px solid #D4AF37;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    flex-shrink: 0;
+    background: #051426;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+.jsm-owner-img-wrap:hover .jsm-owner-img {
+    transform: scale(1.06);
+    border-color: #ffd700;
+    box-shadow: 0 0 16px rgba(212, 175, 55, 0.7);
+}
+.jsm-img-zoom-hint {
+    position: absolute;
+    bottom: -3px;
+    right: -3px;
+    background: #051426;
+    border: 1.5px solid #D4AF37;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #D4AF37;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    transition: all 0.2s ease;
+    pointer-events: none;
+}
+.jsm-owner-img-wrap:hover .jsm-img-zoom-hint,
+.jsm-member-img-wrap:hover .jsm-img-zoom-hint {
+    transform: scale(1.2);
+    background: #D4AF37;
+    color: #051426;
+}
+.jsm-owner-meta h5 {
+    margin: 0;
+    font-size: 15px;
+    font-family: 'Playfair Display', serif;
+    color: #D4AF37;
+    font-weight: 700;
+}
+.jsm-owner-meta .jsm-owner-role {
+    font-size: 11.5px;
+    color: #cbd5e1;
+    font-weight: 600;
+    margin-top: 2px;
+}
+.jsm-owner-meta .jsm-owner-exp {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 3px;
+}
+.jsm-owner-bio {
+    font-size: 12px;
+    color: #cbd5e1;
+    line-height: 1.5;
+    background: rgba(255,255,255,0.03);
+    padding: 8px 10px;
+    border-radius: 8px;
+    border-left: 3px solid #D4AF37;
+}
+
+/* Members Grid / List */
+.jsm-members-container {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+.jsm-member-item {
+    background: rgba(13, 37, 65, 0.6);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s;
+}
+.jsm-member-item:hover {
+    border-color: #D4AF37;
+    background: rgba(13, 37, 65, 0.9);
+}
+.jsm-member-img-wrap {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.jsm-member-img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1.5px solid #D4AF37;
+    flex-shrink: 0;
+    background: #051426;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+.jsm-member-img-wrap:hover .jsm-member-img {
+    transform: scale(1.1);
+    border-color: #ffd700;
+    box-shadow: 0 0 16px rgba(212, 175, 55, 0.7);
+}
+.jsm-member-details {
+    flex: 1;
+    min-width: 0;
+}
+.jsm-member-details h6 {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #f1f5f9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.jsm-member-details .m-role {
+    font-size: 11px;
+    color: #D4AF37;
+    font-weight: 600;
+}
+.jsm-member-details .m-exp {
+    font-size: 10.5px;
+    color: #94a3b8;
+}
+
+/* Timings Card */
+.jsm-timings-card {
+    margin-top: 10px;
+    background: rgba(13, 37, 65, 0.5);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.jsm-timing-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 4px 0;
+    border-bottom: 1px dashed rgba(255,255,255,0.08);
+}
+.jsm-timing-row:last-child {
+    border-bottom: none;
+}
+.jsm-timing-lbl {
+    color: #94a3b8;
+}
+.jsm-timing-val {
+    color: #f1f5f9;
+    font-weight: 600;
+    text-align: right;
+}
+.jsm-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 700;
+}
+.jsm-status-pill.open {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    border: 1px solid #10b981;
+}
+.jsm-status-pill.closed {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid #ef4444;
+}
+
+/* Booking Action Button */
+.jsm-booking-btn {
+    margin-top: 10px;
+    background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%);
+    color: #051426;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 13.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 14px rgba(212, 175, 55, 0.35);
+    width: 100%;
+}
+.jsm-booking-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.55);
+    background: linear-gradient(135deg, #ffd700 0%, #D4AF37 100%);
+}
+
+/* Typing Indicator */
+.jsm-typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 14px;
+    background: #0d2038;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    width: fit-content;
+    border-bottom-left-radius: 3px;
+}
+.jsm-typing-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #D4AF37;
+    animation: jsmBounce 1.4s infinite ease-in-out both;
+}
+.jsm-typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.jsm-typing-dot:nth-child(2) { animation-delay: -0.16s; }
+@keyframes jsmBounce {
+    0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+}
+
+/* Chat Input Bar */
+.jsm-chat-footer {
+    padding: 12px 14px;
+    background: #051426;
+    border-top: 1px solid rgba(212, 175, 55, 0.25);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.jsm-mic-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(212, 175, 55, 0.4);
+    background: rgba(212, 175, 55, 0.1);
+    color: #D4AF37;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    position: relative;
+}
+.jsm-mic-btn:hover {
+    background: rgba(212, 175, 55, 0.25);
+    border-color: #D4AF37;
+}
+.jsm-mic-btn.recording {
+    background: #dc2626 !important;
+    border-color: #ef4444 !important;
+    color: white !important;
+    animation: jsmMicPulse 1.2s infinite;
+}
+@keyframes jsmMicPulse {
+    0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}
+.jsm-input-box {
+    flex: 1;
+    background: rgba(13, 37, 65, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    padding: 9px 16px;
+    color: #ffffff;
+    font-size: 13.5px;
+    font-family: inherit;
+    outline: none;
+    transition: all 0.2s;
+}
+.jsm-input-box:focus {
+    border-color: #D4AF37;
+    background: rgba(13, 37, 65, 0.9);
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
+}
+.jsm-input-box::placeholder {
+    color: #64748b;
+    font-size: 12.5px;
+}
+.jsm-send-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #D4AF37 0%, #AA7C11 100%);
+    border: none;
+    color: #051426;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    font-size: 14px;
+}
+.jsm-send-btn:hover {
+    transform: scale(1.06);
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+}
+.jsm-voice-listening-banner {
+    display: none;
+    background: #7f1d1d;
+    color: #fecaca;
+    padding: 6px 12px;
+    font-size: 11.5px;
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-top: 1px solid #ef4444;
+}
+
+@media (max-width: 480px) {
+    #jsm-chat-launcher {
+        padding: 8px 12px;
+        bottom: 18px;
+        right: 18px;
+    }
+    .jsm-chat-launcher-text {
+        font-size: 13px;
+    }
+    #jsm-chat-window {
+        bottom: 8px;
+        right: 8px;
+        left: 8px;
+        width: auto;
+        max-width: none;
+        height: calc(100vh - 16px);
+        max-height: calc(100vh - 16px);
+        border-radius: 16px;
+    }
+}
+
+/* Fullscreen Image Lightbox Modal for JSM Legal AI */
+.jsm-img-lightbox {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(3, 10, 20, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 9999999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.jsm-img-lightbox.active {
+    display: flex;
+    opacity: 1;
+}
+.jsm-img-lightbox-content {
+    position: relative;
+    max-width: 500px;
+    width: 92vw;
+    background: linear-gradient(145deg, #071526 0%, #0d2745 100%);
+    border: 2px solid #D4AF37;
+    border-radius: 20px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.85), 0 0 35px rgba(212, 175, 55, 0.3);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: jsmZoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes jsmZoomIn {
+    from { transform: scale(0.85); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+.jsm-img-lightbox-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+    z-index: 10;
+}
+.jsm-img-lightbox-close:hover {
+    background: #e11d48;
+    border-color: #f43f5e;
+    color: #ffffff;
+    transform: rotate(90deg);
+}
+.jsm-img-lightbox-frame {
+    width: 100%;
+    max-height: 58vh;
+    background: #030c18;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+}
+.jsm-lightbox-display-img {
+    max-width: 100%;
+    max-height: 50vh;
+    object-fit: contain;
+    border-radius: 12px;
+    border: 1.5px solid rgba(212, 175, 55, 0.45);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    background: #051426;
+}
+.jsm-img-lightbox-caption {
+    padding: 16px 20px 20px;
+    width: 100%;
+    text-align: center;
+    background: rgba(5, 20, 38, 0.7);
+}
+.jsm-lightbox-tag {
+    font-size: 10px;
+    color: #D4AF37;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+.jsm-img-lightbox-caption h3 {
+    margin: 0;
+    font-size: 20px;
+    color: #ffffff;
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+}
+.jsm-img-lightbox-caption p {
+    margin: 4px 0 0;
+    font-size: 12.5px;
+    color: #cbd5e1;
+}
+</style>
+
+<!-- Floating Launcher -->
+<div id="jsm-chat-launcher" onclick="toggleJsmChat()">
+    <div class="jsm-chat-launcher-badge">
+        <span class="jsm-chat-pulse-ring"></span>
+        ⚖️
+    </div>
+    <div class="jsm-chat-launcher-text">
+        <span>Ask JSM Assistant</span>
+        <span class="jsm-chat-launcher-sub">AI & Voice Help</span>
+    </div>
+    <span class="jsm-chat-live-dot" title="Chambers Online"></span>
+</div>
+
+<!-- Chatbot Window -->
+<div id="jsm-chat-window">
+    <!-- Header -->
+    <div class="jsm-chat-header">
+        <div class="jsm-header-left">
+            <div class="jsm-header-avatar">⚖️</div>
+            <div class="jsm-header-info">
+                <h4>JSM Legal AI</h4>
+                <p><span class="online-badge"></span> Live Chambers Assistant</p>
+            </div>
+        </div>
+        <div class="jsm-header-actions">
+            <button class="jsm-header-btn" id="jsm-voice-persona-btn" onclick="cycleJsmVoicePersona(event)" title="Change Voice Tone: Warm Studio Female (Click to switch Male/Indian/Female)">
+                👩
+            </button>
+            <button class="jsm-header-btn voice-active" id="jsm-voice-toggle-btn" onclick="toggleJsmVoice(event)" title="Toggle Voice Response (Speech Output)">
+                🔊
+            </button>
+            <button class="jsm-header-btn" onclick="resetJsmChat(event)" title="Clear Chat History">
+                🔄
+            </button>
+            <button class="jsm-header-btn" onclick="toggleJsmChat(event)" title="Close Chat">
+                ✕
+            </button>
+        </div>
+    </div>
+
+    <!-- Message Feed -->
+    <div class="jsm-chat-messages" id="jsm-chat-feed">
+        <!-- Welcoming Greeting -->
+        <div class="jsm-msg-wrapper bot">
+            <div class="jsm-msg-bubble">
+                <strong style="color: #D4AF37; font-size: 14px;">Namaste & Welcome to JSM Chambers! 🙏</strong>
+                <p style="margin: 6px 0 0;">I am your official <strong>JSM Chambers AI Legal Assistant</strong>. You can ask me questions about our legal chambers, view our Chamber Head & advocates with photos, check live timings, or book an appointment.</p>
+                <div class="jsm-quick-chips">
+                    <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('About JSM Chambers')">🏛️ About Chambers</button>
+                    <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('Chamber Owner & Senior Counsel')">⚖️ Chamber Owner</button>
+                    <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('All Advocates & Members')">👥 Advocates & Team</button>
+                    <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('Official Timings & Booking Hours')">⏰ Official Timings</button>
+                    <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('How to book an appointment?')">📅 Book Appointment</button>
+                    <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('Chamber Address & Contact Info')">📍 Office Location</button>
+                </div>
+            </div>
+            <div class="jsm-msg-footer">
+                <span>Just now</span>
+                <button class="jsm-speech-btn" onclick="speakJsmText('Welcome to JSM Chambers. I am your official JSM Chambers AI Legal Assistant. You can ask me questions about our legal chambers, view our Chamber Head and advocates, check live timings, or book an appointment.')">🔊 Read aloud</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voice Listening Active Banner -->
+    <div class="jsm-voice-listening-banner" id="jsm-voice-listening-banner">
+        <span style="animation: jsmBounce 1s infinite;">🎙️</span> Listening to your voice... Speak now!
+    </div>
+
+    <!-- Input Footer -->
+    <div class="jsm-chat-footer">
+        <button class="jsm-mic-btn" id="jsm-mic-btn" onclick="toggleJsmSpeechRecognition()" title="Voice Input (Speech-to-Text)">
+            🎙️
+        </button>
+        <input type="text" id="jsm-chat-input" class="jsm-input-box" placeholder="Ask about advocates, timings, booking..." onkeydown="handleJsmInputKey(event)">
+        <button class="jsm-send-btn" onclick="submitJsmChat()" title="Send Message">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+        </button>
+    </div>
+</div>
+
+<!-- Fullscreen Image Lightbox Modal for JSM Legal AI -->
+<div id="jsm-image-modal" class="jsm-img-lightbox" onclick="closeJsmImageModal(event)">
+    <div class="jsm-img-lightbox-content" onclick="event.stopPropagation()">
+        <button class="jsm-img-lightbox-close" onclick="closeJsmImageModal(event)" title="Close (Esc)">✕</button>
+        <div class="jsm-img-lightbox-frame">
+            <img id="jsm-lightbox-img" src="" alt="Chamber Member" class="jsm-lightbox-display-img">
+        </div>
+        <div class="jsm-img-lightbox-caption">
+            <div class="jsm-lightbox-tag">⚖️ JSM CHAMBERS LEGAL TEAM</div>
+            <h3 id="jsm-lightbox-name">Advocate Name</h3>
+            <p id="jsm-lightbox-role">Role & Designation</p>
+        </div>
+    </div>
+</div>
+
+<script>
+/* =========================================================
+   JSM CHAMBERS CHATBOT CONTROLLER & VOICE ENGINE
+========================================================= */
+let jsmVoiceEnabled = true;
+let jsmSpeechRecognition = null;
+let isJsmListening = false;
+let jsmChatOpen = false;
+
+// Initialize Web Speech Synthesis & Recognition
+function initJsmVoice() {
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRec) {
+        jsmSpeechRecognition = new SpeechRec();
+        jsmSpeechRecognition.continuous = false;
+        jsmSpeechRecognition.interimResults = false;
+        jsmSpeechRecognition.lang = 'en-IN'; // Indian English default
+
+        jsmSpeechRecognition.onstart = function() {
+            isJsmListening = true;
+            const micBtn = document.getElementById('jsm-mic-btn');
+            const banner = document.getElementById('jsm-voice-listening-banner');
+            if (micBtn) micBtn.classList.add('recording');
+            if (banner) banner.style.display = 'flex';
+        };
+
+        jsmSpeechRecognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            const input = document.getElementById('jsm-chat-input');
+            if (input) {
+                input.value = transcript;
+                submitJsmChat();
+            }
+        };
+
+        jsmSpeechRecognition.onerror = function(event) {
+            console.warn("Speech recognition error:", event.error);
+            stopJsmListening();
+        };
+
+        jsmSpeechRecognition.onend = function() {
+            stopJsmListening();
+        };
+    }
+}
+
+function stopJsmListening() {
+    isJsmListening = false;
+    const micBtn = document.getElementById('jsm-mic-btn');
+    const banner = document.getElementById('jsm-voice-listening-banner');
+    if (micBtn) micBtn.classList.remove('recording');
+    if (banner) banner.style.display = 'none';
+}
+
+function toggleJsmSpeechRecognition() {
+    if (!jsmSpeechRecognition) {
+        alert("Voice recognition is not supported in this browser. Please use Google Chrome or Microsoft Edge.");
+        return;
+    }
+    if (isJsmListening) {
+        try { jsmSpeechRecognition.stop(); } catch(e){}
+        stopJsmListening();
+    } else {
+        // Stop any current speaking synthesis before listening
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        try {
+            jsmSpeechRecognition.start();
+        } catch(e) {
+            console.error("Failed to start speech recognition:", e);
+        }
+    }
+}
+
+let jsmVoicePersona = 'female'; // 'female' (warm clear studio) | 'male' (dignified counsel) | 'indian' (Indian English)
+let jsmCachedVoices = [];
+
+function loadJsmVoices() {
+    if (!('speechSynthesis' in window)) return [];
+    jsmCachedVoices = window.speechSynthesis.getVoices() || [];
+    return jsmCachedVoices;
+}
+
+function getBestJsmVoice() {
+    const voices = loadJsmVoices();
+    if (!voices || voices.length === 0) return null;
+
+    // Filter out known harsh or novelty robot voices on macOS/Windows
+    const harshNames = ['albert', 'bad news', 'bahh', 'bells', 'boing', 'bubbles', 'cellos', 'deranged', 'good news', 'hysterical', 'pipe organ', 'trinoids', 'whisper', 'zarvox', 'fred'];
+    const filtered = voices.filter(v => !harshNames.includes(v.name.toLowerCase()));
+
+    if (jsmVoicePersona === 'female') {
+        // High-clarity, soothing natural female voices
+        const priority = [
+            'google uk english female',
+            'microsoft aria online (natural)',
+            'microsoft jenny online (natural)',
+            'samantha (enhanced)',
+            'samantha',
+            'serena (enhanced)',
+            'serena',
+            'karen (enhanced)',
+            'karen',
+            'victoria',
+            'moira',
+            'fiona',
+            'tessa',
+            'google us english'
+        ];
+        for (const name of priority) {
+            const found = filtered.find(v => v.name.toLowerCase().includes(name));
+            if (found) return found;
+        }
+        const femaleEng = filtered.find(v => v.lang.startsWith('en') && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('natural')));
+        if (femaleEng) return femaleEng;
+    } else if (jsmVoicePersona === 'male') {
+        // Dignified, calm natural male counsel voices
+        const priority = [
+            'daniel (enhanced)',
+            'daniel',
+            'google uk english male',
+            'microsoft guy online (natural)',
+            'oliver (enhanced)',
+            'oliver',
+            'alex',
+            'rishi (enhanced)',
+            'google us english'
+        ];
+        for (const name of priority) {
+            const found = filtered.find(v => v.name.toLowerCase().includes(name));
+            if (found) return found;
+        }
+        const maleEng = filtered.find(v => v.lang.startsWith('en') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('daniel')));
+        if (maleEng) return maleEng;
+    } else if (jsmVoicePersona === 'indian') {
+        // Clear Indian English natural voices
+        const indianVoices = filtered.filter(v => v.lang.includes('en-IN') || v.name.toLowerCase().includes('india') || v.name.toLowerCase().includes('neerja') || v.name.toLowerCase().includes('veena') || v.name.toLowerCase().includes('prabhat'));
+        const googleIndian = indianVoices.find(v => v.name.toLowerCase().includes('google'));
+        if (googleIndian) return googleIndian;
+        if (indianVoices.length > 0) return indianVoices[0];
+    }
+
+    // Fallback: Best sounding Google or clean English voice
+    return filtered.find(v => v.name.toLowerCase().includes('google') && v.lang.startsWith('en')) ||
+           filtered.find(v => v.name.toLowerCase().includes('samantha')) ||
+           filtered.find(v => v.name.toLowerCase().includes('daniel')) ||
+           filtered.find(v => v.lang.startsWith('en')) ||
+           voices[0];
+}
+
+function cycleJsmVoicePersona(e) {
+    if (e) e.stopPropagation();
+    const btn = document.getElementById('jsm-voice-persona-btn');
+    if (jsmVoicePersona === 'female') {
+        jsmVoicePersona = 'male';
+        if (btn) {
+            btn.innerHTML = '👨';
+            btn.title = "Voice Tone: Dignified Male Counsel (Click to change)";
+        }
+        speakJsmText("Voice switched to Dignified Male Counsel.");
+    } else if (jsmVoicePersona === 'male') {
+        jsmVoicePersona = 'indian';
+        if (btn) {
+            btn.innerHTML = '🇮🇳';
+            btn.title = "Voice Tone: Indian English (Click to change)";
+        }
+        speakJsmText("Voice switched to Indian English.");
+    } else {
+        jsmVoicePersona = 'female';
+        if (btn) {
+            btn.innerHTML = '👩';
+            btn.title = "Voice Tone: Warm Studio Female (Click to change)";
+        }
+        speakJsmText("Voice switched to Warm Studio Female.");
+    }
+}
+
+function sanitizeForSpeech(text) {
+    if (!text) return '';
+    return text
+        // Expand legal titles & abbreviations to natural speech
+        .replace(/\bAdv\.\s*/gi, 'Advocate ')
+        .replace(/\bAdv\b/gi, 'Advocate')
+        .replace(/\bCDA-11\b/gi, 'C D A eleven')
+        .replace(/\bJSM\b/gi, 'J S M')
+        .replace(/\bvs\.\b/gi, 'versus')
+        .replace(/\bNo\.\b/gi, 'Number')
+        .replace(/\bSpec:\b/gi, 'Specialization: ')
+        .replace(/&/g, ' and ')
+        .replace(/\+/g, ' plus ')
+        // Remove markdown formatting
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/\*(.*?)\*/g, '$1')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/[*_#`~>\[\]]/g, '')
+        .replace(/https?:\/\/\S+/g, '')
+        .replace(/Click below to open.*/gi, '')
+        .replace(/[\(\)]/g, ', ')
+        .replace(/[\/\\|]/g, ' ')
+        .replace(/(\r\n|\n|\r)/gm, '. ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function toggleJsmVoice(e) {
+    if (e) e.stopPropagation();
+    jsmVoiceEnabled = !jsmVoiceEnabled;
+    const btn = document.getElementById('jsm-voice-toggle-btn');
+    if (btn) {
+        if (jsmVoiceEnabled) {
+            btn.innerHTML = '🔊';
+            btn.classList.add('voice-active');
+            btn.title = "Voice Speech Output: ENABLED";
+        } else {
+            btn.innerHTML = '🔇';
+            btn.classList.remove('voice-active');
+            btn.title = "Voice Speech Output: MUTED";
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        }
+    }
+}
+
+function speakJsmText(text) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel(); // Stop prior speech
+    if (!text) return;
+
+    let clean = sanitizeForSpeech(text);
+    if (!clean) return;
+
+    // Pick best studio voice
+    const voice = getBestJsmVoice();
+
+    const utterance = new SpeechSynthesisUtterance(clean);
+    if (voice) {
+        utterance.voice = voice;
+        utterance.lang = voice.lang || 'en-US';
+    }
+
+    // Polished, calm, human legal assistant pacing
+    utterance.rate = 0.94; // Clear, articulate cadence (avoids rushing)
+    utterance.pitch = (jsmVoicePersona === 'male') ? 0.92 : 1.02;
+
+    window.speechSynthesis.speak(utterance);
+}
+
+function toggleJsmChat(e) {
+    if (e) e.stopPropagation();
+    const win = document.getElementById('jsm-chat-window');
+    jsmChatOpen = !jsmChatOpen;
+    if (jsmChatOpen) {
+        win.classList.add('jsm-active');
+        setTimeout(() => {
+            const input = document.getElementById('jsm-chat-input');
+            if (input) input.focus();
+        }, 150);
+    } else {
+        win.classList.remove('jsm-active');
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        stopJsmListening();
+    }
+}
+
+function resetJsmChat(e) {
+    if (e) e.stopPropagation();
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    stopJsmListening();
+    const feed = document.getElementById('jsm-chat-feed');
+    feed.innerHTML = `
+        <div class="jsm-msg-wrapper bot">
+            <div class="jsm-msg-bubble">
+                <strong style="color: #D4AF37; font-size: 14px;">Namaste & Welcome to JSM Chambers! 🙏</strong>
+                <p style="margin: 6px 0 0;">I am your official <strong>JSM Chambers AI Legal Assistant</strong>. You can ask me questions about our legal chambers, view our Chamber Head & advocates with photos, check live timings, or book an appointment.</p>
+                <div class="jsm-quick-chips">
+                    <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('About JSM Chambers')">🏛️ About Chambers</button>
+                    <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('Chamber Owner & Senior Counsel')">⚖️ Chamber Owner</button>
+                    <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('All Advocates & Members')">👥 Advocates & Team</button>
+                    <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('Official Timings & Booking Hours')">⏰ Official Timings</button>
+                    <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('How to book an appointment?')">📅 Book Appointment</button>
+                    <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('Chamber Address & Contact Info')">📍 Office Location</button>
+                </div>
+            </div>
+            <div class="jsm-msg-footer">
+                <span>Just now</span>
+                <button class="jsm-speech-btn" onclick="speakJsmText('Chat refreshed. How can I assist you with JSM Chambers?')">🔊 Read aloud</button>
+            </div>
+        </div>
+    `;
+}
+
+function handleJsmInputKey(e) {
+    if (e.key === 'Enter') {
+        submitJsmChat();
+    }
+}
+
+function sendJsmQuickPrompt(promptText) {
+    const input = document.getElementById('jsm-chat-input');
+    if (input) input.value = promptText;
+    submitJsmChat();
+}
+
+async function submitJsmChat() {
+    const input = document.getElementById('jsm-chat-input');
+    const feed = document.getElementById('jsm-chat-feed');
+    const query = input.value.trim();
+    if (!query) return;
+
+    input.value = '';
+
+    // Append User Message
+    const userMsgEl = document.createElement('div');
+    userMsgEl.className = 'jsm-msg-wrapper user';
+    userMsgEl.innerHTML = `
+        <div class="jsm-msg-bubble">${escapeHtml(query)}</div>
+        <div class="jsm-msg-footer"><span>${formatTimeNow()}</span></div>
+    `;
+    feed.appendChild(userMsgEl);
+    feed.scrollTop = feed.scrollHeight;
+
+    // Show Typing Indicator
+    const typingEl = document.createElement('div');
+    typingEl.className = 'jsm-msg-wrapper bot';
+    typingEl.id = 'jsm-typing-loader';
+    typingEl.innerHTML = `
+        <div class="jsm-typing-indicator">
+            <span class="jsm-typing-dot"></span>
+            <span class="jsm-typing-dot"></span>
+            <span class="jsm-typing-dot"></span>
+        </div>
+    `;
+    feed.appendChild(typingEl);
+    feed.scrollTop = feed.scrollHeight;
+
+    try {
+        const response = await fetch('/api/chatbot/query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: query })
+        });
+        const data = await response.json();
+
+        // Remove typing indicator
+        const loader = document.getElementById('jsm-typing-loader');
+        if (loader) loader.remove();
+
+        renderJsmBotReply(data);
+    } catch (err) {
+        console.error("Chatbot query error:", err);
+        const loader = document.getElementById('jsm-typing-loader');
+        if (loader) loader.remove();
+
+        renderJsmBotReply({
+            reply: "I am having trouble connecting to the chamber server right now. However, JSM Chambers is located in Cuttack, Odisha. You can reach us at jsmchamberscuttack2026@gmail.com or book an appointment directly.",
+            booking_action: { text: "📅 Book Consultation Form" }
+        });
+    }
+}
+
+function renderJsmBotReply(data) {
+    const feed = document.getElementById('jsm-chat-feed');
+    const botMsgEl = document.createElement('div');
+    botMsgEl.className = 'jsm-msg-wrapper bot';
+
+    let htmlContent = `<div class="jsm-msg-bubble">`;
+    htmlContent += `<div>${formatMarkdown(data.reply || '')}</div>`;
+
+    // 1. Owner Card
+    if (data.owner_card) {
+        const o = data.owner_card;
+        const ownerImg = o.image_url || '/chamber-owner.jpg';
+        const ownerName = escapeHtml(o.name || 'Advocate Prasanta Kumar Jena');
+        const ownerRole = escapeHtml(o.designation || 'Head of Chambers & Founder');
+        const ownerExp = escapeHtml(o.experience || '30+ Years Experience') + ' • ' + escapeHtml(o.enrollment || 'Orissa High Court');
+        htmlContent += `
+            <div class="jsm-owner-card">
+                <div class="jsm-owner-top">
+                    <div class="jsm-owner-img-wrap" onclick="openJsmImageModal('${ownerImg}', '${ownerName}', '${ownerRole} — ${ownerExp}')" title="Click to view full photo on screen">
+                        <img src="${ownerImg}" alt="${ownerName}" class="jsm-owner-img" onerror="this.src='/chamber-owner.jpg'">
+                        <span class="jsm-img-zoom-hint" title="View full photo">🔍</span>
+                    </div>
+                    <div class="jsm-owner-meta" onclick="openJsmImageModal('${ownerImg}', '${ownerName}', '${ownerRole} — ${ownerExp}')" style="cursor: pointer;" title="Click to view full photo on screen">
+                        <h5>${ownerName}</h5>
+                        <div class="jsm-owner-role">${ownerRole}</div>
+                        <div class="jsm-owner-exp">⚖️ ${ownerExp}</div>
+                    </div>
+                </div>
+                ${o.bio ? `<div class="jsm-owner-bio">${escapeHtml(o.bio)}</div>` : ''}
+            </div>
+        `;
+    }
+
+    // 2. Members List (Rendered separately with individual photos!)
+    if (data.members_list && data.members_list.length > 0) {
+        htmlContent += `
+            <div style="margin-top: 10px; font-weight: 700; color: #D4AF37; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+                👥 Chamber Advocates & Members (${data.members_list.length}) <span style="font-size: 10px; color: #94a3b8; font-weight: normal;">(click photo to view on screen)</span>
+            </div>
+            <div class="jsm-members-container">
+        `;
+        data.members_list.forEach(m => {
+            const mImg = m.image_url || '/assets/images/advocate_logo.jpg';
+            const mName = escapeHtml(m.name);
+            const mRole = escapeHtml(m.role || m.designation || 'Advocate');
+            const mExp = escapeHtml(m.experience || 'Legal Associate') + ' • ' + escapeHtml(m.specialization || m.practice_areas || 'High Court Practice');
+            htmlContent += `
+                <div class="jsm-member-item">
+                    <div class="jsm-member-img-wrap" onclick="openJsmImageModal('${mImg}', '${mName}', '${mRole} — ${mExp}')" title="Click to view full photo on screen">
+                        <img src="${mImg}" alt="${mName}" class="jsm-member-img" onerror="this.src='/assets/images/advocate_logo.jpg'">
+                        <span class="jsm-img-zoom-hint" title="View full photo">🔍</span>
+                    </div>
+                    <div class="jsm-member-details" onclick="openJsmImageModal('${mImg}', '${mName}', '${mRole} — ${mExp}')" style="cursor: pointer;" title="Click to view full photo on screen">
+                        <h6>${mName}</h6>
+                        <div class="m-role">${mRole}</div>
+                        <div class="m-exp">${mExp}</div>
+                    </div>
+                </div>
+            `;
+        });
+        htmlContent += `</div>`;
+    }
+
+    // 3. Timings Card
+    if (data.timings_card) {
+        const t = data.timings_card;
+        const isOpen = t.is_open;
+        htmlContent += `
+            <div class="jsm-timings-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-weight: 700; color: #D4AF37; font-size: 12px;">⏰ OFFICIAL HOURS & SCHEDULE</span>
+                    <span class="jsm-status-pill ${isOpen ? 'open' : 'closed'}">
+                        ${isOpen ? '🟢 Currently Open' : '🔴 Currently Closed'}
+                    </span>
+                </div>
+                <div class="jsm-timing-row">
+                    <span class="jsm-timing-lbl">Consultation Hours:</span>
+                    <span class="jsm-timing-val">${escapeHtml(t.consultation_hours || '06:00 - 21:00')}</span>
+                </div>
+                <div class="jsm-timing-row">
+                    <span class="jsm-timing-lbl">Working Days:</span>
+                    <span class="jsm-timing-val">${escapeHtml(t.working_days || 'Monday - Saturday')}</span>
+                </div>
+                <div class="jsm-timing-row">
+                    <span class="jsm-timing-lbl">Booking Window:</span>
+                    <span class="jsm-timing-val">${escapeHtml(t.booking_hours || '06:00 - 21:00')}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    // 4. Booking Action
+    if (data.booking_action) {
+        htmlContent += `
+            <button class="jsm-booking-btn" onclick="triggerJsmBooking()">
+                📅 ${escapeHtml(data.booking_action.text || 'Book Appointment Now')}
+            </button>
+        `;
+    }
+
+    htmlContent += `</div>`; // End jsm-msg-bubble
+
+    // Footer with timestamp & read aloud
+    htmlContent += `
+        <div class="jsm-msg-footer">
+            <span>${formatTimeNow()}</span>
+            <button class="jsm-speech-btn" onclick="speakJsmText(${JSON.stringify(data.reply || '')})">🔊 Read aloud</button>
+        </div>
+    `;
+
+    botMsgEl.innerHTML = htmlContent;
+    feed.appendChild(botMsgEl);
+    feed.scrollTop = feed.scrollHeight;
+
+    // Automatic Speech Output if enabled
+    if (jsmVoiceEnabled && data.reply) {
+        speakJsmText(data.reply);
+    }
+}
+
+function openJsmImageModal(imgSrc, name, role) {
+    const modal = document.getElementById('jsm-image-modal');
+    const imgEl = document.getElementById('jsm-lightbox-img');
+    const nameEl = document.getElementById('jsm-lightbox-name');
+    const roleEl = document.getElementById('jsm-lightbox-role');
+
+    if (!modal || !imgEl) return;
+
+    imgEl.src = imgSrc;
+    if (nameEl) nameEl.textContent = name || 'Chamber Advocate';
+    if (roleEl) roleEl.textContent = role || 'JSM Chambers Legal Team';
+
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeJsmImageModal(e) {
+    if (e) e.stopPropagation();
+    const modal = document.getElementById('jsm-image-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+}
+
+// Close image lightbox on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeJsmImageModal();
+    }
+});
+
+function triggerJsmBooking() {
+    toggleJsmChat(); // Close or minimize chat window
+    if (typeof openModal === 'function') {
+        openModal('appointmentModal');
+    } else {
+        const modal = document.getElementById('appointmentModal');
+        if (modal) {
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+}
+
+function formatMarkdown(text) {
+    if (!text) return '';
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.1);padding:2px 5px;border-radius:4px;font-size:12px;">$1</code>')
+        .replace(/\n\n/g, '<p style="margin:8px 0;"></p>')
+        .replace(/\n/g, '<br>');
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.innerText = text;
+    return div.innerHTML;
+}
+
+function formatTimeNow() {
+    const d = new Date();
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+// Ensure speech voices and recognition are initialized when loaded
+document.addEventListener('DOMContentLoaded', function() {
+    initJsmVoice();
+    if ('speechSynthesis' in window) {
+        loadJsmVoices();
+        window.speechSynthesis.onvoiceschanged = function() {
+            loadJsmVoices();
+        };
+    }
+});
+</script>
+
 </body>
 
 </html>

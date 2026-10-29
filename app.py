@@ -3392,6 +3392,195 @@ def delete_opinion(id):
         logging.error(f"Error deleting opinion {id}: {e}")
         return jsonify({"error": str(e)}), 500
 
+# =========================================================
+#  AI CHATBOT ASSISTANT ENDPOINTS (REAL-TIME CHAMBER SYNC)
+# =========================================================
+
+def get_live_chamber_context():
+    office_info = settings_col.find_one({"_id": "office_info"}) or {} if settings_col is not None else {}
+    global_cfg = config_col.find_one({"_id": "global_config"}) or {} if config_col is not None else {}
+    appt_cfg = global_cfg.get("appointment_settings", {})
+
+    advocates_cursor = advocates_col.find().sort([("is_owner", -1), ("_id", 1)]) if advocates_col is not None else []
+    members = []
+    owner_info = None
+
+    for adv in advocates_cursor:
+        adv_id = str(adv.get("_id", ""))
+        name = adv.get("name", "").strip()
+        if not name:
+            continue
+        is_owner = bool(adv.get("is_owner"))
+        
+        local_img = f"assets/images/members/{adv_id}.jpg"
+        if is_owner:
+            img_url = "/chamber-owner.jpg"
+        elif os.path.exists(local_img):
+            img_url = f"/assets/images/members/{adv_id}.jpg"
+        else:
+            img_url = "/assets/images/advocate_logo.jpg"
+            
+        role = adv.get("role") or adv.get("designation") or ("Chamber Owner & Lead Counsel" if is_owner else "Advocate")
+        spec = adv.get("specialization") or "Civil, Criminal & Appellate Practice"
+        exp = adv.get("experience") or ""
+        
+        member_obj = {
+            "id": adv_id,
+            "name": name,
+            "role": role,
+            "specialization": spec,
+            "experience": exp,
+            "image_url": img_url,
+            "is_owner": is_owner
+        }
+        members.append(member_obj)
+        if is_owner and not owner_info:
+            owner_info = member_obj
+
+    if not owner_info:
+        owner_name = office_info.get("about_chamber_owner_name") or "Adv. Jayasankar Mishra"
+        owner_info = {
+            "name": owner_name,
+            "role": "Chamber Owner & Founder",
+            "image_url": "/chamber-owner.jpg",
+            "is_owner": True,
+            "specialization": "Civil, Criminal & Constitutional Law"
+        }
+
+    return {
+        "name": office_info.get("chamber_name") or "JSM Chambers",
+        "address": office_info.get("address") or "Cuttack, Odisha",
+        "phone": office_info.get("phone") or "+91 0000000000",
+        "email": office_info.get("email") or "jsmchamberscuttack2026@gmail.com",
+        "owner": owner_info,
+        "founder_bio": office_info.get("about_chamber_founder") or "",
+        "vision": office_info.get("about_chamber_vision") or "",
+        "about_text": office_info.get("about_chamber_text") or "",
+        "appointments_open": office_info.get("appointments_open", True),
+        "timings": {
+            "booking_start": appt_cfg.get("booking_start", "06:00"),
+            "booking_end": appt_cfg.get("booking_end", "21:00"),
+            "consultation_start": appt_cfg.get("start_time", "14:00"),
+            "consultation_end": appt_cfg.get("end_time", "17:00"),
+            "available_days": appt_cfg.get("available_days", ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]),
+            "slot_duration": appt_cfg.get("slot_duration", 30),
+            "max_per_day": appt_cfg.get("max_per_day", 5)
+        },
+        "members": members
+    }
+
+@app.route('/api/chatbot/context', methods=['GET'])
+def get_chatbot_context():
+    try:
+        ctx = get_live_chamber_context()
+        return jsonify(ctx), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/chatbot/query', methods=['POST'])
+def chatbot_query():
+    data = request.get_json(force=True, silent=True) or {}
+    user_query = str(data.get("message") or data.get("query") or "").strip()
+    if not user_query:
+        return jsonify({"error": "Empty message"}), 400
+
+    ctx = get_live_chamber_context()
+    query_lower = user_query.lower()
+
+    # Detect primary intents
+    is_owner = any(w in query_lower for w in ["owner", "founder", "head", "jayasankar", "boss", "who owns", "who runs", "lead counsel"])
+    is_members = any(w in query_lower for w in ["member", "advocate", "lawyer", "team", "staff", "who works", "all members", "associates", "colleague"])
+    is_timings = any(w in query_lower for w in ["time", "timing", "hours", "when open", "open", "close", "working days", "available days", "schedule hours"])
+    is_booking = any(w in query_lower for w in ["book", "appointment", "consultation", "schedule", "meet", "how to book", "reservation", "booking"])
+    is_about = any(w in query_lower for w in ["about", "chamber", "background", "history", "what is jsm", "overview", "heritage", "ethos"])
+    is_contact = any(w in query_lower for w in ["contact", "phone", "email", "address", "location", "where is", "map"])
+
+    members_summary = "\n".join([f"- {m['name']} ({m['role']}, Spec: {m['specialization']})" for m in ctx["members"]])
+    available_days_str = ", ".join(ctx["timings"]["available_days"])
+    
+    system_prompt = f"""You are the official Virtual Legal Assistant for {ctx['name']} located in {ctx['address']}.
+Current Live Chamber Information:
+- Chamber Name: {ctx['name']}
+- Owner & Lead Counsel: {ctx['owner']['name']} ({ctx['owner']['role']})
+- Location / Address: {ctx['address']}
+- Contact Phone: {ctx['phone']} | Email: {ctx['email']}
+- Official Online Booking Hours: {ctx['timings']['booking_start']} to {ctx['timings']['booking_end']}
+- In-Chamber Consultation Hours: {ctx['timings']['consultation_start']} to {ctx['timings']['consultation_end']}
+- Available Working Days: {available_days_str}
+- Appointment Bookings Status: {'Open for bookings' if ctx['appointments_open'] else 'Currently Closed'}
+- Chamber Members & Advocates:
+{members_summary}
+
+Rules:
+1. Always base answers strictly on the above real-time data.
+2. Be polite, clear, professional, and concise (maximum 2-3 short paragraphs).
+3. If asked about booking, explain that users can book directly through the on-screen appointment booking modal.
+4. If asked about the owner, mention {ctx['owner']['name']}.
+"""
+
+    reply_text = ""
+    if groq_client:
+        try:
+            resp = groq_client.chat.completions.create(
+                model='qwen/qwen3.8-27b',
+                messages=[
+                    {'role': 'system', 'content': system_prompt},
+                    {'role': 'user', 'content': user_query}
+                ],
+                max_tokens=300
+            )
+            reply_text = resp.choices[0].message.content.strip()
+        except Exception as e:
+            logging.error(f"Groq API error in chatbot: {e}")
+
+    # Fallback response generator if Groq is unavailable
+    if not reply_text:
+        if is_owner:
+            reply_text = f"The Chamber Owner and Lead Counsel of {ctx['name']} is **{ctx['owner']['name']}**. Under his guidance, the chamber provides high-caliber strategic advocacy and legal consultation."
+        elif is_members:
+            reply_text = f"Here are the distinguished advocates and legal members of {ctx['name']}:"
+        elif is_booking:
+            reply_text = f"You can easily book an appointment with our legal team right on this website! Online booking is open from **{ctx['timings']['booking_start']} to {ctx['timings']['booking_end']}** on **{available_days_str}**. Click the **Book Appointment** button below to open the booking form directly."
+        elif is_timings:
+            reply_text = f"Our official consultation hours are **{ctx['timings']['consultation_start']} to {ctx['timings']['consultation_end']}**, with online appointment booking open daily from **{ctx['timings']['booking_start']} to {ctx['timings']['booking_end']}** ({available_days_str})."
+        elif is_contact:
+            reply_text = f"{ctx['name']} is located at **{ctx['address']}**.\n- **Phone:** {ctx['phone']}\n- **Email:** {ctx['email']}"
+        else:
+            reply_text = f"Welcome to **{ctx['name']}**. We are an independent legal chamber dedicated to comprehensive advocacy, consultation, and litigation support in Cuttack, Odisha. How may I assist you today?"
+
+    # Attach rich UI components
+    response_payload = {
+        "reply": reply_text,
+        "owner_card": None,
+        "members_list": None,
+        "timings_card": None,
+        "booking_action": None
+    }
+
+    if is_owner or "owner" in query_lower or "jayasankar" in query_lower or is_about:
+        response_payload["owner_card"] = ctx["owner"]
+
+    if is_members or "lawyer" in query_lower or "advocate" in query_lower:
+        response_payload["members_list"] = ctx["members"]
+
+    if is_timings or "hour" in query_lower or "time" in query_lower:
+        response_payload["timings_card"] = {
+            "booking_hours": f"{ctx['timings']['booking_start']} - {ctx['timings']['booking_end']}",
+            "consultation_hours": f"{ctx['timings']['consultation_start']} - {ctx['timings']['consultation_end']}",
+            "available_days": ctx["timings"]["available_days"],
+            "appointments_open": ctx["appointments_open"]
+        }
+
+    if is_booking or "book" in query_lower or "appointment" in query_lower:
+        response_payload["booking_action"] = {
+            "can_book": ctx["appointments_open"],
+            "booking_hours": f"{ctx['timings']['booking_start']} - {ctx['timings']['booking_end']}",
+            "available_days": available_days_str,
+            "modal_target": "appointmentModal"
+        }
+
+    return jsonify(response_payload), 200
+
 
 @app.after_request
 
