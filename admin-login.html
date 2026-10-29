@@ -225,8 +225,8 @@
             <div id="step-credentials">
                 <div class="card-header">
                     <div class="chamber-badge">⚖️</div>
-                    <h2>Admin Portal</h2>
-                    <p>Enter Master Credentials to Request 2FA Code</p>
+                    <h2>Admin & Security Portal</h2>
+                    <p>Enter Authorized Credentials to Request 2FA Code</p>
                 </div>
 
                 <div id="alert-lockout-box" class="alert-lockout" style="display: none;">
@@ -242,11 +242,14 @@
                 <form id="admin-login-form">
                     <div class="form-group">
                         <label class="form-label" for="admin-id">Admin Username / ID</label>
-                        <input type="text" id="admin-id" class="form-control" required placeholder="Enter Admin ID" autocomplete="username">
+                        <input type="text" id="admin-id" class="form-control" required placeholder="Enter Username (e.g. JSM)" autocomplete="username">
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="password">Password</label>
-                        <input type="password" id="password" class="form-control" required placeholder="Enter Master Password" autocomplete="current-password">
+                        <input type="password" id="password" class="form-control" required placeholder="Enter Master Password or Registered Security Email" autocomplete="current-password">
+                        <small style="color: #64748b; font-size: 0.78rem; display: block; margin-top: 6px;">
+                            🛡️ <strong>Security Officers:</strong> Enter User ID <strong>JSM</strong> and your registered email address as password.
+                        </small>
                     </div>
                     
                     <button type="submit" id="btn-submit-step1" class="btn-submit" style="margin-top: 1.4rem;">
@@ -265,7 +268,7 @@
                     <div class="chamber-badge" style="background: linear-gradient(135deg, #102a43, #D4AF37);">🛡️</div>
                     <h2>Two-Factor Auth</h2>
                     <p>Enter the 6-digit security code sent to:</p>
-                    <div style="font-weight: 700; color: #0A1628; margin-top: 4px; font-size: 0.95rem; word-break: break-all;">
+                    <div style="font-weight: 700; color: #0A1628; margin-top: 4px; font-size: 0.95rem; word-break: break-all;" id="otp-target-email-display">
                         jsmchamberscuttack2026@gmail.com
                     </div>
                 </div>
@@ -461,7 +464,13 @@
                     document.getElementById('admin-otp-input').value = '';
                     document.getElementById('admin-otp-input').focus();
                     hideAlert('step2');
-                    showAlert('step2', `✅ A 6-digit OTP code has been sent to <strong>${data.target_email || 'jsmchamberscuttack2026@gmail.com'}</strong>. Code is valid for 5 minutes.`, 'info');
+                    
+                    const targetEmail = data.target_email || 'jsmchamberscuttack2026@gmail.com';
+                    const emailDisp = document.getElementById('otp-target-email-display');
+                    if (emailDisp) emailDisp.innerText = targetEmail;
+                    
+                    const roleTitle = (data.role === 'security_officer') ? 'Security Officer' : 'Chamber Admin';
+                    showAlert('step2', `✅ A 6-digit ${roleTitle} OTP has been sent to <strong>${targetEmail}</strong>. Code is valid for 5 minutes.`, 'info');
                     startCountdown(data.expires_in_seconds || 300);
                 } else if (response.ok && !data.requires_2fa) {
                     // Direct access fallback
@@ -514,10 +523,25 @@
 
                 if (response.ok && data.success) {
                     if (countdownInterval) clearInterval(countdownInterval);
-                    showAlert('step2', '✅ 2FA Verified Successfully! Opening Admin Dashboard...', 'success');
-                    sessionStorage.setItem('adminLoggedIn', 'true');
+                    
+                    const isSecOfficer = (data.role === 'security_officer' || data.redirect === 'security-dashboard.html');
+                    const targetPage = isSecOfficer ? 'security-dashboard.html' : 'admin-dashboard.html';
+                    const targetName = isSecOfficer ? 'Cyber Security Operations Dashboard' : 'Admin Dashboard';
+
+                    showAlert('step2', `✅ 2FA Verified Successfully! Opening ${targetName}...`, 'success');
+
+                    if (isSecOfficer) {
+                        sessionStorage.setItem('securityOfficerLoggedIn', 'true');
+                        sessionStorage.setItem('adminLoggedIn', 'true'); // allow admin API calls
+                        sessionStorage.setItem('userRole', 'security_officer');
+                        sessionStorage.setItem('officerEmail', data.target_email || '');
+                    } else {
+                        sessionStorage.setItem('adminLoggedIn', 'true');
+                        sessionStorage.setItem('userRole', 'admin');
+                    }
+
                     setTimeout(() => {
-                        window.location.href = 'admin-dashboard.html';
+                        window.location.href = targetPage;
                     }, 800);
                 } else {
                     showAlert('step2', data.error || 'Invalid verification code. Please check your email.');
