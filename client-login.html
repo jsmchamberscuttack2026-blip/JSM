@@ -267,8 +267,13 @@ input:focus{
                 verifyForm.style.display = 'block';
                 if (reportBox) {
                     reportBox.style.display = 'block';
-                    const rem = data.attempts_left !== undefined ? data.attempts_left : 2;
-                    reportBox.innerHTML = `<strong>📊 Security Activity Report:</strong><br>Verification code sent to <strong>${tempEmail}</strong>.<br>You have <strong style="color: #1e3a8a;">${rem} login(s) remaining for today</strong> (Policy: Max 3 logins/day).`;
+                    const rem = data.attempts_left !== undefined ? data.attempts_left : 0;
+                    const attempt = data.count_today || (3 - rem);
+                    const remColor = rem > 1 ? '#15803d' : (rem === 1 ? '#b45309' : '#b91c1c');
+                    reportBox.innerHTML = `<strong>📊 Security Activity Report:</strong><br>` +
+                        `Verification code sent to <strong>${tempEmail}</strong>.<br>` +
+                        `Current Attempt: <strong>#${attempt} of 3</strong> | Remaining: <strong style="color: ${remColor};">${rem} attempt(s) left today</strong><br>` +
+                        `<small style="color: #64748b;">(Policy: Maximum 3 login attempts per day per client)</small>`;
                 }
             } else if (response.status === 429 || data.limit_reached) {
                 errorMsg.style.display = 'block';

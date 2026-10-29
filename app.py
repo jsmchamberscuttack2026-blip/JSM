@@ -179,7 +179,7 @@ JSM Chambers"""
     
     return send_email_core(recipient_email, msg, subject)
 
-def send_verification_email(recipient_email, code, attempts_left=None, total_logins_today=0):
+def send_verification_email(recipient_email, code, attempts_left=None, total_logins_today=0, attempt_num=None):
     msg = MIMEMultipart('alternative')
     msg['Date'] = formatdate(localtime=True)
     msg['Message-ID'] = make_msgid()
@@ -187,8 +187,8 @@ def send_verification_email(recipient_email, code, attempts_left=None, total_log
     msg['To'] = recipient_email
     
     today_str = get_now_ist().strftime("%d %b %Y")
-    attempt_num = (total_logins_today or 0) + 1
-    rem = attempts_left if attempts_left is not None else max(0, 3 - (total_logins_today or 0))
+    attempt_num = attempt_num if attempt_num is not None else (total_logins_today if total_logins_today else 1)
+    rem = attempts_left if attempts_left is not None else max(0, 3 - attempt_num)
     
     subject = f"JSM. Chambers - Login Verification Code (Attempt #{attempt_num}/3)"
     msg['Subject'] = subject
@@ -2200,35 +2200,22 @@ def client_login():
     today_str = get_now_ist().strftime("%Y-%m-%d")
     daily = case.get("daily_logins") or {}
     count = int(daily.get("count", 0)) if daily.get("date") == today_str else 0
+    rem = max(0, 3 - count)
     
-    if count >= 3:
-        return jsonify({
-            "error": "Daily login limit reached (3/3 used). You have exhausted your allowed 3 logins for today. Access will be unlocked tomorrow.",
-            "limit_reached": True,
-            "attempts_left": 0,
-            "count_today": count
-        }), 429
-        
-    new_count = count + 1
-    new_rem = max(0, 3 - new_count)
     cases_col.update_one(
         {"_id": case['_id']}, 
         {"$set": {
             "reset_code": "",
-            "daily_logins": {
-                "date": today_str,
-                "count": new_count,
-                "last_login": get_now_ist().isoformat()
-            }
+            "daily_logins.last_login": get_now_ist().isoformat()
         }}
     )
     return jsonify({
         "success": True, 
         "case": {"_id": str(case['_id'])},
-        "logins_used": new_count,
-        "attempts_left": new_rem,
+        "logins_used": count,
+        "attempts_left": rem,
         "daily_max": 3,
-        "message": f"Login successful! You have {new_rem} login(s) remaining for today."
+        "message": f"Login successful! You have {rem} login(s) remaining for today."
     }), 200
 
 @app.route('/api/forgot-password', methods=['POST'])
@@ -2252,23 +2239,36 @@ def forgot_password():
         
         if count >= 3:
             return jsonify({
-                "error": f"Daily login limit reached (3/3 used). You have reached the maximum allowed 3 logins per day for your client portal. Access will reopen tomorrow.",
+                "error": "Daily login limit reached (3/3 used). You have reached the maximum allowed 3 logins per day for your client portal. Access will reopen tomorrow.",
                 "limit_reached": True,
                 "attempts_left": 0,
                 "count_today": count,
                 "daily_max": 3
             }), 429
             
-        attempts_left = 3 - count
+        new_count = count + 1
+        attempts_left = max(0, 3 - new_count)
         code = ''.join(random.choices(string.digits, k=6))
-        cases_col.update_one({"_id": case['_id']}, {"$set": {"reset_code": code}})
         
-        email_sent = send_verification_email(case['email'], code, attempts_left=attempts_left, total_logins_today=count)
+        # Save reset code AND immediately increment daily_logins so every request counts
+        cases_col.update_one(
+            {"_id": case['_id']}, 
+            {"$set": {
+                "reset_code": code,
+                "daily_logins": {
+                    "date": today_str,
+                    "count": new_count,
+                    "last_login": get_now_ist().isoformat()
+                }
+            }}
+        )
+        
+        email_sent = send_verification_email(case['email'], code, attempts_left=attempts_left, total_logins_today=new_count, attempt_num=new_count)
         
         return jsonify({
-            "message": f"Verification code sent to your email. Security Report: You have {attempts_left} login(s) remaining for today.",
+            "message": f"Verification code sent to your email. Security Report: Attempt #{new_count} of 3. You have {attempts_left} login attempt(s) remaining for today.",
             "attempts_left": attempts_left,
-            "count_today": count,
+            "count_today": new_count,
             "daily_max": 3,
             "email_sent": email_sent
         }), 200
@@ -2296,36 +2296,23 @@ def verify_code():
     today_str = get_now_ist().strftime("%Y-%m-%d")
     daily = case.get("daily_logins") or {}
     count = int(daily.get("count", 0)) if daily.get("date") == today_str else 0
+    rem = max(0, 3 - count)
     
-    if count >= 3:
-        return jsonify({
-            "error": "Daily login limit reached (3/3 used). You cannot log in again today. Please try again tomorrow.",
-            "limit_reached": True,
-            "attempts_left": 0,
-            "count_today": count
-        }), 429
-        
-    new_count = count + 1
-    new_rem = max(0, 3 - new_count)
     cases_col.update_one(
         {"_id": case['_id']},
         {"$set": {
             "reset_code": "",
-            "daily_logins": {
-                "date": today_str,
-                "count": new_count,
-                "last_login": get_now_ist().isoformat()
-            }
+            "daily_logins.last_login": get_now_ist().isoformat()
         }}
     )
     return jsonify({
         "success": True, 
         "password": case.get('password'), 
         "case": {"_id": str(case['_id'])},
-        "logins_used": new_count,
-        "attempts_left": new_rem,
+        "logins_used": count,
+        "attempts_left": rem,
         "daily_max": 3,
-        "message": f"Login successful! You have {new_rem} login(s) remaining for today."
+        "message": f"Login successful! You have {rem} login(s) remaining for today."
     }), 200
 
 
