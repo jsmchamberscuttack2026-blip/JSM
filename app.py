@@ -76,8 +76,14 @@ try:
     services_col = db['services']
     news_col = db['news']
     opinions_col = db['opinions']
+    emergency_otp_logs_col = db['emergency_otp_logs']
+    try:
+        emergency_otp_logs_col.create_index("created_at_dt", expireAfterSeconds=172800)
+    except Exception as ie:
+        logging.warning(f"Could not initialize 48h TTL index on emergency_otp_logs: {ie}")
     logging.info("Successfully connected to MongoDB")
 except Exception as e:
+    emergency_otp_logs_col = None
     logging.error(f"Error connecting to MongoDB: {e}")
 
 def log_email(recipient, subject, status, smtp_response):
@@ -179,7 +185,7 @@ JSM Chambers"""
     
     return send_email_core(recipient_email, msg, subject)
 
-def send_verification_email(recipient_email, code, attempts_left=None, total_logins_today=0, attempt_num=None):
+def send_verification_email(recipient_email, code, attempts_left=None, total_logins_today=0, attempt_num=None, max_allowed=3):
     msg = MIMEMultipart('alternative')
     msg['Date'] = formatdate(localtime=True)
     msg['Message-ID'] = make_msgid()
@@ -188,10 +194,13 @@ def send_verification_email(recipient_email, code, attempts_left=None, total_log
     
     today_str = get_now_ist().strftime("%d %b %Y")
     attempt_num = attempt_num if attempt_num is not None else (total_logins_today if total_logins_today else 1)
-    rem = attempts_left if attempts_left is not None else max(0, 3 - attempt_num)
+    rem = attempts_left if attempts_left is not None else max(0, max_allowed - attempt_num)
     
-    subject = f"JSM. Chambers - Login Verification Code (Attempt #{attempt_num}/3)"
+    special_tag = " - Emergency Access" if max_allowed > 3 else ""
+    subject = f"JSM. Chambers - Login Verification Code (Attempt #{attempt_num}/{max_allowed}{special_tag})"
     msg['Subject'] = subject
+    
+    policy_text = "Maximum 3 logins per day per client" if max_allowed == 3 else f"Standard 3 + {max_allowed - 3} Emergency Bonus Logins ({max_allowed} Total Allowed Today)"
     
     text = f"""JSM CHAMBERS - CLIENT PORTAL VERIFICATION
 ===============================================
@@ -200,9 +209,9 @@ Your 6-Digit Verification Code is: {code}
 
 DAILY LOGIN SECURITY REPORT:
 - Date: {today_str}
-- Login Attempt: #{attempt_num} of 3
+- Login Attempt: #{attempt_num} of {max_allowed}
 - Logins Remaining Today: {rem} left
-- Daily Policy: Maximum 3 logins per day per client
+- Daily Policy: {policy_text}
 
 Please enter this verification code on the portal to access your case file.
 If you did not request this login code, please contact JSM Chambers immediately.
@@ -232,7 +241,7 @@ JSM Chambers | Cuttack, Odisha
             <table style="width: 100%; font-size: 13px; color: #1e3a8a;">
               <tr>
                 <td style="padding: 4px 0;">Current Attempt:</td>
-                <td style="padding: 4px 0; font-weight: 700; text-align: right;">#{attempt_num} of 3</td>
+                <td style="padding: 4px 0; font-weight: 700; text-align: right;">#{attempt_num} of {max_allowed}</td>
               </tr>
               <tr>
                 <td style="padding: 4px 0;">Remaining Logins Today:</td>
@@ -240,7 +249,7 @@ JSM Chambers | Cuttack, Odisha
               </tr>
               <tr>
                 <td style="padding: 4px 0;">Daily Limit Policy:</td>
-                <td style="padding: 4px 0; font-weight: 700; text-align: right;">Max 3 Logins / Day</td>
+                <td style="padding: 4px 0; font-weight: 700; text-align: right;">{policy_text}</td>
               </tr>
             </table>
           </div>
@@ -2200,7 +2209,9 @@ def client_login():
     today_str = get_now_ist().strftime("%Y-%m-%d")
     daily = case.get("daily_logins") or {}
     count = int(daily.get("count", 0)) if daily.get("date") == today_str else 0
-    rem = max(0, 3 - count)
+    bonus_otps = int(daily.get("bonus_otps", 0)) if daily.get("date") == today_str else 0
+    max_allowed = 3 + bonus_otps
+    rem = max(0, max_allowed - count)
     
     cases_col.update_one(
         {"_id": case['_id']}, 
@@ -2214,7 +2225,8 @@ def client_login():
         "case": {"_id": str(case['_id'])},
         "logins_used": count,
         "attempts_left": rem,
-        "daily_max": 3,
+        "daily_max": max_allowed,
+        "bonus_otps": bonus_otps,
         "message": f"Login successful! You have {rem} login(s) remaining for today."
     }), 200
 
@@ -2236,18 +2248,21 @@ def forgot_password():
         today_str = get_now_ist().strftime("%Y-%m-%d")
         daily = case.get("daily_logins") or {}
         count = int(daily.get("count", 0)) if daily.get("date") == today_str else 0
+        bonus_otps = int(daily.get("bonus_otps", 0)) if daily.get("date") == today_str else 0
+        max_allowed = 3 + bonus_otps
         
-        if count >= 3:
+        if count >= max_allowed:
             return jsonify({
-                "error": "Daily login limit reached (3/3 used). You have reached the maximum allowed 3 logins per day for your client portal. Access will reopen tomorrow.",
+                "error": f"Daily login limit reached ({count}/{max_allowed} used). You have reached the maximum allowed {max_allowed} logins per day for your client portal. Access will reopen tomorrow or contact chamber administration for emergency special access.",
                 "limit_reached": True,
                 "attempts_left": 0,
                 "count_today": count,
-                "daily_max": 3
+                "daily_max": max_allowed,
+                "bonus_otps": bonus_otps
             }), 429
             
         new_count = count + 1
-        attempts_left = max(0, 3 - new_count)
+        attempts_left = max(0, max_allowed - new_count)
         code = ''.join(random.choices(string.digits, k=6))
         
         # Save reset code AND immediately increment daily_logins so every request counts
@@ -2258,18 +2273,24 @@ def forgot_password():
                 "daily_logins": {
                     "date": today_str,
                     "count": new_count,
+                    "bonus_otps": bonus_otps,
                     "last_login": get_now_ist().isoformat()
                 }
             }}
         )
         
-        email_sent = send_verification_email(case['email'], code, attempts_left=attempts_left, total_logins_today=new_count, attempt_num=new_count)
+        email_sent = send_verification_email(case['email'], code, attempts_left=attempts_left, total_logins_today=new_count, attempt_num=new_count, max_allowed=max_allowed)
+        
+        status_note = f" Security Report: Attempt #{new_count} of {max_allowed}."
+        if bonus_otps > 0:
+            status_note += f" (Includes {bonus_otps} Special Emergency OTP{'s' if bonus_otps > 1 else ''})."
         
         return jsonify({
-            "message": f"Verification code sent to your email. Security Report: Attempt #{new_count} of 3. You have {attempts_left} login attempt(s) remaining for today.",
+            "message": f"Verification code sent to your email.{status_note} You have {attempts_left} login attempt(s) remaining for today.",
             "attempts_left": attempts_left,
             "count_today": new_count,
-            "daily_max": 3,
+            "daily_max": max_allowed,
+            "bonus_otps": bonus_otps,
             "email_sent": email_sent
         }), 200
     except Exception as e:
@@ -2296,7 +2317,9 @@ def verify_code():
     today_str = get_now_ist().strftime("%Y-%m-%d")
     daily = case.get("daily_logins") or {}
     count = int(daily.get("count", 0)) if daily.get("date") == today_str else 0
-    rem = max(0, 3 - count)
+    bonus_otps = int(daily.get("bonus_otps", 0)) if daily.get("date") == today_str else 0
+    max_allowed = 3 + bonus_otps
+    rem = max(0, max_allowed - count)
     
     cases_col.update_one(
         {"_id": case['_id']},
@@ -2311,9 +2334,250 @@ def verify_code():
         "case": {"_id": str(case['_id'])},
         "logins_used": count,
         "attempts_left": rem,
-        "daily_max": 3,
+        "daily_max": max_allowed,
+        "bonus_otps": bonus_otps,
         "message": f"Login successful! You have {rem} login(s) remaining for today."
     }), 200
+
+# =========================================================
+#  SPECIAL OTP EMERGENCY MANAGEMENT API (48H AUTO-CLEANUP)
+# =========================================================
+
+def cleanup_expired_special_otp_data():
+    """Removes emergency OTP logs and audit tracking older than 48 hours."""
+    now_ist = get_now_ist()
+    cutoff_48h = now_ist - timedelta(hours=48)
+    if emergency_otp_logs_col is not None:
+        try:
+            emergency_otp_logs_col.delete_many({"created_at_dt": {"$lt": cutoff_48h}})
+        except Exception as e:
+            logging.warning(f"Error purging 48h emergency otp logs: {e}")
+
+@app.route('/api/admin/special-otp/clients', methods=['GET'])
+def get_special_otp_clients():
+    try:
+        cleanup_expired_special_otp_data()
+        now_ist = get_now_ist()
+        today_str = now_ist.strftime("%Y-%m-%d")
+        
+        # Query active registered clients
+        cases = list(cases_col.find({"status": {"$ne": "Finished & Archived"}}).sort("name", 1))
+        
+        clients_list = []
+        total_registered = len(cases)
+        active_today_count = 0
+        exhausted_count = 0
+        bonus_granted_count = 0
+        total_bonus_otps = 0
+        
+        for c in cases:
+            daily = c.get("daily_logins") or {}
+            is_today = (daily.get("date") == today_str)
+            used_today = int(daily.get("count", 0)) if is_today else 0
+            bonus_otps = int(daily.get("bonus_otps", 0)) if is_today else 0
+            standard_limit = 3
+            max_allowed = standard_limit + bonus_otps
+            remaining = max(0, max_allowed - used_today)
+            last_activity = daily.get("last_login") if is_today and daily.get("last_login") else ""
+            last_grant = daily.get("last_grant_time") if is_today and daily.get("last_grant_time") else ""
+            
+            if used_today > 0:
+                active_today_count += 1
+            if remaining == 0 and used_today >= 3:
+                exhausted_count += 1
+            if bonus_otps > 0:
+                bonus_granted_count += 1
+                total_bonus_otps += bonus_otps
+                
+            if bonus_otps > 0 and remaining > 0:
+                status_key = "bonus_active"
+                status_label = f"Special Bonus Active (+{bonus_otps})"
+                badge_class = "badge-gold"
+            elif remaining == 0 and bonus_otps > 0:
+                status_key = "special_exhausted"
+                status_label = f"Special Quota Exhausted ({used_today}/{max_allowed})"
+                badge_class = "badge-danger"
+            elif remaining == 0:
+                status_key = "exhausted"
+                status_label = f"Daily Limit Reached (3/3)"
+                badge_class = "badge-danger"
+            elif used_today > 0:
+                status_key = "active"
+                status_label = f"Active Today ({used_today}/3)"
+                badge_class = "badge-info"
+            else:
+                status_key = "unused"
+                status_label = "Unused Today (3 left)"
+                badge_class = "badge-success"
+                
+            clients_list.append({
+                "case_id": str(c["_id"]),
+                "name": c.get("name") or "Unknown Client",
+                "email": c.get("email") or "",
+                "phone": c.get("phone") or "",
+                "case_number": c.get("case_number") or "N/A",
+                "court_case_number": c.get("court_case_number") or "",
+                "case_type": c.get("case_type") or "General",
+                "used_today": used_today,
+                "bonus_otps": bonus_otps,
+                "standard_limit": standard_limit,
+                "max_allowed": max_allowed,
+                "remaining": remaining,
+                "last_activity": last_activity,
+                "last_grant": last_grant,
+                "status_key": status_key,
+                "status_label": status_label,
+                "badge_class": badge_class,
+                "today_date": today_str
+            })
+            
+        def sort_priority(item):
+            if item["status_key"] in ["exhausted", "special_exhausted"]:
+                return (0, -item["used_today"], item["name"])
+            if item["status_key"] == "bonus_active":
+                return (1, -item["bonus_otps"], item["name"])
+            if item["status_key"] == "active":
+                return (2, -item["used_today"], item["name"])
+            return (3, 0, item["name"])
+            
+        clients_list.sort(key=sort_priority)
+        
+        return jsonify({
+            "success": True,
+            "today": today_str,
+            "stats": {
+                "total_registered": total_registered,
+                "active_today": active_today_count,
+                "exhausted": exhausted_count,
+                "bonus_clients": bonus_granted_count,
+                "total_bonus_otps": total_bonus_otps
+            },
+            "clients": clients_list
+        }), 200
+    except Exception as e:
+        logging.error(f"Error fetching special OTP clients: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/special-otp/grant', methods=['POST'])
+def grant_special_otp():
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        case_id = data.get('case_id', '').strip()
+        bonus_count = int(data.get('bonus_count', 0))
+        reason = (data.get('reason') or '').strip()
+        
+        if not case_id:
+            return jsonify({"error": "Client Case ID is required"}), 400
+        if bonus_count < 1 or bonus_count > 50:
+            return jsonify({"error": "Please enter a valid bonus OTP count between 1 and 50"}), 400
+            
+        case = cases_col.find_one({"_id": ObjectId(case_id)})
+        if not case:
+            return jsonify({"error": "Client case record not found"}), 404
+            
+        now_ist = get_now_ist()
+        today_str = now_ist.strftime("%Y-%m-%d")
+        daily = case.get("daily_logins") or {}
+        is_today = (daily.get("date") == today_str)
+        
+        current_count = int(daily.get("count", 0)) if is_today else 0
+        current_bonus = int(daily.get("bonus_otps", 0)) if is_today else 0
+        
+        new_bonus = current_bonus + bonus_count
+        new_total_allowed = 3 + new_bonus
+        rem = max(0, new_total_allowed - current_count)
+        
+        cases_col.update_one(
+            {"_id": case["_id"]},
+            {"$set": {
+                "daily_logins.date": today_str,
+                "daily_logins.count": current_count,
+                "daily_logins.bonus_otps": new_bonus,
+                "daily_logins.last_grant_time": now_ist.isoformat()
+            }}
+        )
+        
+        expires_at_dt = now_ist + timedelta(hours=48)
+        log_entry = {
+            "case_id": str(case["_id"]),
+            "name": case.get("name") or "Client",
+            "email": case.get("email") or "",
+            "case_number": case.get("case_number") or "N/A",
+            "bonus_granted": bonus_count,
+            "total_bonus_today": new_bonus,
+            "total_allowed_today": new_total_allowed,
+            "used_today": current_count,
+            "remaining_today": rem,
+            "reason": reason or "Emergency Client Access Request",
+            "granted_by": "Chamber Admin",
+            "created_at_dt": now_ist,
+            "created_at": now_ist.strftime("%Y-%m-%d %I:%M %p"),
+            "expires_at_dt": expires_at_dt,
+            "expires_at": expires_at_dt.strftime("%Y-%m-%d %I:%M %p")
+        }
+        if emergency_otp_logs_col is not None:
+            emergency_otp_logs_col.insert_one(log_entry)
+            
+        return jsonify({
+            "success": True,
+            "message": f"Special emergency access granted! Added +{bonus_count} bonus OTP(s) to {case.get('name')}. Today's quota: {current_count}/{new_total_allowed} ({rem} attempts available). All tracking records will auto-clean in 48 hours.",
+            "client_name": case.get('name'),
+            "email": case.get('email'),
+            "bonus_added": bonus_count,
+            "new_bonus_total": new_bonus,
+            "total_allowed": new_total_allowed,
+            "remaining": rem
+        }), 200
+    except Exception as e:
+        logging.error(f"Error granting special OTP: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/special-otp/logs', methods=['GET'])
+def get_special_otp_logs():
+    try:
+        cleanup_expired_special_otp_data()
+        now_ist = get_now_ist()
+        
+        if emergency_otp_logs_col is None:
+            return jsonify({"success": True, "logs": []}), 200
+            
+        logs_cursor = emergency_otp_logs_col.find().sort("created_at_dt", -1).limit(100)
+        logs = []
+        
+        for item in logs_cursor:
+            exp_dt = item.get("expires_at_dt")
+            if exp_dt:
+                if exp_dt.tzinfo is None:
+                    exp_dt = exp_dt.replace(tzinfo=IST)
+                seconds_left = max(0, (exp_dt - now_ist).total_seconds())
+                hours_left = int(seconds_left // 3600)
+                minutes_left = int((seconds_left % 3600) // 60)
+                expires_in_label = f"{hours_left}h {minutes_left}m remaining" if seconds_left > 0 else "Expired (Auto-Purging)"
+            else:
+                expires_in_label = "Within 48 hours"
+                
+            logs.append({
+                "id": str(item["_id"]),
+                "case_id": item.get("case_id"),
+                "name": item.get("name"),
+                "email": item.get("email"),
+                "case_number": item.get("case_number"),
+                "bonus_granted": item.get("bonus_granted", 0),
+                "total_bonus_today": item.get("total_bonus_today", 0),
+                "total_allowed_today": item.get("total_allowed_today", 3),
+                "used_today": item.get("used_today", 0),
+                "remaining_today": item.get("remaining_today", 0),
+                "reason": item.get("reason", "Emergency Request"),
+                "granted_by": item.get("granted_by", "Chamber Admin"),
+                "created_at": item.get("created_at"),
+                "expires_at": item.get("expires_at"),
+                "expires_in_label": expires_in_label
+            })
+            
+        return jsonify({"success": True, "logs": logs}), 200
+    except Exception as e:
+        logging.error(f"Error fetching special OTP logs: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 def ensure_chamber_owner_advocate():

@@ -268,16 +268,21 @@ input:focus{
                 if (reportBox) {
                     reportBox.style.display = 'block';
                     const rem = data.attempts_left !== undefined ? data.attempts_left : 0;
-                    const attempt = data.count_today || (3 - rem);
+                    const dailyMax = data.daily_max || 3;
+                    const bonus = data.bonus_otps || 0;
+                    const attempt = data.count_today || (dailyMax - rem);
                     const remColor = rem > 1 ? '#15803d' : (rem === 1 ? '#b45309' : '#b91c1c');
+                    const policyText = bonus > 0 
+                        ? `(Special Emergency Access: Standard 3 + ${bonus} Bonus OTPs = ${dailyMax} Total for Today)`
+                        : `(Policy: Maximum 3 login attempts per day per client)`;
                     reportBox.innerHTML = `<strong>📊 Security Activity Report:</strong><br>` +
                         `Verification code sent to <strong>${tempEmail}</strong>.<br>` +
-                        `Current Attempt: <strong>#${attempt} of 3</strong> | Remaining: <strong style="color: ${remColor};">${rem} attempt(s) left today</strong><br>` +
-                        `<small style="color: #64748b;">(Policy: Maximum 3 login attempts per day per client)</small>`;
+                        `Current Attempt: <strong>#${attempt} of ${dailyMax}</strong> | Remaining: <strong style="color: ${remColor};">${rem} attempt(s) left today</strong><br>` +
+                        `<small style="color: #64748b;">${policyText}</small>`;
                 }
             } else if (response.status === 429 || data.limit_reached) {
                 errorMsg.style.display = 'block';
-                errorMsg.innerHTML = `🚫 <strong>Daily Login Limit Reached:</strong><br>${data.error || 'You have exhausted your 3 logins for today. Access will be unlocked tomorrow.'}`;
+                errorMsg.innerHTML = `🚫 <strong>Daily Login Limit Reached:</strong><br>${data.error || 'You have exhausted your daily logins. If this is an emergency, contact Chamber Administration to grant Special OTP access.'}`;
             } else {
                 errorMsg.style.display = 'block';
                 errorMsg.innerText = data.error || 'Failed to send code. Please verify your email.';

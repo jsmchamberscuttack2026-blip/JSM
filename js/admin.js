@@ -2015,6 +2015,7 @@ const ADMIN_SECTION_META = {
     'opinions': { title: "Today's Legal Opinion", desc: 'Day-by-day chamber opinions with calendar archive' },
     'services': { title: 'Legal Expertise & 3D Books', desc: 'Practice areas and interactive 3D turn-page monographs' },
     'settings': { title: 'Chamber Settings & Banner', desc: 'Chamber identity, credentials, banner images, and logo' },
+    'special-otp': { title: 'Special OTP Section', desc: 'Emergency Client Login Quota & Bonus Tracking (48h Auto-Audit)' },
     'emails': { title: 'Staff Email Audit Logs', desc: 'Login codes, dispatches, and system transaction logs' }
 };
 
@@ -2076,6 +2077,9 @@ window.showSection = function(sectionId) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
     // Trigger section-specific reloads
+    if (sectionId === 'special-otp' && typeof window.loadSpecialOtpData === 'function') {
+        window.loadSpecialOtpData();
+    }
     if (sectionId === 'services' && typeof window.loadAdminServices === 'function') {
         window.loadAdminServices();
     }
@@ -3484,5 +3488,458 @@ window.deleteOpinion = async function(id) {
         showToast('Error deleting opinion', 'error');
     }
 };
+
+// ==========================================
+// SPECIAL OTP MANAGEMENT & 48H AUDIT SYSTEM
+// ==========================================
+let specialOtpClientsCache = [];
+let currentSpecialOtpClient = null;
+
+window.loadSpecialOtpData = async function() {
+    const tbody = document.getElementById('special-otp-clients-tbody');
+    if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 2rem; color: #94a3b8;"><div style="font-size: 1.5rem; margin-bottom: 8px;">⏳</div>Loading client daily OTP tracking data...</td></tr>`;
+    }
+
+    try {
+        const res = await fetch('/api/admin/special-otp/clients');
+        const data = await res.json();
+        if (!res.ok) {
+            if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #ef4444; padding: 2rem;">Error loading client tracking data: ${data.error || 'Server error'}</td></tr>`;
+            return;
+        }
+
+        specialOtpClientsCache = data.clients || [];
+        
+        // Update Stats
+        const stats = data.stats || {};
+        const totalEl = document.getElementById('stat-special-total');
+        const activeEl = document.getElementById('stat-special-active');
+        const exhaustedEl = document.getElementById('stat-special-exhausted');
+        const bonusEl = document.getElementById('stat-special-bonus');
+        const bonusSubEl = document.getElementById('stat-special-bonus-sub');
+        const todayLabel = document.getElementById('special-otp-today-label');
+
+        if (totalEl) totalEl.innerText = stats.total_registered || 0;
+        if (activeEl) activeEl.innerText = stats.active_today || 0;
+        if (exhaustedEl) exhaustedEl.innerText = stats.exhausted || 0;
+        if (bonusEl) bonusEl.innerText = stats.bonus_clients || 0;
+        if (bonusSubEl) bonusSubEl.innerText = `${stats.total_bonus_otps || 0} extra OTP attempts granted today`;
+        if (todayLabel) todayLabel.innerText = data.today || new Date().toISOString().slice(0, 10);
+
+        window.renderSpecialOtpClientsTable(specialOtpClientsCache);
+    } catch (err) {
+        console.error("Error loading special OTP clients:", err);
+        if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #ef4444; padding: 2rem;">Failed to connect to server.</td></tr>`;
+    }
+};
+
+window.renderSpecialOtpClientsTable = function(clients) {
+    const tbody = document.getElementById('special-otp-clients-tbody');
+    if (!tbody) return;
+
+    if (!clients || clients.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 2.5rem; color: #64748b;">
+            <div style="font-size: 1.6rem; margin-bottom: 6px;">🔍</div>
+            No registered clients found matching the search criteria.
+        </td></tr>`;
+        return;
+    }
+
+    let html = '';
+    clients.forEach(c => {
+        const isBlocked = (c.remaining === 0 && c.used_today >= 3);
+        const hasBonus = (c.bonus_otps > 0);
+        
+        // Format last activity time
+        let timeFormatted = 'No requests today';
+        if (c.last_activity) {
+            try {
+                const dt = new Date(c.last_activity);
+                timeFormatted = dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            } catch(e) {
+                timeFormatted = c.last_activity;
+            }
+        }
+
+        // Status badge styling
+        let badgeHtml = '';
+        if (hasBonus && c.remaining > 0) {
+            badgeHtml = `<span style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; padding: 4px 10px; border-radius: 999px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">🎁 Bonus Active (+${c.bonus_otps})</span>`;
+        } else if (isBlocked && hasBonus) {
+            badgeHtml = `<span style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 4px 10px; border-radius: 999px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">🚫 Bonus Limit Reached (${c.used_today}/${c.max_allowed})</span>`;
+        } else if (isBlocked) {
+            badgeHtml = `<span style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 4px 10px; border-radius: 999px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">⚠️ Limit Reached (3/3)</span>`;
+        } else if (c.used_today > 0) {
+            badgeHtml = `<span style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; padding: 4px 10px; border-radius: 999px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">⚡ Active Today (${c.used_today}/3)</span>`;
+        } else {
+            badgeHtml = `<span style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 4px 10px; border-radius: 999px; font-size: 0.76rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">🟢 Normal (3 left)</span>`;
+        }
+
+        // Remaining pill
+        const remainingPill = c.remaining > 0
+            ? `<strong style="color: #15803d; font-size: 0.95rem;">${c.remaining} left</strong>`
+            : `<strong style="color: #b91c1c; font-size: 0.95rem;">0 left</strong>`;
+
+        const rowBg = isBlocked ? 'background-color: #fffaf0;' : '';
+
+        // Safe JSON for button onclick
+        const clientJson = JSON.stringify({
+            case_id: c.case_id,
+            name: c.name,
+            email: c.email,
+            case_number: c.case_number,
+            used_today: c.used_today,
+            bonus_otps: c.bonus_otps,
+            max_allowed: c.max_allowed,
+            remaining: c.remaining
+        }).replace(/"/g, '&quot;');
+
+        html += `
+        <tr style="${rowBg}">
+            <td>
+                <div style="font-weight: 700; color: #0A1628; font-size: 0.95rem;">${escapeHtml(c.name)}</div>
+                <div style="font-size: 0.82rem; color: #64748b; margin-top: 2px;">📧 ${escapeHtml(c.email)}</div>
+                ${c.phone ? `<div style="font-size: 0.78rem; color: #94a3b8;">📞 ${escapeHtml(c.phone)}</div>` : ''}
+            </td>
+            <td>
+                <div style="font-weight: 600; color: #334155; font-size: 0.88rem;">${escapeHtml(c.case_number)}</div>
+                <div style="font-size: 0.78rem; color: #64748b;">${escapeHtml(c.case_type)}</div>
+                ${c.court_case_number ? `<div style="font-size: 0.75rem; color: #94a3b8;">🏛️ ${escapeHtml(c.court_case_number)}</div>` : ''}
+            </td>
+            <td style="text-align: center; color: #64748b; font-weight: 600;">
+                3 / day
+            </td>
+            <td style="text-align: center;">
+                <span style="font-weight: 800; font-size: 1.05rem; color: ${c.used_today >= c.max_allowed ? '#dc2626' : (c.used_today > 0 ? '#0284c7' : '#64748b')};">
+                    ${c.used_today}
+                </span>
+                <span style="color: #94a3b8; font-size: 0.8rem;"> / ${c.max_allowed}</span>
+            </td>
+            <td style="text-align: center;">
+                ${hasBonus 
+                    ? `<span style="background: #fef3c7; color: #b45309; padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.88rem; border: 1px solid #fde68a;">+${c.bonus_otps}</span>`
+                    : `<span style="color: #94a3b8; font-size: 0.85rem;">0</span>`
+                }
+            </td>
+            <td style="text-align: center;">
+                ${remainingPill}
+            </td>
+            <td>
+                <div style="font-size: 0.85rem; color: #334155; font-weight: 600;">${timeFormatted}</div>
+                <div style="font-size: 0.74rem; color: #94a3b8;">${c.today_date}</div>
+            </td>
+            <td>
+                ${badgeHtml}
+            </td>
+            <td style="text-align: center;">
+                <button type="button" class="btn" onclick="openSpecialOtpModalFromData(${clientJson})" style="background: #0A1628; color: #D4AF37; border: 1px solid #D4AF37; padding: 6px 14px; border-radius: 8px; font-size: 0.82rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
+                    <span>⭐</span> Allow Special Case
+                </button>
+            </td>
+        </tr>`;
+    });
+
+    tbody.innerHTML = html;
+};
+
+window.filterSpecialOtpClients = function() {
+    const query = (document.getElementById('special-otp-search-input')?.value || '').trim().toLowerCase();
+    const filterStatus = document.getElementById('special-otp-filter-status')?.value || 'all';
+
+    let filtered = specialOtpClientsCache.filter(c => {
+        // Query match
+        const matchQuery = !query || 
+            (c.name && c.name.toLowerCase().includes(query)) ||
+            (c.email && c.email.toLowerCase().includes(query)) ||
+            (c.case_number && c.case_number.toLowerCase().includes(query)) ||
+            (c.court_case_number && c.court_case_number.toLowerCase().includes(query));
+
+        if (!matchQuery) return false;
+
+        // Status filter
+        if (filterStatus === 'all') return true;
+        if (filterStatus === 'exhausted') return (c.remaining === 0 && c.used_today >= 3);
+        if (filterStatus === 'bonus_active') return (c.bonus_otps > 0);
+        if (filterStatus === 'active') return (c.used_today > 0);
+        if (filterStatus === 'unused') return (c.used_today === 0);
+        return true;
+    });
+
+    window.renderSpecialOtpClientsTable(filtered);
+};
+
+window.resetSpecialOtpFilters = function() {
+    const searchInput = document.getElementById('special-otp-search-input');
+    const filterSelect = document.getElementById('special-otp-filter-status');
+    if (searchInput) searchInput.value = '';
+    if (filterSelect) filterSelect.value = 'all';
+    window.renderSpecialOtpClientsTable(specialOtpClientsCache);
+};
+
+window.switchSpecialOtpTab = function(tab) {
+    const clientsPanel = document.getElementById('special-tab-panel-clients');
+    const logsPanel = document.getElementById('special-tab-panel-logs');
+    const clientsBtn = document.getElementById('tab-btn-special-clients');
+    const logsBtn = document.getElementById('tab-btn-special-logs');
+
+    if (tab === 'clients') {
+        if (clientsPanel) clientsPanel.style.display = 'block';
+        if (logsPanel) logsPanel.style.display = 'none';
+        if (clientsBtn) {
+            clientsBtn.className = 'btn';
+            clientsBtn.style.background = '#0A1628';
+            clientsBtn.style.color = '#D4AF37';
+            clientsBtn.style.border = '1px solid #D4AF37';
+        }
+        if (logsBtn) {
+            logsBtn.className = 'btn btn-outline';
+            logsBtn.style.background = 'transparent';
+            logsBtn.style.color = '#475569';
+            logsBtn.style.border = '1px solid #cbd5e1';
+        }
+    } else {
+        if (clientsPanel) clientsPanel.style.display = 'none';
+        if (logsPanel) logsPanel.style.display = 'block';
+        if (logsBtn) {
+            logsBtn.className = 'btn';
+            logsBtn.style.background = '#0A1628';
+            logsBtn.style.color = '#D4AF37';
+            logsBtn.style.border = '1px solid #D4AF37';
+        }
+        if (clientsBtn) {
+            clientsBtn.className = 'btn btn-outline';
+            clientsBtn.style.background = 'transparent';
+            clientsBtn.style.color = '#475569';
+            clientsBtn.style.border = '1px solid #cbd5e1';
+        }
+        window.loadSpecialOtpLogs();
+    }
+};
+
+window.loadSpecialOtpLogs = async function() {
+    const tbody = document.getElementById('special-otp-logs-tbody');
+    if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 2rem; color: #94a3b8;"><div style="font-size: 1.5rem; margin-bottom: 8px;">⏳</div>Loading 48-hour emergency audit logs...</td></tr>`;
+    }
+
+    try {
+        const res = await fetch('/api/admin/special-otp/logs');
+        const data = await res.json();
+        if (!res.ok) {
+            if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #ef4444; padding: 2rem;">Error: ${data.error || 'Server error'}</td></tr>`;
+            return;
+        }
+
+        const logs = data.logs || [];
+        if (logs.length === 0) {
+            if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 2.5rem; color: #64748b;"><div style="font-size: 1.5rem; margin-bottom: 6px;">📂</div>No emergency OTP grants found within the 48-hour window. Tracking data auto-cleans every 48 hours.</td></tr>`;
+            return;
+        }
+
+        let html = '';
+        logs.forEach(l => {
+            html += `
+            <tr>
+                <td>
+                    <div style="font-weight: 600; color: #0A1628; font-size: 0.85rem;">${escapeHtml(l.created_at)}</div>
+                </td>
+                <td>
+                    <div style="font-weight: 700; color: #0A1628; font-size: 0.9rem;">${escapeHtml(l.name)}</div>
+                </td>
+                <td style="color: #64748b; font-size: 0.85rem;">
+                    ${escapeHtml(l.email)}
+                </td>
+                <td style="color: #475569; font-weight: 600; font-size: 0.85rem;">
+                    ${escapeHtml(l.case_number)}
+                </td>
+                <td style="text-align: center;">
+                    <span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.85rem;">+${l.bonus_granted} OTPs</span>
+                </td>
+                <td style="text-align: center; font-size: 0.85rem; color: #334155;">
+                    ${l.used_today} / ${l.total_allowed_today} (${l.remaining_today} left)
+                </td>
+                <td style="font-size: 0.85rem; color: #334155; max-width: 220px;">
+                    ${escapeHtml(l.reason)}
+                </td>
+                <td style="font-size: 0.82rem; color: #64748b;">
+                    🏛️ ${escapeHtml(l.granted_by)}
+                </td>
+                <td style="text-align: center;">
+                    <span style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;">
+                        ⏱️ ${escapeHtml(l.expires_in_label)}
+                    </span>
+                </td>
+            </tr>`;
+        });
+
+        if (tbody) tbody.innerHTML = html;
+    } catch(err) {
+        console.error("Error loading special OTP logs:", err);
+        if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #ef4444; padding: 2rem;">Failed to fetch emergency logs.</td></tr>`;
+    }
+};
+
+window.openSpecialOtpModalFromData = function(client) {
+    currentSpecialOtpClient = client;
+    const modal = document.getElementById('modal-special-otp');
+    if (!modal) return;
+
+    document.getElementById('special-modal-case-id').value = client.case_id || '';
+    document.getElementById('special-modal-client-name').innerText = client.name || 'Client';
+    document.getElementById('special-modal-client-email').innerText = client.email || '';
+    document.getElementById('special-modal-case-no').innerText = client.case_number || 'N/A';
+    
+    const quotaSummary = document.getElementById('special-modal-quota-summary');
+    if (quotaSummary) {
+        const bonusStr = client.bonus_otps > 0 ? ` (Includes ${client.bonus_otps} bonus granted earlier)` : '';
+        quotaSummary.innerHTML = `<strong>Today's Status:</strong> ${client.used_today} / ${client.max_allowed} Used · <strong>${client.remaining} attempts remaining</strong>${bonusStr}`;
+    }
+
+    // Default to +1 OTP
+    const countInput = document.getElementById('special-modal-bonus-count');
+    if (countInput) countInput.value = 1;
+
+    // Reset chips
+    document.querySelectorAll('#modal-special-otp .btn-otp-chip').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.background = 'white';
+        btn.style.color = '#334155';
+        btn.style.border = '1.5px solid #cbd5e1';
+    });
+    const chip1 = document.getElementById('chip-bonus-1');
+    if (chip1) {
+        chip1.classList.add('active');
+        chip1.style.background = '#0A1628';
+        chip1.style.color = '#D4AF37';
+        chip1.style.border = '1.5px solid #D4AF37';
+    }
+
+    // Reset reasons
+    const reasonPreset = document.getElementById('special-modal-reason-preset');
+    const reasonCustom = document.getElementById('special-modal-reason-custom');
+    if (reasonPreset) reasonPreset.value = "Urgent High Court / Trial Court Hearing today";
+    if (reasonCustom) {
+        reasonCustom.value = '';
+        reasonCustom.style.display = 'none';
+    }
+
+    window.updateBonusLivePreview();
+    modal.style.display = 'flex';
+};
+
+window.closeSpecialOtpModal = function() {
+    const modal = document.getElementById('modal-special-otp');
+    if (modal) modal.style.display = 'none';
+    currentSpecialOtpClient = null;
+};
+
+window.selectBonusOtpPreset = function(count, btnEl) {
+    const countInput = document.getElementById('special-modal-bonus-count');
+    if (countInput) countInput.value = count;
+
+    document.querySelectorAll('#modal-special-otp .btn-otp-chip').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.background = 'white';
+        btn.style.color = '#334155';
+        btn.style.border = '1.5px solid #cbd5e1';
+    });
+
+    if (btnEl) {
+        btnEl.classList.add('active');
+        btnEl.style.background = '#0A1628';
+        btnEl.style.color = '#D4AF37';
+        btnEl.style.border = '1.5px solid #D4AF37';
+    }
+
+    window.updateBonusLivePreview();
+};
+
+window.handleSpecialReasonPresetChange = function(val) {
+    const customInput = document.getElementById('special-modal-reason-custom');
+    if (!customInput) return;
+    if (val === 'custom') {
+        customInput.style.display = 'block';
+        customInput.focus();
+    } else {
+        customInput.style.display = 'none';
+    }
+};
+
+window.updateBonusLivePreview = function() {
+    const countInput = document.getElementById('special-modal-bonus-count');
+    const previewBox = document.getElementById('special-modal-preview-box');
+    if (!countInput || !previewBox || !currentSpecialOtpClient) return;
+
+    let bonusToAdd = parseInt(countInput.value, 10);
+    if (isNaN(bonusToAdd) || bonusToAdd < 1) bonusToAdd = 1;
+
+    const currentBonus = currentSpecialOtpClient.bonus_otps || 0;
+    const currentUsed = currentSpecialOtpClient.used_today || 0;
+    const newTotalBonus = currentBonus + bonusToAdd;
+    const newMaxAllowed = 3 + newTotalBonus;
+    const newRemaining = Math.max(0, newMaxAllowed - currentUsed);
+
+    previewBox.innerHTML = `<strong>✨ Live Effect for Today:</strong> Client's daily limit will instantly expand to <strong>${newMaxAllowed} logins</strong> (3 standard + ${newTotalBonus} bonus). The client will immediately have <strong>${newRemaining} login attempt(s) remaining</strong> for today.`;
+};
+
+window.submitSpecialOtpGrant = async function() {
+    const submitBtn = document.getElementById('btn-submit-special-otp');
+    const caseId = document.getElementById('special-modal-case-id')?.value;
+    const bonusCount = parseInt(document.getElementById('special-modal-bonus-count')?.value, 10);
+    
+    let reason = document.getElementById('special-modal-reason-preset')?.value || '';
+    if (reason === 'custom') {
+        reason = (document.getElementById('special-modal-reason-custom')?.value || '').trim();
+        if (!reason) {
+            showToast('Please specify the emergency reason for granting bonus OTPs.', 'error');
+            return;
+        }
+    }
+
+    if (!caseId) {
+        showToast('Client case file missing.', 'error');
+        return;
+    }
+    if (isNaN(bonusCount) || bonusCount < 1 || bonusCount > 50) {
+        showToast('Please specify a valid bonus OTP count between 1 and 50.', 'error');
+        return;
+    }
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Granting Emergency Access...';
+    }
+
+    try {
+        const res = await fetch('/api/admin/special-otp/grant', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                case_id: caseId,
+                bonus_count: bonusCount,
+                reason: reason
+            })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            showToast(data.message || 'Special emergency OTP quota granted successfully!', 'success');
+            window.closeSpecialOtpModal();
+            window.loadSpecialOtpData();
+        } else {
+            showToast(data.error || 'Failed to grant special OTP.', 'error');
+        }
+    } catch(err) {
+        console.error("Error submitting special OTP grant:", err);
+        showToast('Error communicating with server.', 'error');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = '⭐ Submit & Grant Bonus OTPs';
+        }
+    }
+};
+
 
 
