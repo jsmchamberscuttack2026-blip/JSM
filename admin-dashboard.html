@@ -600,7 +600,12 @@
                     <h2 id="current-section-title">Admin Dashboard</h2>
                     <p id="current-section-desc" style="color: var(--color-text-light);">Chamber Operations & Analytics Overview</p>
                 </div>
-                <div style="display: flex; gap: 1rem; align-items: center;">
+                <div style="display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap;">
+                    <!-- Public Website Master Status Pill in Top Header -->
+                    <div id="top-public-status-pill" onclick="window.togglePublicWebsiteStatusQuick()" style="display: inline-flex; align-items: center; gap: 8px; padding: 0.45rem 1rem; border-radius: 999px; background: rgba(16, 185, 129, 0.15); border: 1.5px solid #10b981; color: #10b981; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.06);" title="Click to quickly toggle Public Website ON / OFF">
+                        <span id="top-public-status-dot">🟢</span>
+                        <span id="top-public-status-label">Public Website: LIVE (ON)</span>
+                    </div>
                     <button id="ai-voice-btn" class="btn btn-primary" onclick="startAiVoice()" style="display: none; background: linear-gradient(135deg, #102a43, #D4AF37); color: white; align-items: center; gap: 8px; border: none; padding: 0.6rem 1.2rem; border-radius: 8px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);">
                         <span style="font-size: 1.2rem;">🎙️</span> AI Voice Update
                     </button>
@@ -612,6 +617,20 @@
 
             <div id="content-area">
                 <div id="section-dashboard" class="admin-section active">
+                    <!-- Lockdown Warning Banner (Visible on Dashboard when OFF) -->
+                    <div id="dashboard-lockdown-banner" style="display: none; margin-bottom: 1.5rem; background: linear-gradient(135deg, #450a0a, #7f1d1d); border: 2px solid #ef4444; border-radius: 12px; padding: 1.2rem 1.5rem; color: #ffffff; box-shadow: 0 8px 25px rgba(239, 68, 68, 0.25); align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 14px;">
+                            <span style="font-size: 2.2rem;">🛠️</span>
+                            <div>
+                                <h4 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #fee2e2;">Public Website is Currently Locked / Under Repair (OFF)</h4>
+                                <p style="margin: 3px 0 0 0; font-size: 0.88rem; color: #fca5a5;">Public visitors see only the official Repair & Security Maintenance notice. All public chamber data is concealed.</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="window.savePublicWebsiteStatus('on')" style="background: #ffffff; color: #991b1b; font-weight: 800; border: none; border-radius: 8px; padding: 0.65rem 1.4rem; font-size: 0.9rem; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: all 0.2s ease;">
+                            🟢 Turn Public Website LIVE (ON)
+                        </button>
+                    </div>
+
                     <!-- Dashboard Summary Stats -->
                     <div class="stat-grid">
                         <div class="stat-card" style="border-left: 5px solid #3b82f6; cursor: pointer;" onclick="showSection('cases-manage')">

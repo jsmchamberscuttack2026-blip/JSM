@@ -150,17 +150,42 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function showRepairScreenNow() {
+      document.title = "Website Under Repair & Security Maintenance | JSM Chambers";
+      document.body.innerHTML = `
+      <div style="background-color: #051426; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box;">
+          <div style="background: linear-gradient(145deg, rgba(10, 22, 40, 0.95), rgba(7, 19, 34, 0.98)); border: 1.5px solid rgba(212, 175, 55, 0.4); border-radius: 20px; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), 0 0 30px rgba(212, 175, 55, 0.15); max-width: 680px; width: 100%; padding: 44px 36px; text-align: center; box-sizing: border-box;">
+              <div style="display: inline-flex; align-items: center; justify-content: center; width: 96px; height: 96px; background: radial-gradient(circle, rgba(212, 175, 55, 0.18) 0%, rgba(10, 22, 40, 0.6) 80%); border: 2px solid #D4AF37; border-radius: 50%; margin-bottom: 24px; box-shadow: 0 0 25px rgba(212, 175, 55, 0.35);">
+                  <span style="font-size: 42px;">🛠️</span>
+              </div>
+              <div style="font-size: 11px; font-weight: 800; color: #D4AF37; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 10px;">JSM CHAMBERS</div>
+              <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: 28px; font-weight: 700; color: #ffffff; line-height: 1.3; margin-bottom: 14px; letter-spacing: 0.5px;">Website Under Scheduled Repair & Security Maintenance</h1>
+              <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-left: 4px solid #D4AF37; border-radius: 10px; padding: 18px 20px; margin-bottom: 24px; text-align: left; font-size: 14px; line-height: 1.65; color: #94a3b8;">
+                  <p><strong style="color: #ffffff;">Notice to Visitors:</strong> The public chamber portal has been temporarily taken offline by Chamber Administration for system repairs and scheduled maintenance.</p>
+                  <p style="margin-top: 8px;">All public data has been securely concealed while maintenance operations are carried out. Client databases and case files remain safely encrypted and unaffected.</p>
+              </div>
+              <div style="display: inline-block; background: rgba(212, 175, 55, 0.1); color: #F3E5AB; border: 1px dashed rgba(212, 175, 55, 0.4); padding: 6px 14px; border-radius: 6px; font-family: monospace; font-size: 13px; margin-bottom: 24px;">
+                  STATUS: 503 Service Unavailable · Public Access Suspended
+              </div>
+              <div style="font-size: 11.5px; color: #64748b; margin-top: 24px; line-height: 1.5; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 20px;">
+                  © ${new Date().getFullYear()} JSM Chambers · Cuttack, Odisha · All rights reserved.<br>
+                  For emergency court registry matters, contact chamber reception directly.
+              </div>
+          </div>
+      </div>`;
+  }
+
   // Load Dynamic Office Information & Settings
   fetch('/api/settings').then(res => {
       if (res.status === 503) {
-          window.location.reload();
+          showRepairScreenNow();
           return null;
       }
       return res.json();
-  }).then(info => {
+  }).catch(() => null).then(info => {
       if (!info) return;
       if (info.under_maintenance || info.public_page_status === 'off' || info.public_website_enabled === false) {
-          window.location.reload();
+          showRepairScreenNow();
           return;
       }
       window.siteSettingsData = info;

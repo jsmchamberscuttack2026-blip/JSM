@@ -1,9 +1,31 @@
+// Ensure admin_logged_in cookie is always set for API authorization
+try {
+    document.cookie = "admin_logged_in=true; path=/; max-age=86400; SameSite=Lax";
+} catch(e) {}
+
+// Automatic Interceptor: Guarantee all admin panel fetch requests send X-Admin-Request: true
+(function() {
+    const _origFetch = window.fetch;
+    window.fetch = function(input, init) {
+        init = init || {};
+        init.headers = init.headers || {};
+        if (init.headers instanceof Headers) {
+            init.headers.set('X-Admin-Request', 'true');
+        } else if (Array.isArray(init.headers)) {
+            init.headers.push(['X-Admin-Request', 'true']);
+        } else {
+            init.headers['X-Admin-Request'] = 'true';
+        }
+        return _origFetch.call(this, input, init);
+    };
+})();
+
 // Helper: compress an image File to a small base64 JPEG
 
 // ==========================================
 // TOAST NOTIFICATIONS
 // ==========================================
-window.showToast = function(message, type = 'success') {;
+window.showToast = function(message, type = 'success') {
     let toast = document.getElementById('admin-toast');
     if (!toast) {
         toast = document.createElement('div');
@@ -3972,10 +3994,9 @@ window.handlePublicStatusRadioChange = function(status) {
 
 window.updatePublicStatusUI = function(status) {
     const isLive = (status === 'on' || status === true);
+    
+    // 1. Settings section badge
     const badge = document.getElementById('public-website-status-badge');
-    const labelOn = document.getElementById('label-status-on');
-    const labelOff = document.getElementById('label-status-off');
-
     if (badge) {
         if (isLive) {
             badge.style.background = '#10b981';
@@ -3988,6 +4009,43 @@ window.updatePublicStatusUI = function(status) {
         }
     }
 
+    // 2. Top Header Status Pill
+    const topPill = document.getElementById('top-public-status-pill');
+    const topDot = document.getElementById('top-public-status-dot');
+    const topLabel = document.getElementById('top-public-status-label');
+    if (topPill && topDot && topLabel) {
+        if (isLive) {
+            topPill.style.background = 'rgba(16, 185, 129, 0.15)';
+            topPill.style.borderColor = '#10b981';
+            topPill.style.color = '#10b981';
+            topDot.innerText = '🟢';
+            topLabel.innerText = 'Public Website: LIVE (ON)';
+        } else {
+            topPill.style.background = 'rgba(239, 68, 68, 0.2)';
+            topPill.style.borderColor = '#ef4444';
+            topPill.style.color = '#ef4444';
+            topDot.innerText = '🔴';
+            topLabel.innerText = 'Public Website: UNDER REPAIR (OFF)';
+        }
+    }
+
+    // 3. Dashboard Warning Banner
+    const dashBanner = document.getElementById('dashboard-lockdown-banner');
+    if (dashBanner) {
+        dashBanner.style.display = isLive ? 'none' : 'flex';
+    }
+
+    // 4. Radio Buttons
+    const rOn = document.getElementById('public-status-on');
+    const rOff = document.getElementById('public-status-off');
+    if (rOn && rOff) {
+        rOn.checked = isLive;
+        rOff.checked = !isLive;
+    }
+
+    // 5. Radio button stylized labels
+    const labelOn = document.getElementById('label-status-on');
+    const labelOff = document.getElementById('label-status-off');
     if (labelOn) {
         if (isLive) {
             labelOn.style.background = 'rgba(16, 185, 129, 0.2)';
@@ -4014,8 +4072,11 @@ window.updatePublicStatusUI = function(status) {
 };
 
 window.savePublicWebsiteStatus = async function(statusVal) {
-    const isOff = document.getElementById('public-status-off')?.checked;
-    const status = statusVal || (isOff ? 'off' : 'on');
+    let status = statusVal;
+    if (!status) {
+        const isOff = document.getElementById('public-status-off')?.checked;
+        status = isOff ? 'off' : 'on';
+    }
     const enabled = (status === 'on');
     const btn = document.getElementById('btn-save-public-status');
     if (btn) {
@@ -4054,6 +4115,18 @@ window.savePublicWebsiteStatus = async function(statusVal) {
             btn.innerText = '💾 Apply Website State';
         }
     }
+};
+
+window.togglePublicWebsiteStatusQuick = async function() {
+    const isCurrentlyOff = document.getElementById('public-status-off')?.checked || 
+                           (document.getElementById('top-public-status-label')?.innerText.includes('UNDER REPAIR'));
+    const nextStatus = isCurrentlyOff ? 'on' : 'off';
+    const confirmMsg = nextStatus === 'off' 
+        ? "Switch Public Website to UNDER REPAIR (OFF)?\n\nAll public pages and APIs will immediately hide chamber data and show the repair notice. Only Admin Login and Dashboard will remain active."
+        : "Switch Public Website back to LIVE (ON)?\n\nPublic visitors will immediately be able to view chamber data, advocates, cases, and services.";
+        
+    if (!confirm(confirmMsg)) return;
+    await window.savePublicWebsiteStatus(nextStatus);
 };
 
 

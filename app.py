@@ -258,7 +258,11 @@ def render_under_repair_page():
     </div>
 </body>
 </html>"""
-    return Response(html, status=503, mimetype='text/html')
+    resp = Response(html, status=503, mimetype='text/html')
+    resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    resp.headers['Pragma'] = 'no-cache'
+    resp.headers['Expires'] = '0'
+    return resp
 
 @app.before_request
 def check_maintenance_mode():
@@ -271,30 +275,36 @@ def check_maintenance_mode():
     if path in ('/admin-login.html', '/admin-dashboard.html', '/admin-login', '/admin-dashboard'):
         return None
         
-    # 2. Always allow static files needed for admin UI and repairing page
+    # 2. Always allow static assets needed for UI display
     if path.startswith(('/assets/', '/css/', '/js/', '/chamber-owner.jpg', '/chamber-logo.jpg', '/favicon')):
         return None
         
-    # 3. Always allow critical admin authentication and settings endpoints
-    if path.startswith(('/api/admin-login', '/api/admin-verify-otp', '/api/admin-resend-otp', '/api/admin-lock-status', '/api/settings', '/api/website-status', '/api/admin')):
+    # 3. Always allow critical admin authentication and status endpoints
+    if path.startswith(('/api/admin-login', '/api/admin-verify-otp', '/api/admin-resend-otp', '/api/admin-lock-status', '/api/website-status', '/api/admin')):
         return None
         
-    # 4. If request originates from an admin session, allow internal APIs
-    ref = request.referrer or ''
-    is_from_admin = ('admin-dashboard.html' in ref or 'admin-login.html' in ref or request.headers.get('X-Admin-Request') == 'true')
-    if is_from_admin and path.startswith('/api/'):
+    # 4. Check if request originates from an authorized Chamber Administrator
+    ref = (request.referrer or '').lower()
+    is_from_admin = (
+        request.headers.get('X-Admin-Request') == 'true' or
+        request.cookies.get('admin_logged_in') == 'true' or
+        'admin-dashboard' in ref or
+        'admin-login' in ref
+    )
+    if is_from_admin:
         return None
         
-    # 5. Block all other API requests with 503 error message
+    # 5. Public API requests: return 503 JSON so NO public data is disclosed
     if path.startswith('/api/'):
         return jsonify({
-            "error": "The chamber website is currently under emergency repair and cyber security lockdown to protect against cyber threats. Public services are temporarily suspended. Only Chamber Administration is active.",
+            "error": "The chamber website is currently under scheduled repair and security maintenance. Public services are temporarily suspended. Only Chamber Administration is active.",
             "status": "under_repair",
             "maintenance": True,
-            "security_lockdown": True
+            "public_page_status": "off",
+            "public_website_enabled": False
         }), 503
         
-    # 6. Block all other public web pages (/, /index.html, /client-login.html, /client-dashboard.html, etc.)
+    # 6. Public Web Pages (/, /index.html, /cases.html, /advocates.html, /client-portal.html, etc.): Show Repair Notice
     return render_under_repair_page()
 
 @app.route('/api/website-status', methods=['GET'])
