@@ -151,7 +151,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Load Dynamic Office Information & Settings
-  fetch('/api/settings').then(res => res.json()).then(info => {
+  fetch('/api/settings').then(res => {
+      if (res.status === 503) {
+          window.location.reload();
+          return null;
+      }
+      return res.json();
+  }).then(info => {
+      if (!info) return;
+      if (info.under_maintenance || info.public_page_status === 'off' || info.public_website_enabled === false) {
+          window.location.reload();
+          return;
+      }
       window.siteSettingsData = info;
       
       // Dynamic Homepage Hero Banner Image

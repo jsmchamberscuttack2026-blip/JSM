@@ -1075,6 +1075,19 @@ if (officeInfoForm) {
         });
     }
             if (data.allow_common_password !== undefined) document.getElementById('admin-allow-common-pwd').checked = data.allow_common_password;
+            
+            // Public website status (ON / OFF)
+            const isPublicLive = (data.public_page_status === 'on' || (data.public_page_status === undefined && data.public_website_enabled !== false));
+            const rOn = document.getElementById('public-status-on');
+            const rOff = document.getElementById('public-status-off');
+            if (rOn && rOff) {
+                rOn.checked = isPublicLive;
+                rOff.checked = !isPublicLive;
+            }
+            if (typeof window.updatePublicStatusUI === 'function') {
+                window.updatePublicStatusUI(isPublicLive ? 'on' : 'off');
+            }
+
             if (data.security_officer_email) {
                 const secEl = document.getElementById('admin-security-officer-email');
                 if (secEl) secEl.value = data.security_officer_email;
@@ -1183,11 +1196,20 @@ if (officeInfoForm) {
         const btn = officeInfoForm.querySelector('button');
         btn.innerText = 'Saving...';
         
+        const isPublicOff = document.getElementById('public-status-off')?.checked;
+        const public_page_status = isPublicOff ? 'off' : 'on';
+        const public_website_enabled = !isPublicOff;
+
         try {
             await fetch('/api/settings', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Admin-Request': 'true'
+                },
                 body: JSON.stringify({ 
+                    public_page_status,
+                    public_website_enabled,
                     allow_common_password, 
                     security_officer_email,
                     chamber_name, 
@@ -3940,6 +3962,100 @@ window.submitSpecialOtpGrant = async function() {
         }
     }
 };
+
+// ==========================================
+// PUBLIC WEBSITE STATUS & REPAIR CONTROLLER
+// ==========================================
+window.handlePublicStatusRadioChange = function(status) {
+    window.updatePublicStatusUI(status);
+};
+
+window.updatePublicStatusUI = function(status) {
+    const isLive = (status === 'on' || status === true);
+    const badge = document.getElementById('public-website-status-badge');
+    const labelOn = document.getElementById('label-status-on');
+    const labelOff = document.getElementById('label-status-off');
+
+    if (badge) {
+        if (isLive) {
+            badge.style.background = '#10b981';
+            badge.style.boxShadow = '0 2px 8px rgba(16,185,129,0.3)';
+            badge.innerText = '🟢 Public Website: LIVE (ON)';
+        } else {
+            badge.style.background = '#ef4444';
+            badge.style.boxShadow = '0 2px 8px rgba(239,68,68,0.4)';
+            badge.innerText = '🔴 Public Website: UNDER REPAIR (OFF)';
+        }
+    }
+
+    if (labelOn) {
+        if (isLive) {
+            labelOn.style.background = 'rgba(16, 185, 129, 0.2)';
+            labelOn.style.border = '2px solid #10b981';
+            labelOn.style.color = '#ffffff';
+        } else {
+            labelOn.style.background = 'rgba(255, 255, 255, 0.05)';
+            labelOn.style.border = '1.5px solid #64748b';
+            labelOn.style.color = '#cbd5e1';
+        }
+    }
+
+    if (labelOff) {
+        if (!isLive) {
+            labelOff.style.background = 'rgba(239, 68, 68, 0.2)';
+            labelOff.style.border = '2px solid #ef4444';
+            labelOff.style.color = '#ffffff';
+        } else {
+            labelOff.style.background = 'rgba(255, 255, 255, 0.05)';
+            labelOff.style.border = '1.5px solid #64748b';
+            labelOff.style.color = '#cbd5e1';
+        }
+    }
+};
+
+window.savePublicWebsiteStatus = async function(statusVal) {
+    const isOff = document.getElementById('public-status-off')?.checked;
+    const status = statusVal || (isOff ? 'off' : 'on');
+    const enabled = (status === 'on');
+    const btn = document.getElementById('btn-save-public-status');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'Applying State...';
+    }
+
+    try {
+        const res = await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Admin-Request': 'true'
+            },
+            body: JSON.stringify({
+                public_page_status: status,
+                public_website_enabled: enabled
+            })
+        });
+        if (res.ok) {
+            window.updatePublicStatusUI(status);
+            if (enabled) {
+                showToast('Public Website is now LIVE (ON)! Visitors can view chamber information.', 'success');
+            } else {
+                showToast('Website is now UNDER REPAIR (OFF)! Public data is completely hidden, and only Admin Login is operational.', 'warning');
+            }
+        } else {
+            showToast('Failed to update website state.', 'error');
+        }
+    } catch(err) {
+        console.error('Error saving public website status:', err);
+        showToast('Network error while updating website status.', 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = '💾 Apply Website State';
+        }
+    }
+};
+
 
 
 

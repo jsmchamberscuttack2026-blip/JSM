@@ -86,6 +86,225 @@ except Exception as e:
     emergency_otp_logs_col = None
     logging.error(f"Error connecting to MongoDB: {e}")
 
+# =========================================================
+#  PUBLIC WEBSITE STATUS (ON / OFF) & CYBER DEFENSE LOCKDOWN
+# =========================================================
+
+def is_public_website_enabled():
+    """Checks whether the public website is live or under emergency maintenance."""
+    if settings_col is None:
+        return True
+    try:
+        setting_doc = settings_col.find_one({"_id": "office_info"}) or {}
+        if "public_page_status" in setting_doc:
+            return str(setting_doc["public_page_status"]).strip().lower() != "off"
+        if "public_website_enabled" in setting_doc:
+            return bool(setting_doc["public_website_enabled"])
+        return True
+    except Exception as e:
+        logging.error(f"Error checking public website status: {e}")
+        return True
+
+def render_under_repair_page():
+    now_year = get_now_ist().year
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Under Repair & Security Maintenance | JSM Chambers</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/jpeg" href="/chamber-owner.jpg">
+    <style>
+        :root {{
+            --bg-midnight: #051426;
+            --card-navy: #0A1628;
+            --accent-gold: #D4AF37;
+            --accent-gold-light: #F3E5AB;
+            --border-gold: rgba(212, 175, 55, 0.4);
+            --text-light: #e2e8f0;
+            --text-muted: #94a3b8;
+            --danger: #ef4444;
+        }}
+        * {{
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }}
+        body {{
+            background-color: var(--bg-midnight);
+            background-image: 
+                radial-gradient(circle at 50% 20%, rgba(212, 175, 55, 0.08) 0%, transparent 60%),
+                radial-gradient(circle at 80% 80%, rgba(14, 165, 233, 0.06) 0%, transparent 50%),
+                linear-gradient(180deg, #051426 0%, #071322 100%);
+            color: var(--text-light);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            overflow-x: hidden;
+        }}
+        .repair-card {{
+            background: linear-gradient(145deg, rgba(10, 22, 40, 0.95), rgba(7, 19, 34, 0.98));
+            border: 1.5px solid var(--border-gold);
+            border-radius: 20px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), 0 0 30px rgba(212, 175, 55, 0.15);
+            max-width: 680px;
+            width: 100%;
+            padding: 44px 36px;
+            text-align: center;
+            position: relative;
+            backdrop-filter: blur(12px);
+        }}
+        .repair-icon-box {{
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 96px;
+            height: 96px;
+            background: radial-gradient(circle, rgba(212, 175, 55, 0.18) 0%, rgba(10, 22, 40, 0.6) 80%);
+            border: 2px solid var(--accent-gold);
+            border-radius: 50%;
+            margin-bottom: 24px;
+            position: relative;
+            box-shadow: 0 0 25px rgba(212, 175, 55, 0.35);
+        }}
+        .repair-icon {{
+            font-size: 42px;
+            animation: pulse-gear 3s infinite ease-in-out;
+            display: inline-block;
+        }}
+        @keyframes pulse-gear {{
+            0% {{ transform: scale(1) rotate(0deg); }}
+            50% {{ transform: scale(1.1) rotate(15deg); }}
+            100% {{ transform: scale(1) rotate(0deg); }}
+        }}
+        .chamber-seal {{
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--accent-gold);
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }}
+        .headline {{
+            font-family: "Playfair Display", Georgia, serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.3;
+            margin-bottom: 14px;
+            letter-spacing: 0.5px;
+        }}
+        .defense-box {{
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-left: 4px solid var(--accent-gold);
+            border-radius: 10px;
+            padding: 18px 20px;
+            margin-bottom: 24px;
+            text-align: left;
+            font-size: 14px;
+            line-height: 1.65;
+            color: var(--text-muted);
+        }}
+        .defense-box strong {{
+            color: #ffffff;
+        }}
+        .status-pill {{
+            display: inline-block;
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--accent-gold-light);
+            border: 1px dashed var(--border-gold);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 13px;
+            margin-bottom: 24px;
+        }}
+        .footer-note {{
+            font-size: 11.5px;
+            color: #64748b;
+            margin-top: 24px;
+            line-height: 1.5;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding-top: 20px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="repair-card">
+        <div class="repair-icon-box">
+            <span class="repair-icon">🛠️</span>
+        </div>
+        <div class="chamber-seal">JSM CHAMBERS</div>
+        <h1 class="headline">Website Under Scheduled Repair & Security Maintenance</h1>
+
+        <div class="defense-box">
+            <p><strong>Notice to Visitors:</strong> The public chamber portal has been temporarily taken offline by Chamber Administration for system repairs and scheduled maintenance.</p>
+            <p style="margin-top: 8px;">All public data has been securely concealed while maintenance operations are carried out. Client databases and case files remain safely encrypted and unaffected.</p>
+        </div>
+
+        <div class="status-pill">
+            STATUS: 503 Service Unavailable · Public Access Suspended
+        </div>
+
+        <div class="footer-note">
+            © {now_year} JSM Chambers · Cuttack, Odisha · All rights reserved.<br>
+            For emergency court registry matters, contact chamber reception directly.
+        </div>
+    </div>
+</body>
+</html>"""
+    return Response(html, status=503, mimetype='text/html')
+
+@app.before_request
+def check_maintenance_mode():
+    if is_public_website_enabled():
+        return None
+        
+    path = request.path
+    
+    # 1. Always allow Admin UI pages
+    if path in ('/admin-login.html', '/admin-dashboard.html', '/admin-login', '/admin-dashboard'):
+        return None
+        
+    # 2. Always allow static files needed for admin UI and repairing page
+    if path.startswith(('/assets/', '/css/', '/js/', '/chamber-owner.jpg', '/chamber-logo.jpg', '/favicon')):
+        return None
+        
+    # 3. Always allow critical admin authentication and settings endpoints
+    if path.startswith(('/api/admin-login', '/api/admin-verify-otp', '/api/admin-resend-otp', '/api/admin-lock-status', '/api/settings', '/api/website-status', '/api/admin')):
+        return None
+        
+    # 4. If request originates from an admin session, allow internal APIs
+    ref = request.referrer or ''
+    is_from_admin = ('admin-dashboard.html' in ref or 'admin-login.html' in ref or request.headers.get('X-Admin-Request') == 'true')
+    if is_from_admin and path.startswith('/api/'):
+        return None
+        
+    # 5. Block all other API requests with 503 error message
+    if path.startswith('/api/'):
+        return jsonify({
+            "error": "The chamber website is currently under emergency repair and cyber security lockdown to protect against cyber threats. Public services are temporarily suspended. Only Chamber Administration is active.",
+            "status": "under_repair",
+            "maintenance": True,
+            "security_lockdown": True
+        }), 503
+        
+    # 6. Block all other public web pages (/, /index.html, /client-login.html, /client-dashboard.html, etc.)
+    return render_under_repair_page()
+
+@app.route('/api/website-status', methods=['GET'])
+def get_website_status():
+    enabled = is_public_website_enabled()
+    return jsonify({
+        "public_website_enabled": enabled,
+        "public_page_status": "on" if enabled else "off"
+    }), 200
+
 def log_email(recipient, subject, status, smtp_response):
     try:
         log_entry = {
@@ -554,6 +773,8 @@ Please log into the Admin Dashboard to approve and set a date/time."""
 @app.route('/')
 @app.route('/index.html')
 def serve_index():
+    if not is_public_website_enabled():
+        return render_under_repair_page()
     try:
         with open('index.html', 'r', encoding='utf-8') as f:
             html = f.read()
@@ -813,6 +1034,9 @@ def serve_sitemap_xml():
 
 @app.route('/<path:path>')
 def serve_static(path):
+    if not is_public_website_enabled():
+        if path.endswith('.html') and path not in ('admin-login.html', 'admin-dashboard.html'):
+            return render_under_repair_page()
     return send_from_directory('.', path)
 
 
