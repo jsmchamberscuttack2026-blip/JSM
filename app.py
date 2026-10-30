@@ -101,11 +101,11 @@ except Exception as e:
 # =========================================================
 #  TURSO DATABASE INTEGRATION (Clients Directory / History)
 # =========================================================
-TURSO_DATABASE_URL = os.environ.get("TURSO_DATABASE_URL") or os.environ.get("TURSO1_DATABASE_URL") or os.environ.get("TURSO_1_DATABASE_URL") or "libsql://jsm-chamber-jsmcuttack.aws-ap-south-1.turso.io"
-TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN") or os.environ.get("TURSO1_AUTH_TOKEN") or os.environ.get("TURSO_1_AUTH_TOKEN") or "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTMzMzQ4NTcsImlkIjoiMDFhMThiMTAtZmUwMS03ZTViLWI1YjItNGY4YjljMGYxNTIzIiwia2lkIjoiY2E4SWNBcm5MRFAwZ0gtN3Izd2hjVnFyS2ZmLTVBUGdrRERhWDdKcVU4YyIsInJpZCI6IjAxYTI4ODcwLWM3MmEtNDRkMC1hMDdlLWJhOGRmZDY2YjE2NSJ9.YjookYrYO2u-3vGkilEQoFkzzqSEbVMs3cS2EurNm7PY9f00j5p2aX8N7MaP8uyUhDnPXWAYXMXKLHnCDpwGBA"
+TURSO_DATABASE_URL = (os.environ.get("TURSO_DATABASE_URL") or os.environ.get("TURSO1_DATABASE_URL") or os.environ.get("TURSO_1_DATABASE_URL") or "libsql://jsm-chamber-jsmcuttack.aws-ap-south-1.turso.io").strip().strip('"').strip("'")
+TURSO_AUTH_TOKEN = (os.environ.get("TURSO_AUTH_TOKEN") or os.environ.get("TURSO1_AUTH_TOKEN") or os.environ.get("TURSO_1_AUTH_TOKEN") or "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTMzMzQ4NTcsImlkIjoiMDFhMThiMTAtZmUwMS03ZTViLWI1YjItNGY4YjljMGYxNTIzIiwia2lkIjoiY2E4SWNBcm5MRFAwZ0gtN3Izd2hjVnFyS2ZmLTVBUGdrRERhWDdKcVU4YyIsInJpZCI6IjAxYTI4ODcwLWM3MmEtNDRkMC1hMDdlLWJhOGRmZDY2YjE2NSJ9.YjookYrYO2u-3vGkilEQoFkzzqSEbVMs3cS2EurNm7PY9f00j5p2aX8N7MaP8uyUhDnPXWAYXMXKLHnCDpwGBA").strip().strip('"').strip("'")
 
 def get_turso_pipeline_url():
-    url = (TURSO_DATABASE_URL or "").strip()
+    url = (os.environ.get("TURSO_DATABASE_URL") or os.environ.get("TURSO1_DATABASE_URL") or os.environ.get("TURSO_1_DATABASE_URL") or TURSO_DATABASE_URL or "").strip().strip('"').strip("'")
     if url.startswith("libsql://"):
         url = "https://" + url[len("libsql://"):]
     elif url.startswith("http://"):
@@ -117,7 +117,8 @@ def get_turso_pipeline_url():
     return url
 
 def execute_turso_query(sql, params=None):
-    if not TURSO_AUTH_TOKEN:
+    token = (os.environ.get("TURSO_AUTH_TOKEN") or os.environ.get("TURSO1_AUTH_TOKEN") or os.environ.get("TURSO_1_AUTH_TOKEN") or TURSO_AUTH_TOKEN or "").strip().strip('"').strip("'")
+    if not token:
         logging.warning("TURSO_AUTH_TOKEN is not configured; skipping Turso query.")
         return []
     
@@ -143,13 +144,13 @@ def execute_turso_query(sql, params=None):
         pipeline_url,
         data=json.dumps(payload).encode('utf-8'),
         headers={
-            'Authorization': f'Bearer {TURSO_AUTH_TOKEN}',
+            'Authorization': f'Bearer {token}',
             'Content-Type': 'application/json'
         },
         method='POST'
     )
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=5) as resp:
             data = json.loads(resp.read().decode('utf-8'))
             results = data.get('results', [])
             if not results:
@@ -267,11 +268,11 @@ def delete_case_from_turso_history(case_id):
 # =========================================================
 #  TURSO 2 DATABASE INTEGRATION (News & Insights, Today's Opinions)
 # =========================================================
-TURSO2_DATABASE_URL = os.environ.get("TURSO2_DATABASE_URL") or os.environ.get("TURSO_2_DATABASE_URL") or "libsql://jsm2-jsm2.aws-ap-south-1.turso.io"
-TURSO2_AUTH_TOKEN = os.environ.get("TURSO2_AUTH_TOKEN") or os.environ.get("TURSO_2_AUTH_TOKEN") or "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTMzNDc4NzMsImlkIjoiMDFhMThiZGMtOTIwMS03M2E2LTk3MTctZDBjNTM2YTczNjNmIiwia2lkIjoiRlZDZmNQVklIT1k5bmNqbzFpbDRQTE9YMEY3QVFlcTJpcUFtQWc1UGNhcyIsInJpZCI6ImM1ODg5NjI5LWFlYjYtNDQwOS04MzQ0LTZhMjNlODUwZWExYiJ9.6gxUyEcJ-hujJkI72dGNIL1BI6ELzlRSk8n5lBU5h7i9c2QN9DeQRrsIiI8sR36TxBXJjQVJ1QAy2vEcUg6-DA"
+TURSO2_DATABASE_URL = (os.environ.get("TURSO2_DATABASE_URL") or os.environ.get("TURSO_2_DATABASE_URL") or "libsql://jsm2-jsm2.aws-ap-south-1.turso.io").strip().strip('"').strip("'")
+TURSO2_AUTH_TOKEN = (os.environ.get("TURSO2_AUTH_TOKEN") or os.environ.get("TURSO_2_AUTH_TOKEN") or "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTMzNDc4NzMsImlkIjoiMDFhMThiZGMtOTIwMS03M2E2LTk3MTctZDBjNTM2YTczNjNmIiwia2lkIjoiRlZDZmNQVklIT1k5bmNqbzFpbDRQTE9YMEY3QVFlcTJpcUFtQWc1UGNhcyIsInJpZCI6ImM1ODg5NjI5LWFlYjYtNDQwOS04MzQ0LTZhMjNlODUwZWExYiJ9.6gxUyEcJ-hujJkI72dGNIL1BI6ELzlRSk8n5lBU5h7i9c2QN9DeQRrsIiI8sR36TxBXJjQVJ1QAy2vEcUg6-DA").strip().strip('"').strip("'")
 
 def get_turso2_pipeline_url():
-    url = (TURSO2_DATABASE_URL or "").strip()
+    url = (os.environ.get("TURSO2_DATABASE_URL") or os.environ.get("TURSO_2_DATABASE_URL") or TURSO2_DATABASE_URL or "").strip().strip('"').strip("'")
     if url.startswith("libsql://"):
         url = "https://" + url[len("libsql://"):]
     elif url.startswith("http://"):
@@ -283,7 +284,8 @@ def get_turso2_pipeline_url():
     return url
 
 def execute_turso2_query(sql, params=None):
-    if not TURSO2_AUTH_TOKEN:
+    token = (os.environ.get("TURSO2_AUTH_TOKEN") or os.environ.get("TURSO_2_AUTH_TOKEN") or TURSO2_AUTH_TOKEN or "").strip().strip('"').strip("'")
+    if not token:
         logging.warning("TURSO2_AUTH_TOKEN is not configured; skipping Turso 2 query.")
         return []
     
@@ -309,13 +311,13 @@ def execute_turso2_query(sql, params=None):
         pipeline_url,
         data=json.dumps(payload).encode('utf-8'),
         headers={
-            'Authorization': f'Bearer {TURSO2_AUTH_TOKEN}',
+            'Authorization': f'Bearer {token}',
             'Content-Type': 'application/json'
         },
         method='POST'
     )
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=5) as resp:
             data = json.loads(resp.read().decode('utf-8'))
             results = data.get('results', [])
             if not results:
@@ -1444,8 +1446,11 @@ _chamber_images_cache = {
     "logo_mime": "image/jpeg"
 }
 
+_opinions_cache = {"data": None, "ts": 0}
+
 def invalidate_all_public_caches():
-    global _public_cache, _chamber_images_cache, _advocates_cache, _advocates_cache_time
+    global _public_cache, _chamber_images_cache, _advocates_cache, _advocates_cache_time, _opinions_cache
+    _opinions_cache = {"data": None, "ts": 0}
     _public_cache = {
         "bundle": None,
         "index_html": None,
@@ -1464,6 +1469,133 @@ def invalidate_all_public_caches():
     }
     _advocates_cache = None
     _advocates_cache_time = 0
+
+def get_default_opinions():
+    now_ist = get_now_ist()
+    return [
+        {
+            "date": now_ist.strftime("%Y-%m-%d"),
+            "title": "Constitutional Due Process & Institutional Restraint in Judicial Review",
+            "author": "Managing Counsel",
+            "category": "Constitutional Law",
+            "message": "The equilibrium between executive expediency and judicial scrutiny remains the lodestar of our constitutional order. Under Article 226 and Article 32, the High Courts and Supreme Court serve not merely as appellate corrections, but as vigilance posts ensuring that state discretion does not degenerate into administrative arbitrariness.\n\nRecent jurisprudence reinforces that procedural fairness is not an ornamental formality; it is the lifeblood of administrative validity. Where documentary records reveal an absence of reasoned deliberation, judicial intervention is not just permitted—it is constitutionally mandated.",
+            "order": 1
+        },
+        {
+            "date": (now_ist - timedelta(days=1)).strftime("%Y-%m-%d"),
+            "title": "Minimal Court Intervention & Expedited Enforcement in Commercial Arbitration",
+            "author": "Chamber Arbitration Bench",
+            "category": "Arbitration & Commercial",
+            "message": "The modern commercial landscape demands that arbitration awards be respected as definitive adjudications rather than interim milestones. The narrow aperture of Section 34 of the Arbitration and Conciliation Act mandates that courts refrain from re-evaluating evidentiary conclusions or substituting their own view for that of the arbitral tribunal.\n\nParties drafting commercial pacts must prioritize clear forum selection, institutional rules, and well-defined terms of reference. Precision in the arbitration clause ensures prompt enforcement under Section 36 without multi-year appellate detours.",
+            "order": 2
+        },
+        {
+            "date": (now_ist - timedelta(days=2)).strftime("%Y-%m-%d"),
+            "title": "Evidentiary Rigor & Forensic Documentary Review in Complex Civil Trials",
+            "author": "Senior Advocate",
+            "category": "Civil Jurisprudence",
+            "message": "Trial advocacy in high-stakes civil and property disputes is fundamentally won during the discovery and documentary admission phases. Oral testimony, however compelling, cannot cure deficits in foundational pleadings or unproven exhibited documents under the Evidence Act.\n\nOur chamber's trial philosophy centers on comprehensive chronological indexing, admissibility scrutiny, and anticipating cross-examination vectors long before the matter reaches final oral arguments.",
+            "order": 3
+        }
+    ]
+
+def is_opinions_seeded():
+    if config_col is None: return False
+    doc = config_col.find_one({"_id": "opinions_seeded_flag"})
+    return doc is not None and doc.get("seeded") is True
+
+def mark_opinions_seeded():
+    if config_col is not None:
+        try:
+            config_col.update_one(
+                {"_id": "opinions_seeded_flag"},
+                {"$set": {"seeded": True, "updated_at": get_now_ist().isoformat()}},
+                upsert=True
+            )
+        except Exception:
+            pass
+
+def seed_initial_opinions():
+    try:
+        defaults = get_default_opinions()
+        for op in defaults:
+            op_id = str(uuid.uuid4())
+            created_at = get_now_ist().strftime("%Y-%m-%d %H:%M:%S")
+            execute_turso2_query('''
+                INSERT INTO opinions (id, title, date, author, category, message, display_order, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', [op_id, op['title'], op['date'], op.get('author', 'Chamber Counsel'), op.get('category', 'Legal Editorial'), op['message'], op.get('order', 1), created_at])
+            if opinions_col is not None:
+                try:
+                    opinions_col.insert_one({
+                        "id": op_id,
+                        "title": op['title'],
+                        "date": op['date'],
+                        "author": op.get('author', 'Chamber Counsel'),
+                        "category": op.get('category', 'Legal Editorial'),
+                        "message": op['message'],
+                        "order": op.get('order', 1),
+                        "created_at": created_at
+                    })
+                except Exception:
+                    pass
+        mark_opinions_seeded()
+    except Exception as e:
+        logging.error(f"Error seeding default opinions: {e}")
+
+def get_all_opinions():
+    global _opinions_cache
+    now = time.time()
+    if _opinions_cache.get("data") is not None and (now - _opinions_cache.get("ts", 0) < 60):
+        return _opinions_cache["data"]
+
+    op_list = []
+    # 1. Probe Turso 2 first
+    try:
+        rows = execute_turso2_query('SELECT * FROM opinions ORDER BY date DESC, display_order ASC')
+        for r in rows:
+            op_list.append({
+                "_id": r.get('id'),
+                "id": r.get('id'),
+                "title": r.get('title') or '',
+                "date": r.get('date') or '',
+                "author": r.get('author') or 'Chamber Counsel',
+                "category": r.get('category') or 'Legal Editorial',
+                "message": r.get('message') or '',
+                "order": int(r.get('display_order') or r.get('order') or 1),
+                "created_at": r.get('created_at') or ''
+            })
+    except Exception as e:
+        logging.error(f"Error fetching opinions from Turso 2: {e}")
+        # 2. Resilient fallback to MongoDB Atlas
+        if opinions_col is not None:
+            try:
+                for doc in opinions_col.find().sort([("date", -1), ("order", 1)]):
+                    doc_id = str(doc.get("id") or doc.get("_id"))
+                    op_list.append({
+                        "_id": doc_id,
+                        "id": doc_id,
+                        "title": doc.get('title', ''),
+                        "date": doc.get('date', ''),
+                        "author": doc.get('author', 'Chamber Counsel'),
+                        "category": doc.get('category', 'Legal Editorial'),
+                        "message": doc.get('message', ''),
+                        "order": int(doc.get('order', 1)),
+                        "created_at": doc.get('created_at', '')
+                    })
+            except Exception as me:
+                logging.error(f"MongoDB opinions fallback error: {me}")
+
+    if not op_list and not is_opinions_seeded():
+        try:
+            seed_initial_opinions()
+            return get_all_opinions()
+        except Exception:
+            pass
+
+    _opinions_cache["data"] = op_list
+    _opinions_cache["ts"] = now
+    return op_list
 
 def get_public_bundle():
     global _public_cache
@@ -1538,24 +1670,7 @@ def get_public_bundle():
         n_list = _public_cache.get("news") or []
 
     # 5. Opinions
-    op_list = []
-    try:
-        o_rows = execute_turso2_query('SELECT * FROM opinions ORDER BY date DESC, display_order ASC')
-        for r in o_rows:
-            op_list.append({
-                "_id": r.get('id'),
-                "id": r.get('id'),
-                "title": r.get('title') or '',
-                "date": r.get('date') or '',
-                "author": r.get('author') or 'Chamber Counsel',
-                "category": r.get('category') or 'Legal Editorial',
-                "message": r.get('message') or '',
-                "order": int(r.get('display_order') or r.get('order') or 1),
-                "created_at": r.get('created_at') or ''
-            })
-    except Exception as e:
-        logging.error(f"Error fetching opinions for bundle: {e}")
-        op_list = _public_cache.get("opinions") or []
+    op_list = get_all_opinions()
 
     bundle = {
         "settings": settings_doc,
@@ -5824,51 +5939,6 @@ def add_staff_news():
 # TODAY'S OPINION (Day-wise Chamber Editorial & Insights)
 # =========================================================
 
-def get_default_opinions():
-    now_ist = get_now_ist()
-    return [
-        {
-            "date": now_ist.strftime("%Y-%m-%d"),
-            "title": "Constitutional Due Process & Institutional Restraint in Judicial Review",
-            "author": "Managing Counsel",
-            "category": "Constitutional Law",
-            "message": "The equilibrium between executive expediency and judicial scrutiny remains the lodestar of our constitutional order. Under Article 226 and Article 32, the High Courts and Supreme Court serve not merely as appellate corrections, but as vigilance posts ensuring that state discretion does not degenerate into administrative arbitrariness.\n\nRecent jurisprudence reinforces that procedural fairness is not an ornamental formality; it is the lifeblood of administrative validity. Where documentary records reveal an absence of reasoned deliberation, judicial intervention is not just permitted—it is constitutionally mandated.",
-            "order": 1
-        },
-        {
-            "date": (now_ist - timedelta(days=1)).strftime("%Y-%m-%d"),
-            "title": "Minimal Court Intervention & Expedited Enforcement in Commercial Arbitration",
-            "author": "Chamber Arbitration Bench",
-            "category": "Arbitration & Commercial",
-            "message": "The modern commercial landscape demands that arbitration awards be respected as definitive adjudications rather than interim milestones. The narrow aperture of Section 34 of the Arbitration and Conciliation Act mandates that courts refrain from re-evaluating evidentiary conclusions or substituting their own view for that of the arbitral tribunal.\n\nParties drafting commercial pacts must prioritize clear forum selection, institutional rules, and well-defined terms of reference. Precision in the arbitration clause ensures prompt enforcement under Section 36 without multi-year appellate detours.",
-            "order": 2
-        },
-        {
-            "date": (now_ist - timedelta(days=2)).strftime("%Y-%m-%d"),
-            "title": "Evidentiary Rigor & Forensic Documentary Review in Complex Civil Trials",
-            "author": "Senior Advocate",
-            "category": "Civil Jurisprudence",
-            "message": "Trial advocacy in high-stakes civil and property disputes is fundamentally won during the discovery and documentary admission phases. Oral testimony, however compelling, cannot cure deficits in foundational pleadings or unproven exhibited documents under the Evidence Act.\n\nOur chamber's trial philosophy centers on comprehensive chronological indexing, admissibility scrutiny, and anticipating cross-examination vectors long before the matter reaches final oral arguments.",
-            "order": 3
-        }
-    ]
-
-def is_opinions_seeded():
-    if config_col is None: return False
-    doc = config_col.find_one({"_id": "opinions_seeded_flag"})
-    return doc is not None and doc.get("seeded") is True
-
-def mark_opinions_seeded():
-    if config_col is not None:
-        try:
-            config_col.update_one(
-                {"_id": "opinions_seeded_flag"},
-                {"$set": {"seeded": True, "updated_at": get_now_ist().isoformat()}},
-                upsert=True
-            )
-        except Exception:
-            pass
-
 @app.route('/api/opinions', methods=['GET'])
 def get_opinions():
     date_filter = request.args.get('date')
@@ -5891,10 +5961,10 @@ def get_opinions():
             return jsonify(opinions), 200
         except Exception as e:
             logging.error(f"Error fetching opinions from Turso 2: {e}")
-            return jsonify([]), 200
+            all_ops = get_all_opinions()
+            return jsonify([o for o in all_ops if o.get('date') == date_filter]), 200
 
-    bundle = get_public_bundle()
-    return jsonify(bundle.get("opinions", [])), 200
+    return jsonify(get_all_opinions()), 200
 
 @app.route('/api/opinions', methods=['POST'])
 def add_opinion():
@@ -5920,6 +5990,20 @@ def add_opinion():
             'INSERT INTO opinions (id, title, date, author, category, message, display_order, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
             [op_id, title, date_val, author, category, message, order_val, created_at]
         )
+        if opinions_col is not None:
+            try:
+                opinions_col.insert_one({
+                    "id": op_id,
+                    "title": title,
+                    "date": date_val,
+                    "author": author,
+                    "category": category,
+                    "message": message,
+                    "order": order_val,
+                    "created_at": created_at
+                })
+            except Exception:
+                pass
         
         new_op = {
             "_id": op_id,
@@ -5944,24 +6028,32 @@ def update_opinion(id):
         data = request.get_json(force=True, silent=True) or {}
         fields = []
         params = []
+        update_doc = {}
         if 'title' in data:
             fields.append("title = ?")
             params.append(data['title'].strip())
+            update_doc['title'] = data['title'].strip()
         if 'date' in data:
             fields.append("date = ?")
             params.append(data['date'].strip())
+            update_doc['date'] = data['date'].strip()
         if 'author' in data:
             fields.append("author = ?")
             params.append(data['author'].strip())
+            update_doc['author'] = data['author'].strip()
         if 'category' in data:
             fields.append("category = ?")
             params.append(data['category'].strip())
+            update_doc['category'] = data['category'].strip()
         if 'message' in data:
             fields.append("message = ?")
             params.append(data['message'].strip())
+            update_doc['message'] = data['message'].strip()
         if 'order' in data or 'display_order' in data:
+            order_num = int(data.get('order') or data.get('display_order') or 1)
             fields.append("display_order = ?")
-            params.append(int(data.get('order') or data.get('display_order') or 1))
+            params.append(order_num)
+            update_doc['order'] = order_num
             
         if not fields:
             return jsonify({"success": True}), 200
@@ -5969,6 +6061,11 @@ def update_opinion(id):
         params.append(str(id))
         sql = f"UPDATE opinions SET {', '.join(fields)} WHERE id = ?"
         execute_turso2_query(sql, params)
+        if opinions_col is not None and update_doc:
+            try:
+                opinions_col.update_many({"$or": [{"id": str(id)}, {"_id": str(id)}]}, {"$set": update_doc})
+            except Exception:
+                pass
         invalidate_all_public_caches()
         return jsonify({"success": True}), 200
     except Exception as e:
@@ -5981,15 +6078,105 @@ def delete_opinion(id):
         execute_turso2_query("DELETE FROM opinions WHERE id = ?", [str(id)])
         if opinions_col is not None:
             try:
-                opinions_col.delete_one({"_id": ObjectId(id)})
+                opinions_col.delete_many({"$or": [{"id": str(id)}, {"_id": str(id)}]})
+                try:
+                    opinions_col.delete_one({"_id": ObjectId(id)})
+                except Exception:
+                    pass
             except Exception:
-                opinions_col.delete_one({"_id": str(id)})
-                opinions_col.delete_one({"id": str(id)})
+                pass
         invalidate_all_public_caches()
         return jsonify({"success": True}), 200
     except Exception as e:
         logging.error(f"Error deleting opinion {id} from Turso 2: {e}")
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/health/databases', methods=['GET'])
+def health_check_all_databases():
+    """Diagnostic health check verifying live connectivity to all 3 cloud databases."""
+    res = {
+        "status": "HEALTHY",
+        "timestamp": get_now_ist().strftime("%Y-%m-%d %H:%M:%S IST"),
+        "databases": {},
+        "all_connected": True
+    }
+    
+    # 1. MongoDB Atlas
+    t0 = time.time()
+    try:
+        if client is not None:
+            client.admin.command('ping')
+            cols = db.list_collection_names() if db is not None else []
+            res["databases"]["mongodb_atlas"] = {
+                "status": "ONLINE",
+                "connected": True,
+                "database": DB_NAME or "jsmchambers_db",
+                "collections_count": len(cols),
+                "latency_ms": round((time.time() - t0) * 1000, 1),
+                "role": "Active Cases, Appointments, Settings, SOC Logs, RBAC"
+            }
+        else:
+            raise Exception("MongoDB client is None")
+    except Exception as e:
+        res["all_connected"] = False
+        res["status"] = "DEGRADED"
+        res["databases"]["mongodb_atlas"] = {
+            "status": "OFFLINE",
+            "connected": False,
+            "error": str(e)
+        }
+
+    # 2. Turso 1 (Clients Directory)
+    t1 = time.time()
+    try:
+        t_res = execute_turso_query("SELECT count(*) as c FROM clients_history")
+        count_val = t_res[0].get('c', 0) if t_res else 0
+        res["databases"]["turso_1"] = {
+            "status": "ONLINE",
+            "connected": True,
+            "cluster": "jsm-chamber-jsmcuttack",
+            "table": "clients_history",
+            "archived_cases": int(count_val),
+            "latency_ms": round((time.time() - t1) * 1000, 1),
+            "role": "Clients Directory & Finished Cases Records"
+        }
+    except Exception as e:
+        res["all_connected"] = False
+        res["status"] = "DEGRADED"
+        res["databases"]["turso_1"] = {
+            "status": "OFFLINE",
+            "connected": False,
+            "error": str(e)
+        }
+
+    # 3. Turso 2 (News & Opinions)
+    t2 = time.time()
+    try:
+        n_res = execute_turso2_query("SELECT count(*) as c FROM news")
+        o_res = execute_turso2_query("SELECT count(*) as c FROM opinions")
+        news_c = int(n_res[0].get('c', 0)) if n_res else 0
+        ops_c = int(o_res[0].get('c', 0)) if o_res else 0
+        res["databases"]["turso_2"] = {
+            "status": "ONLINE",
+            "connected": True,
+            "cluster": "jsm2-jsm2",
+            "tables": ["news", "opinions"],
+            "news_count": news_c,
+            "opinions_count": ops_c,
+            "latency_ms": round((time.time() - t2) * 1000, 1),
+            "role": "News & Insights, Today's Opinions"
+        }
+    except Exception as e:
+        res["all_connected"] = False
+        res["status"] = "DEGRADED"
+        res["databases"]["turso_2"] = {
+            "status": "OFFLINE",
+            "connected": False,
+            "error": str(e)
+        }
+
+    status_code = 200 if res["all_connected"] else 503
+    return jsonify(res), status_code
 
 # =========================================================
 #  AI CHATBOT ASSISTANT ENDPOINTS (REAL-TIME CHAMBER SYNC)

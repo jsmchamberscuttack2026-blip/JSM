@@ -1452,7 +1452,7 @@ window.loadPublicOpinions = async function() {
 };
 
 window.openOpinionArticleModal = function(id) {
-    const opinion = (window.allOpinionsData || []).find(o => o._id === id);
+    const opinion = (window.allOpinionsData || []).find(o => String(o._id) === String(id) || String(o.id) === String(id));
     if (!opinion) return;
 
     const modal = document.getElementById('opinion-article-modal');

@@ -3813,29 +3813,19 @@ function escapeHtml(str) {
 
 window.adminOpinionsCache = [];
 
-window.loadAdminOpinions = async function() {
-    const listEl = document.getElementById('admin-opinions-list');
+function renderOpinionsInAdmin(opinions, listEl) {
+    if (!listEl) listEl = document.getElementById('admin-opinions-list');
     if (!listEl) return;
-    listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #64748b;">Loading opinions...</div>';
 
-    try {
-        const res = await fetch('/api/opinions?t=' + Date.now(), { cache: 'no-store' });
-        if (!res.ok) {
-            throw new Error('HTTP ' + res.status);
-        }
-        let opinions = await res.json();
-        if (!Array.isArray(opinions)) {
-            opinions = [];
-        }
-        window.adminOpinionsCache = opinions;
+    if (!Array.isArray(opinions) || opinions.length === 0) {
+        listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2.5rem; color: #64748b; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 10px;">No opinions published yet. Click <strong>"Add Today\'s Opinion"</strong> above to publish.</div>';
+        return;
+    }
 
-        if (opinions.length === 0) {
-            listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #64748b;">No opinions published yet. Click "Add Today\'s Opinion" to publish.</div>';
-            return;
-        }
-
-        listEl.innerHTML = opinions.map(op => `
-            <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-top: 4px solid #D4AF37; border-radius: 10px; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
+    listEl.innerHTML = opinions.map(op => {
+        const opId = String(op._id || op.id || '');
+        return `
+            <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-top: 4px solid #D4AF37; border-radius: 10px; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
                 <div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 6px;">
                         <span style="background: #0A1628; color: #D4AF37; font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; text-transform: uppercase;">
@@ -3856,18 +3846,62 @@ window.loadAdminOpinions = async function() {
                     </p>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #e2e8f0; padding-top: 0.8rem;">
-                    <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="editOpinion('${op._id}')">
+                    <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="editOpinion('${opId}')">
                         ✏️ Edit
                     </button>
-                    <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; color: #dc2626; border-color: #fca5a5;" onclick="deleteOpinion('${op._id}')">
+                    <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; color: #dc2626; border-color: #fca5a5;" onclick="deleteOpinion('${opId}')">
                         🗑️ Delete
                     </button>
                 </div>
             </div>
-        `).join('');
+        `;
+    }).join('');
+}
+
+window.loadAdminOpinions = async function() {
+    const listEl = document.getElementById('admin-opinions-list');
+    if (!listEl) return;
+
+    // Fast render: if cache is available, show instantly
+    if (Array.isArray(window.adminOpinionsCache) && window.adminOpinionsCache.length > 0) {
+        renderOpinionsInAdmin(window.adminOpinionsCache, listEl);
+    } else {
+        listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #64748b;"><div style="font-size: 1.5rem; margin-bottom: 8px;">⏳</div>Loading opinions...</div>';
+    }
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        const res = await fetch('/api/opinions?t=' + Date.now(), { 
+            cache: 'no-store',
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (!res.ok) {
+            throw new Error('HTTP ' + res.status);
+        }
+        let opinions = await res.json();
+        if (!Array.isArray(opinions)) {
+            opinions = [];
+        }
+        window.adminOpinionsCache = opinions;
+        renderOpinionsInAdmin(opinions, listEl);
     } catch(err) {
-        console.error(err);
-        listEl.innerHTML = '<div style="grid-column: 1/-1; color: #dc2626; text-align: center; padding: 2rem;">Error loading opinions.</div>';
+        console.error('Error loading opinions:', err);
+        if (Array.isArray(window.adminOpinionsCache) && window.adminOpinionsCache.length > 0) {
+            // Keep existing cached data visible
+            renderOpinionsInAdmin(window.adminOpinionsCache, listEl);
+        } else {
+            listEl.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #dc2626; background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 10px;">
+                    <div style="font-size: 1.5rem; margin-bottom: 8px;">⚠️</div>
+                    <strong>Could not fetch opinions</strong>
+                    <p style="color: #64748b; font-size: 0.85rem; margin: 6px 0 12px 0;">Please check your connection or retry.</p>
+                    <button class="btn btn-primary" onclick="loadAdminOpinions()" style="padding: 0.4rem 1.2rem; font-size: 0.85rem;">🔄 Retry</button>
+                </div>
+            `;
+        }
     }
 };
 
@@ -3888,13 +3922,13 @@ window.closeOpinionModal = function() {
 };
 
 window.editOpinion = function(id) {
-    const op = window.adminOpinionsCache.find(o => o._id === id);
+    const op = (window.adminOpinionsCache || []).find(o => String(o._id) === String(id) || String(o.id) === String(id));
     if (!op) return;
-    document.getElementById('opinion-form-id').value = op._id;
+    document.getElementById('opinion-form-id').value = op._id || op.id || '';
     document.getElementById('opinion-form-title').value = op.title || '';
     document.getElementById('opinion-form-date').value = op.date || new Date().toISOString().split('T')[0];
-    document.getElementById('opinion-form-author').value = op.author || '';
-    document.getElementById('opinion-form-category').value = op.category || '';
+    document.getElementById('opinion-form-author').value = op.author || 'Chamber Counsel';
+    document.getElementById('opinion-form-category').value = op.category || 'Constitutional Law';
     document.getElementById('opinion-form-message').value = op.message || '';
     document.getElementById('opinion-modal-title').innerText = "Edit Today's Opinion";
     document.getElementById('opinion-submit-btn').innerText = "💾 Update Opinion";
@@ -3947,15 +3981,22 @@ window.saveOpinionForm = async function(e) {
 window.deleteOpinion = async function(id) {
     if (!confirm('Are you sure you want to delete this opinion?')) return;
     try {
+        // Optimistic UI removal
+        if (Array.isArray(window.adminOpinionsCache)) {
+            window.adminOpinionsCache = window.adminOpinionsCache.filter(o => String(o._id) !== String(id) && String(o.id) !== String(id));
+            renderOpinionsInAdmin(window.adminOpinionsCache);
+        }
         const res = await fetch(`/api/opinions/${id}`, { method: 'DELETE' });
         if (res.ok) {
-            showToast('Opinion deleted.', 'success');
+            showToast('Opinion deleted successfully.', 'success');
             loadAdminOpinions();
         } else {
             showToast('Failed to delete opinion', 'error');
+            loadAdminOpinions();
         }
     } catch(err) {
         showToast('Error deleting opinion', 'error');
+        loadAdminOpinions();
     }
 };
 
