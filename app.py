@@ -101,8 +101,8 @@ except Exception as e:
 # =========================================================
 #  TURSO DATABASE INTEGRATION (Clients Directory / History)
 # =========================================================
-TURSO_DATABASE_URL = os.environ.get("TURSO_DATABASE_URL", "libsql://jsm-chamber-jsmcuttack.aws-ap-south-1.turso.io")
-TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTMzMzQ4NTcsImlkIjoiMDFhMThiMTAtZmUwMS03ZTViLWI1YjItNGY4YjljMGYxNTIzIiwia2lkIjoiY2E4SWNBcm5MRFAwZ0gtN3Izd2hjVnFyS2ZmLTVBUGdrRERhWDdKcVU4YyIsInJpZCI6IjAxYTI4ODcwLWM3MmEtNDRkMC1hMDdlLWJhOGRmZDY2YjE2NSJ9.YjookYrYO2u-3vGkilEQoFkzzqSEbVMs3cS2EurNm7PY9f00j5p2aX8N7MaP8uyUhDnPXWAYXMXKLHnCDpwGBA")
+TURSO_DATABASE_URL = os.environ.get("TURSO_DATABASE_URL") or os.environ.get("TURSO1_DATABASE_URL") or os.environ.get("TURSO_1_DATABASE_URL") or "libsql://jsm-chamber-jsmcuttack.aws-ap-south-1.turso.io"
+TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN") or os.environ.get("TURSO1_AUTH_TOKEN") or os.environ.get("TURSO_1_AUTH_TOKEN") or "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTMzMzQ4NTcsImlkIjoiMDFhMThiMTAtZmUwMS03ZTViLWI1YjItNGY4YjljMGYxNTIzIiwia2lkIjoiY2E4SWNBcm5MRFAwZ0gtN3Izd2hjVnFyS2ZmLTVBUGdrRERhWDdKcVU4YyIsInJpZCI6IjAxYTI4ODcwLWM3MmEtNDRkMC1hMDdlLWJhOGRmZDY2YjE2NSJ9.YjookYrYO2u-3vGkilEQoFkzzqSEbVMs3cS2EurNm7PY9f00j5p2aX8N7MaP8uyUhDnPXWAYXMXKLHnCDpwGBA"
 
 def get_turso_pipeline_url():
     url = (TURSO_DATABASE_URL or "").strip()
@@ -267,8 +267,8 @@ def delete_case_from_turso_history(case_id):
 # =========================================================
 #  TURSO 2 DATABASE INTEGRATION (News & Insights, Today's Opinions)
 # =========================================================
-TURSO2_DATABASE_URL = os.environ.get("TURSO2_DATABASE_URL", "libsql://jsm2-jsm2.aws-ap-south-1.turso.io")
-TURSO2_AUTH_TOKEN = os.environ.get("TURSO2_AUTH_TOKEN", "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTMzNDc4NzMsImlkIjoiMDFhMThiZGMtOTIwMS03M2E2LTk3MTctZDBjNTM2YTczNjNmIiwia2lkIjoiRlZDZmNQVklIT1k5bmNqbzFpbDRQTE9YMEY3QVFlcTJpcUFtQWc1UGNhcyIsInJpZCI6ImM1ODg5NjI5LWFlYjYtNDQwOS04MzQ0LTZhMjNlODUwZWExYiJ9.6gxUyEcJ-hujJkI72dGNIL1BI6ELzlRSk8n5lBU5h7i9c2QN9DeQRrsIiI8sR36TxBXJjQVJ1QAy2vEcUg6-DA")
+TURSO2_DATABASE_URL = os.environ.get("TURSO2_DATABASE_URL") or os.environ.get("TURSO_2_DATABASE_URL") or "libsql://jsm2-jsm2.aws-ap-south-1.turso.io"
+TURSO2_AUTH_TOKEN = os.environ.get("TURSO2_AUTH_TOKEN") or os.environ.get("TURSO_2_AUTH_TOKEN") or "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTMzNDc4NzMsImlkIjoiMDFhMThiZGMtOTIwMS03M2E2LTk3MTctZDBjNTM2YTczNjNmIiwia2lkIjoiRlZDZmNQVklIT1k5bmNqbzFpbDRQTE9YMEY3QVFlcTJpcUFtQWc1UGNhcyIsInJpZCI6ImM1ODg5NjI5LWFlYjYtNDQwOS04MzQ0LTZhMjNlODUwZWExYiJ9.6gxUyEcJ-hujJkI72dGNIL1BI6ELzlRSk8n5lBU5h7i9c2QN9DeQRrsIiI8sR36TxBXJjQVJ1QAy2vEcUg6-DA"
 
 def get_turso2_pipeline_url():
     url = (TURSO2_DATABASE_URL or "").strip()
@@ -5979,6 +5979,12 @@ def update_opinion(id):
 def delete_opinion(id):
     try:
         execute_turso2_query("DELETE FROM opinions WHERE id = ?", [str(id)])
+        if opinions_col is not None:
+            try:
+                opinions_col.delete_one({"_id": ObjectId(id)})
+            except Exception:
+                opinions_col.delete_one({"_id": str(id)})
+                opinions_col.delete_one({"id": str(id)})
         invalidate_all_public_caches()
         return jsonify({"success": True}), 200
     except Exception as e:
