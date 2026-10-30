@@ -359,12 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Update Stats
             const statActive = document.getElementById('stat-active-cases');
-            const statClients = document.getElementById('stat-clients');
             if (statActive) statActive.innerText = cases.length;
-            if (statClients) {
-                const uniqueEmails = new Set(cases.map(c => c.email));
-                statClients.innerText = uniqueEmails.size;
-            }
             
             if (cases.length > 0) {
                 casesGrid.innerHTML = '';
@@ -406,7 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: #667085;">📅 ${c.next_hearing}</p>
                         </div>
                         <div style="display: flex; gap: 8px; margin-top: 10px;">
-                            <button class="btn btn-outline" style="flex: 1; border-color: #0b1f33; color: #0b1f33; padding: 0.5rem;" onclick="openCaseModal('${c._id}')">Open File</button>
+                            <button class="btn btn-outline" style="flex: 1; border-color: #0b1f33; color: #0b1f33; padding: 0.5rem;" onclick="openCaseModal('${c._id}')">✏️ Edit / Open File</button>
                             <button class="btn btn-primary" style="flex: 1; padding: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 5px;" onclick="printCaseDetails('${c._id}')">
                                 ⬇️ Report
                             </button>
@@ -429,7 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <td>${c.next_hearing || 'To Be Decided'}</td>
                             <td><span class="badge ${statusClass}">${c.status}</span></td>
                             <td>
-                                <button class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="showSection('cases-manage')">View</button>
+                                <button class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="openCaseModal('${c._id}')">✏️ Edit</button>
                                 <button class="btn btn-primary" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; margin-left: 5px;" onclick="printCaseDetails('${c._id}')">⬇️ Report</button>
                             </td>
                         `;
@@ -568,21 +563,34 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = document.getElementById('modal-case-id').value;
         if(!confirm('Are you sure you want to mark this case as finished?')) return;
         try {
-            const response = await fetch(`/api/cases/${id}/finish`, { method: 'POST' });
-            const data = await response.json();
+            let response = await fetch(`/api/cases/${id}/finish`, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ force: false })
+            });
+            let data = await response.json();
             if (data.unpaid) {
                 const warning = document.getElementById('modal-unpaid-warning');
-                document.getElementById('unpaid-amt').innerText = data.unpaid;
-                warning.style.display = 'block';
-                casesCache = "";
-                loadCases();
-            } else {
-                showToast(data.message);
-                closeCaseModal();
-                casesCache = "";
-                loadCases();
-                if (window.loadArchivedCases) loadArchivedCases();
+                if (warning) {
+                    document.getElementById('unpaid-amt').innerText = data.unpaid;
+                    warning.style.display = 'block';
+                }
+                const proceed = confirm(`Notice: Client has an unpaid balance of ₹${data.unpaid}.\n\nDo you still wish to finalize and permanently archive this case to Turso Clients Directory?`);
+                if (!proceed) return;
+                
+                response = await fetch(`/api/cases/${id}/finish`, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ force: true })
+                });
+                data = await response.json();
             }
+            
+            showToast(data.message || 'Case Finished and transferred to Clients Directory!');
+            closeCaseModal();
+            casesCache = "";
+            loadCases();
+            if (window.loadArchivedCases) window.loadArchivedCases();
         } catch (err) {
             console.error(err);
             showToast("Error finalizing case.", 'error');

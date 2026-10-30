@@ -101,7 +101,7 @@ except Exception as e:
 #  TURSO DATABASE INTEGRATION (Clients Directory / History)
 # =========================================================
 TURSO_DATABASE_URL = os.environ.get("TURSO_DATABASE_URL", "libsql://jsm-chamber-jsmcuttack.aws-ap-south-1.turso.io")
-TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "")
+TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTMzMzQ4NTcsImlkIjoiMDFhMThiMTAtZmUwMS03ZTViLWI1YjItNGY4YjljMGYxNTIzIiwia2lkIjoiY2E4SWNBcm5MRFAwZ0gtN3Izd2hjVnFyS2ZmLTVBUGdrRERhWDdKcVU4YyIsInJpZCI6IjAxYTI4ODcwLWM3MmEtNDRkMC1hMDdlLWJhOGRmZDY2YjE2NSJ9.YjookYrYO2u-3vGkilEQoFkzzqSEbVMs3cS2EurNm7PY9f00j5p2aX8N7MaP8uyUhDnPXWAYXMXKLHnCDpwGBA")
 
 def get_turso_pipeline_url():
     url = (TURSO_DATABASE_URL or "").strip()
@@ -3758,24 +3758,40 @@ def delete_archived_case(id):
 def finish_case(id):
     case = cases_col.find_one({"_id": ObjectId(id)})
     if not case: return jsonify({"error": "Not found"}), 404
-    total = float(case.get('total_fee', 0))
-    paid = float(case.get('fee_paid', 0))
-    if paid < total:
+    
+    force = False
+    if request.is_json and request.json and request.json.get('force'):
+        force = True
+
+    total = float(case.get('total_fee', 0) or 0)
+    paid = float(case.get('fee_paid', 0) or 0)
+    if case.get('bills') and isinstance(case.get('bills'), list):
+        bill_total = sum(float(b.get('amount', 0) or 0) for b in case['bills'])
+        bill_paid = sum(float(b.get('paid_amount', 0) or (b.get('amount', 0) if b.get('status') == 'verified' else 0)) for b in case['bills'])
+        if bill_total > 0:
+            total = max(total, bill_total)
+            paid = max(paid, bill_paid)
+            
+    if paid < total and not force:
         return jsonify({"unpaid": str(total - paid)}), 200
     
     completion_time = datetime.now().strftime("%Y-%m-%d %I:%M %p")
-    cases_col.update_one({"_id": ObjectId(id)}, {"$set": {
-        "status": "Finished & Archived",
-        "completion_date": completion_time
-    }})
     case['status'] = "Finished & Archived"
     case['completion_date'] = completion_time
+    case['total_fee'] = total
+    case['fee_paid'] = paid
 
-    # Automatically transfer finished case to Turso database (Clients Directory / History)
+    # 1. Automatically transfer finished case to Turso database (Clients Directory / History)
     try:
         save_case_to_turso_history(case)
     except Exception as te:
         logging.error(f"Failed to auto-transfer finished case to Turso: {te}")
+
+    # 2. Delete completely from MongoDB cases collection so finished cases are strictly in Turso!
+    try:
+        cases_col.delete_one({"_id": ObjectId(id)})
+    except Exception as me:
+        logging.error(f"Failed to remove finished case from MongoDB: {me}")
 
     email = case.get('email')
     name = case.get('client_name')
