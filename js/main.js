@@ -175,17 +175,11 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>`;
   }
 
-  // Load Dynamic Office Information & Settings
-  fetch('/api/settings').then(res => {
-      if (res.status === 503) {
-          showRepairScreenNow();
-          return null;
-      }
-      return res.json();
-  }).catch(() => null).then(info => {
+  // Modular Dynamic Office Information & Settings Applicator
+  window.applyChamberSettings = function(info) {
       if (!info) return;
       if (info.under_maintenance || info.public_page_status === 'off' || info.public_website_enabled === false) {
-          showRepairScreenNow();
+          if (typeof showRepairScreenNow === 'function') showRepairScreenNow();
           return;
       }
       window.siteSettingsData = info;
@@ -270,7 +264,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (info.quick_links) {
           let links = [];
           if (typeof info.quick_links === 'string') {
-              // Legacy fallback
               const lines = info.quick_links.split('\n');
               lines.forEach(line => {
                   let parts = line.split('|');
@@ -304,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if(tBtn) tBtn.style.display = 'block';
       }
 
-      // 1. Appointments Open/Closed logic
+      // Appointments Open/Closed logic
       if (info.appointments_open === false) {
           const appForm = document.getElementById('appointmentForm') || document.getElementById('appointment-form');
           if (appForm) {
@@ -319,7 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
           });
       }
 
-      // 2. Load Office Info
+      // Office Info & Logo
       const publicOfficeInfo = document.getElementById('public-office-info');
       if(publicOfficeInfo) {
           if (info.logoUrl) {
@@ -349,12 +342,111 @@ document.addEventListener('DOMContentLoaded', () => {
               `;
           }
       }
-  }).catch(err => console.error("Error loading settings:", err));
+  };
 
-  // Load and Render Advocates from API
+  // Modular Advocate Card Renderer
+  window.renderAdvocates = function(advocates) {
+      const advocatesGrid = document.getElementById('advocates-grid');
+      if (!advocatesGrid) return;
+      if (!Array.isArray(advocates) || advocates.length === 0) {
+          advocatesGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #9daeb9; padding: 2rem;">No advocates listed at the moment.</p>';
+          return;
+      }
+      const peopleSection = document.getElementById('people') || document.getElementById('advocates');
+      if (peopleSection) peopleSection.style.display = 'block';
+
+      advocatesGrid.innerHTML = '';
+      advocates.forEach(adv => {
+          const div = document.createElement('div');
+          div.className = 'advocate';
+          const isOwner = !!adv.is_owner;
+          if (isOwner) {
+              div.style.border = '2px solid #D4AF37';
+              div.style.boxShadow = '0 12px 30px rgba(212,175,55,0.18)';
+              div.style.borderRadius = '12px';
+              div.style.background = '#ffffff';
+          }
+          const role = adv.role || (isOwner ? 'Chamber Owner & Lead Counsel' : 'Partner - Legal Practice');
+          const location = adv.location || 'High Court of Orissa, Cuttack';
+          const specialty = adv.specialty || (isOwner ? '35 years of advocacy; specialized in Constitutional Law, Civil Law, Insurance and Banking Law, Education and Technical Education Law, Service and Industrial Law, Land.' : 'Litigation & Legal Advisory');
+          
+          let imageHtml = '';
+          let photoSrc = adv.imageUrl;
+          if ((!photoSrc || photoSrc.length < 20) && isOwner) {
+              photoSrc = 'assets/images/advocate_logo.jpg';
+          }
+
+          if (photoSrc && photoSrc.length > 20) {
+              imageHtml = `<img src="${photoSrc}" alt="${adv.name} - Chamber Member" class="advocate-image" loading="eager" width="400" height="300">`;
+          } else {
+              const initial = (adv.name || '⚖').trim().charAt(0).toUpperCase();
+              imageHtml = `
+                  <div class="advocate-image" style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, #0A1628 0%, #1E293B 100%); color: #D4AF37;">
+                      <span style="font-size: 3.8rem; font-family: 'Playfair Display', Georgia, serif; font-weight: bold; line-height: 1;">${initial}</span>
+                      <span style="font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #94a3b8; margin-top: 8px;">JSM Chambers</span>
+                  </div>
+              `;
+          }
+          
+          let contactIcons = '';
+          if (adv.email) {
+              contactIcons += `<a href="mailto:${adv.email}" class="advocate-contact-btn" title="Email ${adv.name}">✉</a>`;
+          }
+          if (adv.linkedin) {
+              contactIcons += `<a href="${adv.linkedin}" target="_blank" rel="noopener noreferrer" class="advocate-contact-btn" title="LinkedIn Profile" style="font-weight: 800; font-family: sans-serif; font-size: 13px;">in</a>`;
+          } else if (!isOwner) {
+              contactIcons += `<a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" class="advocate-contact-btn" title="Professional Profile" style="font-weight: 800; font-family: sans-serif; font-size: 13px;">in</a>`;
+          }
+          if (adv.phone) {
+              contactIcons += `<a href="tel:${adv.phone}" class="advocate-contact-btn" title="Call ${adv.phone}">📞</a>`;
+          }
+
+          div.innerHTML = `
+              ${imageHtml}
+              <div class="advocate-info">
+                  ${isOwner ? '<div style="margin-bottom: 6px;"><span style="background: linear-gradient(135deg, #071322 0%, #0A1628 100%); color: #D4AF37; border: 1px solid #D4AF37; padding: 3px 10px; border-radius: 4px; font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; display: inline-flex; align-items: center; gap: 5px;">👑 CHAMBER OWNER</span></div>' : ''}
+                  <h3 style="margin: 0 0 4px 0; font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 700; color: #0A1628; line-height: 1.3;">${adv.name}</h3>
+                  <div class="advocate-role" style="${isOwner ? 'color: #b45309; font-weight: 700;' : ''}">${role}</div>
+                  <div class="advocate-specialty">${specialty}</div>
+                  <div class="advocate-location">
+                      <svg style="width: 13px; height: 13px; fill: #64748b; flex-shrink: 0;" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                      <span>${location}</span>
+                  </div>
+                  <div class="advocate-actions">
+                      <div style="display: flex; gap: 8px;">
+                          ${contactIcons}
+                      </div>
+                      <button onclick="openModal('appointmentModal')" style="background: ${isOwner ? '#0A1628' : 'transparent'}; border: 1px solid #D4AF37; color: ${isOwner ? '#D4AF37' : '#0A1628'}; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#D4AF37';this.style.color='#0A1628';" onmouseout="this.style.background='${isOwner ? '#0A1628' : 'transparent'}';this.style.color='${isOwner ? '#D4AF37' : '#0A1628'}';">
+                          Consult →
+                      </button>
+                  </div>
+              </div>
+          `;
+          advocatesGrid.appendChild(div);
+      });
+  };
+
+  // Instant Frame-1 Hydration for Settings & Advocates
+  if (window.__INITIAL_DATA__) {
+      if (window.__INITIAL_DATA__.settings) window.applyChamberSettings(window.__INITIAL_DATA__.settings);
+      if (window.__INITIAL_DATA__.advocates) window.renderAdvocates(window.__INITIAL_DATA__.advocates);
+  }
+
+  // Background sync for settings
+  fetch('/api/settings').then(res => {
+      if (res.status === 503) {
+          if (typeof showRepairScreenNow === 'function') showRepairScreenNow();
+          return null;
+      }
+      return res.json();
+  }).then(info => {
+      if (info) window.applyChamberSettings(info);
+  }).catch(err => console.error("Error background loading settings:", err));
+
+  // Background sync for advocates
   const advocatesGrid = document.getElementById('advocates-grid');
   if (advocatesGrid) {
-      let advocatesCache = "";
+      let advocatesCache = window.__INITIAL_DATA__ && window.__INITIAL_DATA__.advocates ? JSON.stringify(window.__INITIAL_DATA__.advocates) : "";
       async function loadAdvocates() {
           try {
               const response = await fetch('/api/advocates?t=' + Date.now(), { cache: 'no-store' });
@@ -362,91 +454,16 @@ document.addEventListener('DOMContentLoaded', () => {
               const newDataString = JSON.stringify(advocates);
               if (newDataString === advocatesCache) return;
               advocatesCache = newDataString;
-              advocatesGrid.innerHTML = '';
-              if (advocates && advocates.length > 0) {
-                  const peopleSection = document.getElementById('people') || document.getElementById('advocates');
-                  if (peopleSection) peopleSection.style.display = 'block';
-
-                  advocates.forEach(adv => {
-                      const div = document.createElement('div');
-                      div.className = 'advocate';
-                      const isOwner = !!adv.is_owner;
-                      if (isOwner) {
-                          div.style.border = '2px solid #D4AF37';
-                          div.style.boxShadow = '0 12px 30px rgba(212,175,55,0.18)';
-                          div.style.borderRadius = '12px';
-                          div.style.background = '#ffffff';
-                      }
-                      const role = adv.role || (isOwner ? 'Chamber Owner & Lead Counsel' : 'Partner - Legal Practice');
-                      const location = adv.location || 'High Court of Orissa, Cuttack';
-                      const specialty = adv.specialty || (isOwner ? '35 years of advocacy; specialized in Constitutional Law, Civil Law, Insurance and Banking Law, Education and Technical Education Law, Service and Industrial Law, Land.' : 'Litigation & Legal Advisory');
-                      
-                      let imageHtml = '';
-                      let photoSrc = adv.imageUrl;
-                      if ((!photoSrc || photoSrc.length < 20) && isOwner) {
-                          photoSrc = 'assets/images/advocate_logo.jpg';
-                      }
-
-                      if (photoSrc && photoSrc.length > 20) {
-                          imageHtml = `<img src="${photoSrc}" alt="${adv.name} - Chamber Member" class="advocate-image" loading="eager" width="400" height="300">`;
-                      } else {
-                          const initial = (adv.name || '⚖').trim().charAt(0).toUpperCase();
-                          imageHtml = `
-                              <div class="advocate-image" style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, #0A1628 0%, #1E293B 100%); color: #D4AF37;">
-                                  <span style="font-size: 3.8rem; font-family: 'Playfair Display', Georgia, serif; font-weight: bold; line-height: 1;">${initial}</span>
-                                  <span style="font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #94a3b8; margin-top: 8px;">JSM Chambers</span>
-                              </div>
-                          `;
-                      }
-                      
-                      let contactIcons = '';
-                      if (adv.email) {
-                          contactIcons += `<a href="mailto:${adv.email}" class="advocate-contact-btn" title="Email ${adv.name}">✉</a>`;
-                      }
-                      if (adv.linkedin) {
-                          contactIcons += `<a href="${adv.linkedin}" target="_blank" rel="noopener noreferrer" class="advocate-contact-btn" title="LinkedIn Profile" style="font-weight: 800; font-family: sans-serif; font-size: 13px;">in</a>`;
-                      } else if (!isOwner) {
-                          contactIcons += `<a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" class="advocate-contact-btn" title="Professional Profile" style="font-weight: 800; font-family: sans-serif; font-size: 13px;">in</a>`;
-                      }
-                      if (adv.phone) {
-                          contactIcons += `<a href="tel:${adv.phone}" class="advocate-contact-btn" title="Call ${adv.phone}">📞</a>`;
-                      }
-
-                      div.innerHTML = `
-                          ${imageHtml}
-                          <div class="advocate-info">
-                              ${isOwner ? '<div style="margin-bottom: 6px;"><span style="background: linear-gradient(135deg, #071322 0%, #0A1628 100%); color: #D4AF37; border: 1px solid #D4AF37; padding: 3px 10px; border-radius: 4px; font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; display: inline-flex; align-items: center; gap: 5px;">👑 CHAMBER OWNER</span></div>' : ''}
-                              <h3 style="margin: 0 0 4px 0; font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 700; color: #0A1628; line-height: 1.3;">${adv.name}</h3>
-                              <div class="advocate-role" style="${isOwner ? 'color: #b45309; font-weight: 700;' : ''}">${role}</div>
-                              <div class="advocate-specialty">${specialty}</div>
-                              <div class="advocate-location">
-                                  <svg style="width: 13px; height: 13px; fill: #64748b; flex-shrink: 0;" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                                  <span>${location}</span>
-                              </div>
-                              <div class="advocate-actions">
-                                  <div style="display: flex; gap: 8px;">
-                                      ${contactIcons}
-                                  </div>
-                                  <button onclick="openModal('appointmentModal')" style="background: ${isOwner ? '#0A1628' : 'transparent'}; border: 1px solid #D4AF37; color: ${isOwner ? '#D4AF37' : '#0A1628'}; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#D4AF37';this.style.color='#0A1628';" onmouseout="this.style.background='${isOwner ? '#0A1628' : 'transparent'}';this.style.color='${isOwner ? '#D4AF37' : '#0A1628'}';">
-                                      Consult →
-                                  </button>
-                              </div>
-                          </div>
-                      `;
-                      advocatesGrid.appendChild(div);
-                  });
-              } else {
-                  advocatesGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #9daeb9; padding: 2rem;">No advocates listed at the moment.</p>';
-              }
+              window.renderAdvocates(advocates);
           } catch (err) {
-              console.error('Error loading advocates:', err);
-              advocatesGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #999;">Error loading advocates.</p>';
+              console.error('Error background updating advocates:', err);
           }
       }
-      loadAdvocates();
-      
-      // Real-time Sync (30 seconds)
-      setInterval(loadAdvocates, 30000);
+      // If no initial data, load immediately, else sync periodically
+      if (!window.__INITIAL_DATA__ || !window.__INITIAL_DATA__.advocates) {
+          loadAdvocates();
+      }
+      setInterval(loadAdvocates, 60000);
   }
 
     // Instant Loading Screen Dismiss (Prevent Page Hang)
@@ -468,9 +485,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let alertCache = null;
 
+    if (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.settings && window.__INITIAL_DATA__.settings.footer_alert) {
+        const initAlert = window.__INITIAL_DATA__.settings.footer_alert.trim();
+        if (initAlert !== "") {
+            alertCache = initAlert;
+            footerAlertText.innerText = "⚠ " + initAlert + " ⚠";
+            footerAlertBar.style.display = 'block';
+        }
+    }
+
     async function loadFooterAlert() {
         try {
-            const res = await fetch('/api/settings', { cache: 'no-store' });
+            const res = await fetch('/api/settings/alert', { cache: 'no-store' });
             const data = await res.json();
             
             const alertMsg = data.footer_alert || "";
@@ -485,7 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         } catch (e) {
-            console.error("Error loading settings:", e);
+            console.error("Error loading alert:", e);
         }
     }
     
@@ -990,35 +1016,48 @@ window.openServiceBook = function(idOrTitle) {
 
 window.openServiceBookByTitle = window.openServiceBook;
 
+// Modular Services Renderer
+window.renderServices = function(data) {
+    if (!Array.isArray(data) || data.length === 0) return;
+    window.allServicesData = data;
+    const grid = document.getElementById('services-grid');
+    if (!grid) return;
+    grid.innerHTML = data.map((srv, idx) => {
+        const isImageIcon = srv.icon && (srv.icon.startsWith('data:') || srv.icon.startsWith('http') || srv.icon.startsWith('/'));
+        const iconRender = isImageIcon
+            ? `<img src="${srv.icon}" style="width: 38px; height: 38px; object-fit: contain; border-radius: 6px;">`
+            : (srv.icon || '⚖');
+
+        return `
+            <div class="service-card" onclick="openServiceBook('${srv._id}')" style="cursor: pointer;">
+                <div class="service-number">${String(idx + 1).padStart(2, '0')}</div>
+                <div class="service-icon" style="display: flex; align-items: center; justify-content: center; overflow: hidden;">${iconRender}</div>
+                <h3>${srv.title}</h3>
+                <p>${srv.short_desc || srv.summary || ''}</p>
+                <div class="service-link" role="button" tabindex="0" onclick="event.stopPropagation(); openServiceBook('${srv._id}')" style="cursor: pointer;">
+                    Explore Service →
+                </div>
+            </div>
+        `;
+    }).join('');
+};
+
+// Immediate hydration for services if initial data is present
+if (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.services) {
+    window.renderServices(window.__INITIAL_DATA__.services);
+}
+
 // Load and render public services dynamically into #services-grid
 async function loadPublicServices() {
+    if (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.services && (!window.allServicesData || window.allServicesData.length === 0)) {
+        window.renderServices(window.__INITIAL_DATA__.services);
+    }
     try {
         const res = await fetch('/api/services', { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
-            window.allServicesData = data;
-            const grid = document.getElementById('services-grid');
-            if (grid) {
-                grid.innerHTML = data.map((srv, idx) => {
-                    const isImageIcon = srv.icon && (srv.icon.startsWith('data:') || srv.icon.startsWith('http') || srv.icon.startsWith('/'));
-                    const iconRender = isImageIcon
-                        ? `<img src="${srv.icon}" style="width: 38px; height: 38px; object-fit: contain; border-radius: 6px;">`
-                        : (srv.icon || '⚖');
-
-                    return `
-                        <div class="service-card" onclick="openServiceBook('${srv._id}')" style="cursor: pointer;">
-                            <div class="service-number">${String(idx + 1).padStart(2, '0')}</div>
-                            <div class="service-icon" style="display: flex; align-items: center; justify-content: center; overflow: hidden;">${iconRender}</div>
-                            <h3>${srv.title}</h3>
-                            <p>${srv.short_desc || srv.summary || ''}</p>
-                            <div class="service-link" role="button" tabindex="0" onclick="event.stopPropagation(); openServiceBook('${srv._id}')" style="cursor: pointer;">
-                                Explore Service →
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }
+            window.renderServices(data);
         }
     } catch (e) {
         console.error('Error fetching public services:', e);
@@ -1234,51 +1273,64 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+// Modular News Renderer
+window.renderNews = function(data) {
+    if (!Array.isArray(data) || data.length === 0) return;
+    window.allNewsData = data;
+    const track = document.getElementById('news-train-track') || document.getElementById('news-grid');
+    if (!track) return;
+    const singleSet = data.map(item => {
+        const iconHtml = item.icon && (item.icon.startsWith('data:') || item.icon.startsWith('http') || item.icon.startsWith('/'))
+            ? `<img src="${item.icon}" alt="icon" style="width: 17px; height: 17px; object-fit: contain; vertical-align: middle; margin-right: 6px; display: inline-block;">`
+            : `<span style="margin-right: 6px;">${item.icon || '⚖️'}</span>`;
+
+        const imgHtml = item.image_url
+            ? `<div class="news-card-img"><img src="${item.image_url}" alt="${item.title}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'"></div>`
+            : `<div class="news-card-img" style="background: linear-gradient(135deg, #071322, #102138); display: flex; align-items: center; justify-content: center; color: #D4AF37; font-size: 2rem; border-bottom: 1px solid rgba(212,175,55,0.2);">${item.icon && !item.icon.startsWith('data:') && !item.icon.startsWith('http') ? item.icon : '📰'}</div>`;
+
+        return `
+            <article class="news-card news-train-card" onclick="openNewsArticleModal('${item._id}')" onmouseover="this.style.transform='translateY(-6px)';this.style.borderColor='#D4AF37';this.style.boxShadow='0 15px 35px rgba(212,175,55,0.2)';" onmouseout="this.style.transform='none';this.style.borderColor='rgba(212, 175, 55, 0.25)';this.style.boxShadow='0 10px 25px rgba(0,0,0,0.35)';">
+                ${imgHtml}
+                <div class="news-card-content" style="padding: 18px; display: flex; flex-direction: column; flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                        <span class="news-badge" style="background: rgba(212, 175, 55, 0.15); color: #D4AF37; border: 1px solid rgba(212, 175, 55, 0.3); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: inline-flex; align-items: center;">${iconHtml} ${item.category || 'Legal Update'}</span>
+                        <span style="color: #94a3b8; font-size: 11.5px;">📅 ${item.date || ''}</span>
+                    </div>
+                    <h3 style="font-family: 'Playfair Display', Georgia, serif; font-size: 17px; color: #ffffff; margin: 0 0 8px 0; line-height: 1.35; white-space: normal;">${item.title}</h3>
+                    <p style="color: #cbd5e1; font-size: 12.8px; line-height: 1.55; margin: 0 0 12px 0; flex: 1; white-space: normal; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${item.summary || ''}</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: auto;">
+                        <span style="color: #94a3b8; font-size: 11.5px; font-style: italic;">By ${item.author || 'Chamber Editorial'}</span>
+                        <span style="color: #D4AF37; font-weight: 700; font-size: 11.5px;">Read Article →</span>
+                    </div>
+                </div>
+            </article>
+        `;
+    }).join('');
+
+    // Repeat enough times to create an infinite, seamless continuous train track
+    const repeatCount = data.length <= 2 ? 6 : (data.length <= 4 ? 4 : 2);
+    let fullConveyor = '';
+    for (let i = 0; i < repeatCount * 2; i++) {
+        fullConveyor += singleSet;
+    }
+    track.innerHTML = fullConveyor;
+};
+
+// Immediate hydration for news if initial data is present
+if (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.news) {
+    window.renderNews(window.__INITIAL_DATA__.news);
+}
+
 window.loadPublicNews = async function() {
+    if (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.news && (!window.allNewsData || window.allNewsData.length === 0)) {
+        window.renderNews(window.__INITIAL_DATA__.news);
+    }
     try {
         const res = await fetch('/api/news', { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
-            window.allNewsData = data;
-            const track = document.getElementById('news-train-track') || document.getElementById('news-grid');
-            if (track) {
-                const singleSet = data.map(item => {
-                    const iconHtml = item.icon && (item.icon.startsWith('data:') || item.icon.startsWith('http') || item.icon.startsWith('/'))
-                        ? `<img src="${item.icon}" alt="icon" style="width: 17px; height: 17px; object-fit: contain; vertical-align: middle; margin-right: 6px; display: inline-block;">`
-                        : `<span style="margin-right: 6px;">${item.icon || '⚖️'}</span>`;
-
-                    const imgHtml = item.image_url
-                        ? `<div class="news-card-img"><img src="${item.image_url}" alt="${item.title}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'"></div>`
-                        : `<div class="news-card-img" style="background: linear-gradient(135deg, #071322, #102138); display: flex; align-items: center; justify-content: center; color: #D4AF37; font-size: 2rem; border-bottom: 1px solid rgba(212,175,55,0.2);">${item.icon && !item.icon.startsWith('data:') && !item.icon.startsWith('http') ? item.icon : '📰'}</div>`;
-
-                    return `
-                        <article class="news-card news-train-card" onclick="openNewsArticleModal('${item._id}')" onmouseover="this.style.transform='translateY(-6px)';this.style.borderColor='#D4AF37';this.style.boxShadow='0 15px 35px rgba(212,175,55,0.2)';" onmouseout="this.style.transform='none';this.style.borderColor='rgba(212, 175, 55, 0.25)';this.style.boxShadow='0 10px 25px rgba(0,0,0,0.35)';">
-                            ${imgHtml}
-                            <div class="news-card-content" style="padding: 18px; display: flex; flex-direction: column; flex: 1;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
-                                    <span class="news-badge" style="background: rgba(212, 175, 55, 0.15); color: #D4AF37; border: 1px solid rgba(212, 175, 55, 0.3); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: inline-flex; align-items: center;">${iconHtml} ${item.category || 'Legal Update'}</span>
-                                    <span style="color: #94a3b8; font-size: 11.5px;">📅 ${item.date || ''}</span>
-                                </div>
-                                <h3 style="font-family: 'Playfair Display', Georgia, serif; font-size: 17px; color: #ffffff; margin: 0 0 8px 0; line-height: 1.35; white-space: normal;">${item.title}</h3>
-                                <p style="color: #cbd5e1; font-size: 12.8px; line-height: 1.55; margin: 0 0 12px 0; flex: 1; white-space: normal; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${item.summary || ''}</p>
-                                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: auto;">
-                                    <span style="color: #94a3b8; font-size: 11.5px; font-style: italic;">By ${item.author || 'Chamber Editorial'}</span>
-                                    <span style="color: #D4AF37; font-weight: 700; font-size: 11.5px;">Read Article →</span>
-                                </div>
-                            </div>
-                        </article>
-                    `;
-                }).join('');
-
-                // Repeat enough times to create an infinite, seamless continuous train track
-                const repeatCount = data.length <= 2 ? 6 : (data.length <= 4 ? 4 : 2);
-                let fullConveyor = '';
-                for (let i = 0; i < repeatCount * 2; i++) {
-                    fullConveyor += singleSet;
-                }
-                track.innerHTML = fullConveyor;
-            }
+            window.renderNews(data);
         }
     } catch (e) {
         console.error('Error fetching public news:', e);
@@ -1335,54 +1387,64 @@ window.closeNewsArticleModal = function() {
     }
 };
 
-// ==========================================
-// TODAY'S OPINION (Day-wise Conveyor Right-to-Left)
-// ==========================================
+// Modular Opinions Renderer
+window.renderOpinions = function(data) {
+    if (!Array.isArray(data) || data.length === 0) return;
+    window.allOpinionsData = data;
+    const track = document.getElementById('opinion-train-track');
+    if (!track) return;
+    const singleSet = data.map(item => {
+        return `
+            <article class="opinion-train-card" onclick="openOpinionArticleModal('${item._id}')">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: gap: 6px;">
+                        <span style="background: rgba(212, 175, 55, 0.15); color: #D4AF37; border: 1px solid rgba(212, 175, 55, 0.35); padding: 3px 8px; border-radius: 6px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: inline-flex; align-items: center; gap: 4px;">
+                            ⚖️ ${item.category || 'Editorial Opinion'}
+                        </span>
+                        <span style="color: #94a3b8; font-size: 11px; font-weight: 600;">📅 ${item.date || ''}</span>
+                    </div>
+                    <div style="color: #D4AF37; font-size: 26px; line-height: 1; font-family: Georgia, serif; margin: 2px 0 -4px 0; opacity: 0.85;">“</div>
+                    <h3 style="font-family: 'Playfair Display', Georgia, serif; font-size: 16.5px; color: #ffffff; margin: 0 0 6px 0; line-height: 1.35; font-weight: 700; white-space: normal;">
+                        ${item.title || ''}
+                    </h3>
+                    <div style="color: #94a3b8; font-size: 11.5px; margin-bottom: 8px; font-weight: 500;">
+                        ✍️ By <span style="color: #D4AF37; font-weight: 600;">${item.author || 'Chamber Counsel'}</span>
+                    </div>
+                    <p style="color: #cbd5e1; font-size: 12.8px; line-height: 1.55; margin: 0 0 12px 0; font-family: 'Georgia', serif; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; opacity: 0.92; white-space: normal;">
+                        "${item.message || ''}"
+                    </p>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: auto;">
+                    <span style="color: #94a3b8; font-size: 11px; font-style: italic;">JSM Perspective</span>
+                    <span style="color: #D4AF37; font-weight: 700; font-size: 11.5px; display: inline-flex; align-items: center; gap: 4px;">Read Full Opinion →</span>
+                </div>
+            </article>
+        `;
+    }).join('');
+
+    const repeatCount = data.length <= 2 ? 6 : (data.length <= 4 ? 4 : 2);
+    let fullConveyor = '';
+    for (let i = 0; i < repeatCount * 2; i++) {
+        fullConveyor += singleSet;
+    }
+    track.innerHTML = fullConveyor;
+};
+
+// Immediate hydration for opinions if initial data is present
+if (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.opinions) {
+    window.renderOpinions(window.__INITIAL_DATA__.opinions);
+}
+
 window.loadPublicOpinions = async function() {
+    if (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.opinions && (!window.allOpinionsData || window.allOpinionsData.length === 0)) {
+        window.renderOpinions(window.__INITIAL_DATA__.opinions);
+    }
     try {
         const res = await fetch('/api/opinions', { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
-            window.allOpinionsData = data;
-            const track = document.getElementById('opinion-train-track');
-            if (track) {
-                const singleSet = data.map(item => {
-                    return `
-                        <article class="opinion-train-card" onclick="openOpinionArticleModal('${item._id}')">
-                            <div>
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
-                                    <span style="background: rgba(212, 175, 55, 0.15); color: #D4AF37; border: 1px solid rgba(212, 175, 55, 0.35); padding: 3px 8px; border-radius: 6px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: inline-flex; align-items: center; gap: 4px;">
-                                        ⚖️ ${item.category || 'Editorial Opinion'}
-                                    </span>
-                                    <span style="color: #94a3b8; font-size: 11px; font-weight: 600;">📅 ${item.date || ''}</span>
-                                </div>
-                                <div style="color: #D4AF37; font-size: 26px; line-height: 1; font-family: Georgia, serif; margin: 2px 0 -4px 0; opacity: 0.85;">“</div>
-                                <h3 style="font-family: 'Playfair Display', Georgia, serif; font-size: 16.5px; color: #ffffff; margin: 0 0 6px 0; line-height: 1.35; font-weight: 700; white-space: normal;">
-                                    ${item.title || ''}
-                                </h3>
-                                <div style="color: #94a3b8; font-size: 11.5px; margin-bottom: 8px; font-weight: 500;">
-                                    ✍️ By <span style="color: #D4AF37; font-weight: 600;">${item.author || 'Chamber Counsel'}</span>
-                                </div>
-                                <p style="color: #cbd5e1; font-size: 12.8px; line-height: 1.55; margin: 0 0 12px 0; font-family: 'Georgia', serif; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; opacity: 0.92; white-space: normal;">
-                                    "${item.message || ''}"
-                                </p>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: auto;">
-                                <span style="color: #94a3b8; font-size: 11px; font-style: italic;">JSM Perspective</span>
-                                <span style="color: #D4AF37; font-weight: 700; font-size: 11.5px; display: inline-flex; align-items: center; gap: 4px;">Read Full Opinion →</span>
-                            </div>
-                        </article>
-                    `;
-                }).join('');
-
-                const repeatCount = data.length <= 2 ? 6 : (data.length <= 4 ? 4 : 2);
-                let fullConveyor = '';
-                for (let i = 0; i < repeatCount * 2; i++) {
-                    fullConveyor += singleSet;
-                }
-                track.innerHTML = fullConveyor;
-            }
+            window.renderOpinions(data);
         }
     } catch(e) {
         console.error('Error fetching public opinions:', e);

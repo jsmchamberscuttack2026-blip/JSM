@@ -24,6 +24,7 @@ import logging
 import socket
 import string
 import json
+import uuid
 from dotenv import load_dotenv
 from groq import Groq
 
@@ -263,11 +264,123 @@ def delete_case_from_turso_history(case_id):
         logging.error(f"Error deleting case from Turso history: {e}")
         return False
 
-# Initialize Turso on application startup
+# =========================================================
+#  TURSO 2 DATABASE INTEGRATION (News & Insights, Today's Opinions)
+# =========================================================
+TURSO2_DATABASE_URL = os.environ.get("TURSO2_DATABASE_URL", "libsql://jsm2-jsm2.aws-ap-south-1.turso.io")
+TURSO2_AUTH_TOKEN = os.environ.get("TURSO2_AUTH_TOKEN", "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTMzNDc4NzMsImlkIjoiMDFhMThiZGMtOTIwMS03M2E2LTk3MTctZDBjNTM2YTczNjNmIiwia2lkIjoiRlZDZmNQVklIT1k5bmNqbzFpbDRQTE9YMEY3QVFlcTJpcUFtQWc1UGNhcyIsInJpZCI6ImM1ODg5NjI5LWFlYjYtNDQwOS04MzQ0LTZhMjNlODUwZWExYiJ9.6gxUyEcJ-hujJkI72dGNIL1BI6ELzlRSk8n5lBU5h7i9c2QN9DeQRrsIiI8sR36TxBXJjQVJ1QAy2vEcUg6-DA")
+
+def get_turso2_pipeline_url():
+    url = (TURSO2_DATABASE_URL or "").strip()
+    if url.startswith("libsql://"):
+        url = "https://" + url[len("libsql://"):]
+    elif url.startswith("http://"):
+        url = "https://" + url[len("http://"):]
+    elif not url.startswith("https://"):
+        url = "https://" + url
+    if not url.endswith("/v2/pipeline"):
+        url = url.rstrip("/") + "/v2/pipeline"
+    return url
+
+def execute_turso2_query(sql, params=None):
+    if not TURSO2_AUTH_TOKEN:
+        logging.warning("TURSO2_AUTH_TOKEN is not configured; skipping Turso 2 query.")
+        return []
+    
+    def format_arg(val):
+        if val is None:
+            return {'type': 'null'}
+        elif isinstance(val, bool):
+            return {'type': 'integer', 'value': '1' if val else '0'}
+        elif isinstance(val, int):
+            return {'type': 'integer', 'value': str(val)}
+        elif isinstance(val, float):
+            return {'type': 'float', 'value': val}
+        else:
+            return {'type': 'text', 'value': str(val)}
+
+    stmt = {'sql': sql}
+    if params:
+        stmt['args'] = [format_arg(p) for p in params]
+
+    pipeline_url = get_turso2_pipeline_url()
+    payload = {'requests': [{'type': 'execute', 'stmt': stmt}]}
+    req = urllib.request.Request(
+        pipeline_url,
+        data=json.dumps(payload).encode('utf-8'),
+        headers={
+            'Authorization': f'Bearer {TURSO2_AUTH_TOKEN}',
+            'Content-Type': 'application/json'
+        },
+        method='POST'
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            results = data.get('results', [])
+            if not results:
+                return []
+            res = results[0]
+            if res.get('type') == 'error':
+                raise Exception(res.get('error', 'Turso 2 query failed'))
+            resp_obj = res.get('response', {}).get('result', {})
+            cols = [c['name'] for c in resp_obj.get('cols', [])]
+            rows = []
+            for row in resp_obj.get('rows', []):
+                row_dict = {}
+                for col_name, cell in zip(cols, row):
+                    row_dict[col_name] = cell.get('value')
+                rows.append(row_dict)
+            return rows
+    except Exception as e:
+        logging.error(f"Turso 2 HTTP query error: {e}")
+        raise e
+
+def init_turso2_db():
+    try:
+        execute_turso2_query('''
+        CREATE TABLE IF NOT EXISTS news (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            category TEXT,
+            date TEXT,
+            author TEXT,
+            author_email TEXT,
+            staff_id TEXT,
+            summary TEXT,
+            content TEXT,
+            icon TEXT,
+            image TEXT,
+            display_order INTEGER DEFAULT 99,
+            created_at TEXT
+        );
+        ''')
+        execute_turso2_query('''
+        CREATE TABLE IF NOT EXISTS opinions (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            date TEXT,
+            author TEXT,
+            category TEXT,
+            message TEXT,
+            display_order INTEGER DEFAULT 1,
+            created_at TEXT
+        );
+        ''')
+        logging.info("Turso 2 news & opinions tables verified/initialized successfully.")
+    except Exception as e:
+        logging.error(f"Failed to initialize Turso 2 database: {e}")
+
+# Initialize Turso 1 & 2 on application startup
 try:
     init_turso_db()
 except Exception as e:
     logging.warning(f"Initial Turso connection attempt: {e}")
+
+try:
+    init_turso2_db()
+except Exception as e:
+    logging.warning(f"Initial Turso 2 connection attempt: {e}")
 
 # =========================================================
 #  PUBLIC WEBSITE STATUS (ON / OFF) & CYBER DEFENSE LOCKDOWN
@@ -1310,16 +1423,172 @@ Please log into the Admin Dashboard to approve and set a date/time."""
         
     return client_result
 
+# -------------------------------------------------------------
+# HIGH-SPEED IN-MEMORY CACHE FOR PUBLIC WEBSITE (Ultra-Fast <1ms)
+# -------------------------------------------------------------
+_public_cache = {
+    "bundle": None,
+    "index_html": None,
+    "settings": None,
+    "advocates": None,
+    "services": None,
+    "news": None,
+    "opinions": None,
+    "last_updated": 0
+}
+
+_chamber_images_cache = {
+    "owner": None,
+    "owner_mime": "image/jpeg",
+    "logo": None,
+    "logo_mime": "image/jpeg"
+}
+
+def invalidate_all_public_caches():
+    global _public_cache, _chamber_images_cache, _advocates_cache, _advocates_cache_time
+    _public_cache = {
+        "bundle": None,
+        "index_html": None,
+        "settings": None,
+        "advocates": None,
+        "services": None,
+        "news": None,
+        "opinions": None,
+        "last_updated": 0
+    }
+    _chamber_images_cache = {
+        "owner": None,
+        "owner_mime": "image/jpeg",
+        "logo": None,
+        "logo_mime": "image/jpeg"
+    }
+    _advocates_cache = None
+    _advocates_cache_time = 0
+
+def get_public_bundle():
+    global _public_cache
+    now = time.time()
+    if _public_cache.get("bundle") is not None and (now - _public_cache.get("last_updated", 0) < 300):
+        return _public_cache["bundle"]
+
+    # 1. Settings
+    settings_doc = {}
+    try:
+        raw_settings = settings_col.find_one({"_id": "office_info"}) or {}
+        settings_doc = dict(raw_settings)
+        if "_id" in settings_doc:
+            settings_doc["_id"] = str(settings_doc["_id"])
+    except Exception as e:
+        logging.error(f"Error fetching settings for bundle: {e}")
+        settings_doc = _public_cache.get("settings") or {}
+
+    # 2. Advocates
+    advs = []
+    try:
+        try:
+            ensure_chamber_owner_advocate()
+        except Exception:
+            pass
+        for adv in advocates_col.find().sort([("is_owner", -1), ("_id", 1)]):
+            adv_copy = dict(adv)
+            adv_copy['_id'] = str(adv_copy['_id'])
+            advs.append(adv_copy)
+    except Exception as e:
+        logging.error(f"Error fetching advocates for bundle: {e}")
+        advs = _public_cache.get("advocates") or []
+
+    # 3. Services
+    srvs = []
+    try:
+        if services_col is not None:
+            if services_col.count_documents({}) == 0 and 'DEFAULT_SERVICES' in globals():
+                services_col.insert_many(DEFAULT_SERVICES)
+            for s in services_col.find().sort("order", 1):
+                sc = dict(s)
+                sc['_id'] = str(sc['_id'])
+                srvs.append(sc)
+    except Exception as e:
+        logging.error(f"Error fetching services for bundle: {e}")
+        srvs = _public_cache.get("services") or []
+
+    # 4. News
+    n_list = []
+    try:
+        rows = execute_turso2_query('SELECT * FROM news ORDER BY date DESC, display_order ASC, created_at DESC')
+        for r in rows:
+            n_list.append({
+                "_id": r.get('id'),
+                "id": r.get('id'),
+                "title": r.get('title') or '',
+                "category": r.get('category') or 'Judicial Update',
+                "date": r.get('date') or '',
+                "author": r.get('author') or 'JSM Chambers',
+                "author_email": r.get('author_email') or '',
+                "staff_id": r.get('staff_id') or '',
+                "summary": r.get('summary') or '',
+                "content": r.get('content') or '',
+                "icon": r.get('icon') or '⚖️',
+                "image": r.get('image') or '',
+                "image_url": r.get('image') or '',
+                "order": int(r.get('display_order') or r.get('order') or 99),
+                "created_at": r.get('created_at') or ''
+            })
+    except Exception as e:
+        logging.error(f"Error fetching news for bundle: {e}")
+        n_list = _public_cache.get("news") or []
+
+    # 5. Opinions
+    op_list = []
+    try:
+        o_rows = execute_turso2_query('SELECT * FROM opinions ORDER BY date DESC, display_order ASC')
+        for r in o_rows:
+            op_list.append({
+                "_id": r.get('id'),
+                "id": r.get('id'),
+                "title": r.get('title') or '',
+                "date": r.get('date') or '',
+                "author": r.get('author') or 'Chamber Counsel',
+                "category": r.get('category') or 'Legal Editorial',
+                "message": r.get('message') or '',
+                "order": int(r.get('display_order') or r.get('order') or 1),
+                "created_at": r.get('created_at') or ''
+            })
+    except Exception as e:
+        logging.error(f"Error fetching opinions for bundle: {e}")
+        op_list = _public_cache.get("opinions") or []
+
+    bundle = {
+        "settings": settings_doc,
+        "advocates": advs,
+        "services": srvs,
+        "news": n_list,
+        "opinions": op_list
+    }
+    _public_cache["bundle"] = bundle
+    _public_cache["settings"] = settings_doc
+    _public_cache["advocates"] = advs
+    _public_cache["services"] = srvs
+    _public_cache["news"] = n_list
+    _public_cache["opinions"] = op_list
+    _public_cache["last_updated"] = now
+    return bundle
+
 @app.route('/')
 @app.route('/index.html')
 def serve_index():
     if not is_public_website_enabled():
         return render_under_repair_page()
+
+    global _public_cache
+    if _public_cache.get("index_html") is not None:
+        return Response(_public_cache["index_html"], mimetype='text/html')
+
     try:
         with open('index.html', 'r', encoding='utf-8') as f:
             html = f.read()
         
-        setting_doc = settings_col.find_one({"_id": "office_info"}) or {}
+        bundle = get_public_bundle()
+        setting_doc = bundle.get("settings") or {}
         gsv = str(setting_doc.get("google_site_verification", "") or "").strip()
         owner_name = str(setting_doc.get("about_chamber_owner_name", "") or "").strip() or "Adv. Jayasankar Mishra"
         chamber_name = str(setting_doc.get("chamber_name", "") or "").strip() or "JSM. Chambers"
@@ -1371,11 +1640,10 @@ def serve_index():
         html = re.sub(r'<meta\s+name=["\']robots["\'][^>]*>', '', html, flags=re.DOTALL)
         
         # 3. Dynamic JSON-LD Structured Data for Google Search & Console Verification
-        # For all ADVOCATES & CHAMBER MEMBERS: Include ONLY name and image (no email, no about/description)
         employee_refs = []
         member_person_schemas = []
         
-        all_advocates = list(advocates_col.find().sort([("is_owner", -1), ("_id", 1)]))
+        all_advocates = bundle.get("advocates") or []
         for adv in all_advocates:
             adv_id = str(adv["_id"])
             adv_name = adv.get("name", "").strip()
@@ -1456,6 +1724,12 @@ def serve_index():
         # Ensure owner name in index.html is updated server-side for initial crawl
         html = re.sub(r'(<h2\s+id=["\']about-doc-owner-name["\'][^>]*>)(.*?)(</h2>)', f'\\g<1>{owner_name}\\g<3>', html)
         
+        # Inject full hydration script right before </head> for instantaneous 0ms frame-1 render
+        hydration_json = json.dumps(bundle, ensure_ascii=False)
+        hydration_script = f'<script id="__INITIAL_DATA__">window.__INITIAL_DATA__ = {hydration_json};</script>'
+        html = html.replace('</head>', f'{hydration_script}\n</head>', 1)
+        
+        _public_cache["index_html"] = html
         return Response(html, mimetype='text/html')
     except Exception as e:
         logging.error(f"Error serving index.html with verification: {e}")
@@ -1463,8 +1737,15 @@ def serve_index():
 
 @app.route('/chamber-owner.jpg')
 def serve_chamber_owner_image():
+    global _chamber_images_cache
+    if _chamber_images_cache.get("owner") is not None:
+        return Response(_chamber_images_cache["owner"], mimetype=_chamber_images_cache.get("owner_mime", "image/jpeg"), headers={
+            "Cache-Control": "public, max-age=86400",
+            "Content-Disposition": "inline; filename=\"jsm-chambers-owner.jpg\""
+        })
     try:
-        setting_doc = settings_col.find_one({"_id": "office_info"}) or {}
+        bundle = get_public_bundle()
+        setting_doc = bundle.get("settings") or {}
         img_data = setting_doc.get("about_chamber_owner_image") or setting_doc.get("about_chamber_image1")
         if img_data and 'base64,' in img_data:
             header, encoded = img_data.split('base64,', 1)
@@ -1472,6 +1753,8 @@ def serve_chamber_owner_image():
             if 'image/png' in header: mime = 'image/png'
             elif 'image/webp' in header: mime = 'image/webp'
             img_bytes = base64.b64decode(encoded)
+            _chamber_images_cache["owner"] = img_bytes
+            _chamber_images_cache["owner_mime"] = mime
             return Response(img_bytes, mimetype=mime, headers={
                 "Cache-Control": "public, max-age=86400",
                 "Content-Disposition": "inline; filename=\"jsm-chambers-owner.jpg\""
@@ -1482,8 +1765,15 @@ def serve_chamber_owner_image():
 
 @app.route('/chamber-logo.jpg')
 def serve_chamber_logo_image():
+    global _chamber_images_cache
+    if _chamber_images_cache.get("logo") is not None:
+        return Response(_chamber_images_cache["logo"], mimetype=_chamber_images_cache.get("logo_mime", "image/jpeg"), headers={
+            "Cache-Control": "public, max-age=86400",
+            "Content-Disposition": "inline; filename=\"jsm-chambers-logo.jpg\""
+        })
     try:
-        setting_doc = settings_col.find_one({"_id": "office_info"}) or {}
+        bundle = get_public_bundle()
+        setting_doc = bundle.get("settings") or {}
         img_data = setting_doc.get("logoUrl")
         if img_data and 'base64,' in img_data:
             header, encoded = img_data.split('base64,', 1)
@@ -1491,6 +1781,8 @@ def serve_chamber_logo_image():
             if 'image/png' in header: mime = 'image/png'
             elif 'image/webp' in header: mime = 'image/webp'
             img_bytes = base64.b64decode(encoded)
+            _chamber_images_cache["logo"] = img_bytes
+            _chamber_images_cache["logo_mime"] = mime
             return Response(img_bytes, mimetype=mime, headers={
                 "Cache-Control": "public, max-age=86400",
                 "Content-Disposition": "inline; filename=\"jsm-chambers-logo.jpg\""
@@ -3147,7 +3439,7 @@ def get_security_database_stats():
         logging.error(f"Error fetching MongoDB stats for SOC: {me}")
         mongo_latency_ms = round((time.time() - mongo_t0) * 1000, 1)
 
-    # 2. Probe Turso Cloud Database Live Metrics
+    # 2. Probe Turso 1 Cloud Database (Clients Directory / History)
     turso_t0 = time.time()
     turso_connected = False
     turso_rows_count = 0
@@ -3179,21 +3471,61 @@ def get_security_database_stats():
                 except Exception:
                     pass
     except Exception as te:
-        logging.error(f"Error fetching Turso stats for SOC: {te}")
+        logging.error(f"Error fetching Turso 1 stats for SOC: {te}")
         turso_latency_ms = round((time.time() - turso_t0) * 1000, 1)
 
+    # 3. Probe Turso 2 Cloud Database (News & Insights, Today's Opinions)
+    turso2_t0 = time.time()
+    turso2_connected = False
+    turso2_news_count = 0
+    turso2_opinions_count = 0
+    turso2_data_bytes = 0
+    turso2_latency_ms = 0
+    try:
+        n_res = execute_turso2_query("SELECT count(*), sum(length(title) + length(summary) + length(content) + length(image)) FROM news")
+        o_res = execute_turso2_query("SELECT count(*), sum(length(title) + length(message) + length(author)) FROM opinions")
+        turso2_latency_ms = round((time.time() - turso2_t0) * 1000, 1)
+        if n_res and len(n_res) > 0:
+            turso2_connected = True
+            row = n_res[0]
+            for k, v in row.items():
+                if 'count' in k.lower():
+                    try: turso2_news_count = int(v or 0)
+                    except: pass
+                elif 'sum' in k.lower() or 'length' in k.lower():
+                    try: turso2_data_bytes += int(v or 0)
+                    except: pass
+        if o_res and len(o_res) > 0:
+            row_o = o_res[0]
+            for k, v in row_o.items():
+                if 'count' in k.lower():
+                    try: turso2_opinions_count = int(v or 0)
+                    except: pass
+                elif 'sum' in k.lower() or 'length' in k.lower():
+                    try: turso2_data_bytes += int(v or 0)
+                    except: pass
+    except Exception as te2:
+        logging.error(f"Error fetching Turso 2 stats for SOC: {te2}")
+        turso2_latency_ms = round((time.time() - turso2_t0) * 1000, 1)
+
     # Storage calculations:
-    # MongoDB Atlas Free Cluster: 512 MB
+    # 1. MongoDB Atlas Free Cluster: 512 MB
     mongo_limit_mb = 512.0
     mongo_used_mb = round(mongo_storage_bytes / (1024 * 1024), 2)
     mongo_free_mb = max(0.0, round(mongo_limit_mb - mongo_used_mb, 2))
     mongo_used_pct = round((mongo_used_mb / mongo_limit_mb) * 100, 2)
 
-    # Turso Starter Plan: 5.0 GB (5,120 MB)
+    # 2. Turso 1 Starter Plan: 5.0 GB (5,120 MB)
     turso_limit_mb = 5120.0
     turso_used_mb = round((turso_data_bytes + (turso_rows_count * 1024)) / (1024 * 1024), 2)
     turso_free_mb = max(0.0, round(turso_limit_mb - turso_used_mb, 2))
     turso_used_pct = round((turso_used_mb / turso_limit_mb) * 100, 3)
+
+    # 3. Turso 2 Starter Plan: 5.0 GB (5,120 MB)
+    turso2_limit_mb = 5120.0
+    turso2_used_mb = round((turso2_data_bytes + ((turso2_news_count + turso2_opinions_count) * 1024)) / (1024 * 1024), 2)
+    turso2_free_mb = max(0.0, round(turso2_limit_mb - turso2_used_mb, 2))
+    turso2_used_pct = round((turso2_used_mb / turso2_limit_mb) * 100, 3)
 
     return jsonify({
         "status": "success",
@@ -3223,8 +3555,6 @@ def get_security_database_stats():
                 "📁 Active Cases & Next Hearing Dates",
                 "➕ Add New Case Intake Form",
                 "💳 Case Fee Payments & Billing Verification Phases",
-                "📰 News & Legal Insights Feed",
-                "✍️ Today's Legal Opinions",
                 "📖 Practice Areas, Expertise & Legal Books",
                 "⚙️ Chamber Settings, Public Banner & Office Info",
                 "📧 Staff & Client Email Communication Logs",
@@ -3239,7 +3569,7 @@ def get_security_database_stats():
         },
         "turso": {
             "name": "jsm-chamber-jsmcuttack",
-            "type": "Edge SQLite / libSQL Cloud Database",
+            "type": "Edge SQLite / libSQL Cloud Database (Turso 1)",
             "region": "AWS Cloud (AWS-ap-south-1 Mumbai)",
             "status": "ONLINE" if turso_connected else "OFFLINE",
             "latency_ms": turso_latency_ms,
@@ -3270,6 +3600,37 @@ def get_security_database_stats():
                 "Air-Gapped Architectural Separation from Active MongoDB",
                 "Isolated Edge HTTPS v2 Pipeline Transport",
                 "Tamper-Proof Archival Immutability Defense"
+            ]
+        },
+        "turso2": {
+            "name": "jsm2-jsm2",
+            "type": "Edge SQLite / libSQL Cloud Database (Turso 2)",
+            "region": "AWS Cloud (AWS-ap-south-1 Mumbai)",
+            "status": "ONLINE" if turso2_connected else "OFFLINE",
+            "latency_ms": turso2_latency_ms,
+            "tables": ["news", "opinions"],
+            "news_count": turso2_news_count,
+            "opinions_count": turso2_opinions_count,
+            "storage": {
+                "limit_gb": 5.0,
+                "limit_mb": turso2_limit_mb,
+                "used_mb": turso2_used_mb,
+                "free_mb": turso2_free_mb,
+                "free_gb": round(turso2_free_mb / 1024, 3),
+                "used_percentage": turso2_used_pct,
+                "free_percentage": round(100 - turso2_used_pct, 2)
+            },
+            "controller": "Editorial Admin & Chamber Advocate Access Control (1 Daily Post Limit)",
+            "controlled_modules": [
+                "📰 News & Legal Insights (Public Monograph Feed & Judicial Updates)",
+                "✍️ Today's Legal Opinions (Day-Wise Chamber Editorials & Perspectives)"
+            ],
+            "security_features": [
+                "Strict Parameterized SQL Prepared Statements (Zero SQL Injection)",
+                "Cryptographic Ed25519 Bearer Token Authorization",
+                "Dedicated Second Isolated Turso Cluster (libsql://jsm2-jsm2)",
+                "1-Post-Per-Day Staff Anti-Spam & Quota Guard",
+                "Decoupled Micro-Cloud Content Architecture"
             ]
         }
     }), 200
@@ -4454,6 +4815,10 @@ def invalidate_advocates_cache():
     global _advocates_cache, _advocates_cache_time
     _advocates_cache = None
     _advocates_cache_time = 0
+    try:
+        invalidate_all_public_caches()
+    except Exception:
+        pass
 
 def ensure_chamber_owner_advocate():
     try:
@@ -4499,26 +4864,8 @@ def ensure_chamber_owner_advocate():
 
 @app.route('/api/advocates', methods=['GET'])
 def get_advocates():
-    global _advocates_cache, _advocates_cache_time
-    now = time.time()
-    if _advocates_cache is not None and (now - _advocates_cache_time < 30):
-        return jsonify(_advocates_cache), 200
-
-    advocates = []
-    try:
-        ensure_chamber_owner_advocate()
-        for adv in advocates_col.find().sort([("is_owner", -1), ("_id", 1)]):
-            adv['_id'] = str(adv['_id'])
-            advocates.append(adv)
-        _advocates_cache = advocates
-        _advocates_cache_time = now
-    except Exception as e:
-        logging.error(f"Error fetching advocates: {e}")
-        if _advocates_cache is not None:
-            return jsonify(_advocates_cache), 200
-        return jsonify([]), 200
-        
-    return jsonify(advocates), 200
+    bundle = get_public_bundle()
+    return jsonify(bundle.get("advocates", [])), 200
 
 def save_advocate_image_file(adv_id, img_data):
     try:
@@ -4783,13 +5130,20 @@ def delete_advocate(id):
 
 @app.route('/api/settings', methods=['GET'])
 def get_settings():
-    settings = settings_col.find_one({"_id": "office_info"}) or {}
-    return jsonify(settings), 200
+    bundle = get_public_bundle()
+    return jsonify(bundle.get("settings", {})), 200
+
+@app.route('/api/settings/alert', methods=['GET'])
+def get_settings_alert():
+    bundle = get_public_bundle()
+    settings = bundle.get("settings", {})
+    return jsonify({"footer_alert": settings.get("footer_alert", "")}), 200
 
 @app.route('/api/settings', methods=['POST'])
 def save_settings():
     data = request.json
     settings_col.update_one({"_id": "office_info"}, {"$set": data}, upsert=True)
+    invalidate_all_public_caches()
     return jsonify({"success": True}), 200
 
 
@@ -5110,17 +5464,8 @@ DEFAULT_SERVICES = [
 
 @app.route('/api/services', methods=['GET'])
 def get_services():
-    if services_col is None: return jsonify([])
-    try:
-        if services_col.count_documents({}) == 0:
-            services_col.insert_many(DEFAULT_SERVICES)
-    except Exception as e:
-        logging.error(f"Error seeding services: {e}")
-        
-    services = list(services_col.find().sort("order", 1))
-    for s in services:
-        s['_id'] = str(s['_id'])
-    return jsonify(services), 200
+    bundle = get_public_bundle()
+    return jsonify(bundle.get("services", [])), 200
 
 @app.route('/api/services', methods=['POST'])
 def add_service():
@@ -5138,6 +5483,7 @@ def add_service():
     }
     result = services_col.insert_one(new_service)
     new_service['_id'] = str(result.inserted_id)
+    invalidate_all_public_caches()
     return jsonify(new_service), 201
 
 @app.route('/api/services/<id>', methods=['PUT'])
@@ -5152,12 +5498,14 @@ def update_service(id):
     if 'book_pages' in data: update_fields['book_pages'] = data['book_pages']
     
     services_col.update_one({"_id": ObjectId(id)}, {"$set": update_fields})
+    invalidate_all_public_caches()
     return jsonify({"success": True}), 200
 
 @app.route('/api/services/<id>', methods=['DELETE'])
 def delete_service(id):
     if services_col is None: return jsonify({"error": "DB error"}), 500
     services_col.delete_one({"_id": ObjectId(id)})
+    invalidate_all_public_caches()
     return jsonify({"success": True}), 200
 
 # ==========================================
@@ -5201,23 +5549,11 @@ DEFAULT_NEWS = [
 
 @app.route('/api/news', methods=['GET'])
 def get_news():
-    if news_col is None: return jsonify([])
-    try:
-        if news_col.count_documents({}) == 0:
-            news_col.insert_many(DEFAULT_NEWS)
-    except Exception as e:
-        logging.error(f"Error seeding news: {e}")
-        
-    news = list(news_col.find().sort("date", -1))
-    for n in news:
-        n['_id'] = str(n['_id'])
-        n['image_url'] = n.get('image') or n.get('image_url') or ''
-        n['icon'] = n.get('icon') or '⚖️'
-    return jsonify(news), 200
+    bundle = get_public_bundle()
+    return jsonify(bundle.get("news", [])), 200
 
 @app.route('/api/news', methods=['POST'])
 def add_news():
-    if news_col is None: return jsonify({"error": "DB error"}), 500
     data = request.get_json(force=True, silent=True) or {}
     
     if data.get('is_staff'):
@@ -5227,56 +5563,109 @@ def add_news():
     if not title:
         return jsonify({"error": "Article title is required"}), 400
         
-    new_article = {
-        "title": title,
-        "category": data.get('category', 'Judicial Update').strip(),
-        "date": data.get('date', get_now_ist().strftime("%Y-%m-%d")),
-        "author": data.get('author', 'JSM Chambers').strip(),
-        "author_email": data.get('author_email', '').strip().lower(),
-        "staff_id": data.get('staff_id', '').strip(),
-        "summary": data.get('summary', '').strip(),
-        "content": data.get('content', '').strip(),
-        "icon": data.get('icon', '⚖️').strip(),
-        "image": (data.get('image') or data.get('image_url') or '').strip(),
-        "order": int(data.get('order', 99)),
-        "created_at": get_now_ist().isoformat()
-    }
-    result = news_col.insert_one(new_article)
-    new_article['_id'] = str(result.inserted_id)
-    new_article['image_url'] = new_article['image']
-    return jsonify(new_article), 201
+    article_id = str(uuid.uuid4())
+    category = data.get('category', 'Judicial Update').strip()
+    date_val = data.get('date', get_now_ist().strftime("%Y-%m-%d"))
+    author = data.get('author', 'JSM Chambers').strip()
+    author_email = data.get('author_email', '').strip().lower()
+    staff_id = data.get('staff_id', '').strip()
+    summary = data.get('summary', '').strip()
+    content = data.get('content', '').strip()
+    icon = data.get('icon', '⚖️').strip()
+    image = (data.get('image') or data.get('image_url') or '').strip()
+    order_val = int(data.get('order', 99))
+    created_at = get_now_ist().isoformat()
+    
+    try:
+        execute_turso2_query(
+            'INSERT INTO news (id, title, category, date, author, author_email, staff_id, summary, content, icon, image, display_order, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [article_id, title, category, date_val, author, author_email, staff_id, summary, content, icon, image, order_val, created_at]
+        )
+        new_article = {
+            "_id": article_id,
+            "id": article_id,
+            "title": title,
+            "category": category,
+            "date": date_val,
+            "author": author,
+            "author_email": author_email,
+            "staff_id": staff_id,
+            "summary": summary,
+            "content": content,
+            "icon": icon,
+            "image": image,
+            "image_url": image,
+            "order": order_val,
+            "created_at": created_at
+        }
+        invalidate_all_public_caches()
+        return jsonify(new_article), 201
+    except Exception as e:
+        logging.error(f"Error saving news to Turso 2: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/news/<id>', methods=['PUT'])
 def update_news(id):
-    if news_col is None: return jsonify({"error": "DB error"}), 500
     data = request.get_json(force=True, silent=True) or {}
-    update_fields = {}
-    if 'title' in data: update_fields['title'] = data['title'].strip()
-    if 'category' in data: update_fields['category'] = data['category'].strip()
-    if 'date' in data: update_fields['date'] = data['date'].strip()
-    if 'author' in data: update_fields['author'] = data['author'].strip()
-    if 'summary' in data: update_fields['summary'] = data['summary'].strip()
-    if 'content' in data: update_fields['content'] = data['content'].strip()
-    if 'icon' in data: update_fields['icon'] = data['icon'].strip()
-    if 'image' in data: update_fields['image'] = data['image'].strip()
-    if 'image_url' in data: update_fields['image'] = data['image_url'].strip()
-    if 'order' in data: update_fields['order'] = int(data['order'])
+    fields = []
+    params = []
     
-    news_col.update_one({"_id": ObjectId(id)}, {"$set": update_fields})
-    return jsonify({"success": True}), 200
+    if 'title' in data:
+        fields.append("title = ?")
+        params.append(data['title'].strip())
+    if 'category' in data:
+        fields.append("category = ?")
+        params.append(data['category'].strip())
+    if 'date' in data:
+        fields.append("date = ?")
+        params.append(data['date'].strip())
+    if 'author' in data:
+        fields.append("author = ?")
+        params.append(data['author'].strip())
+    if 'summary' in data:
+        fields.append("summary = ?")
+        params.append(data['summary'].strip())
+    if 'content' in data:
+        fields.append("content = ?")
+        params.append(data['content'].strip())
+    if 'icon' in data:
+        fields.append("icon = ?")
+        params.append(data['icon'].strip())
+    if 'image' in data or 'image_url' in data:
+        fields.append("image = ?")
+        params.append((data.get('image') or data.get('image_url') or '').strip())
+    if 'order' in data or 'display_order' in data:
+        fields.append("display_order = ?")
+        params.append(int(data.get('order') or data.get('display_order') or 99))
+        
+    if not fields:
+        return jsonify({"success": True}), 200
+        
+    params.append(str(id))
+    sql = f"UPDATE news SET {', '.join(fields)} WHERE id = ?"
+    try:
+        execute_turso2_query(sql, params)
+        invalidate_all_public_caches()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        logging.error(f"Error updating news {id} in Turso 2: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/news/<id>', methods=['DELETE'])
 def delete_news(id):
-    if news_col is None: return jsonify({"error": "DB error"}), 500
-    news_col.delete_one({"_id": ObjectId(id)})
-    return jsonify({"success": True}), 200
+    try:
+        execute_turso2_query("DELETE FROM news WHERE id = ?", [str(id)])
+        invalidate_all_public_caches()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        logging.error(f"Error deleting news {id} from Turso 2: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # =========================================================
 # STAFF DASHBOARD NEWS & INSIGHTS (1 Per Day Limit)
 # =========================================================
 @app.route('/api/staff/news-status', methods=['GET'])
 def get_staff_news_status():
-    if news_col is None: return jsonify({"error": "DB error"}), 500
     email = request.args.get('email', '').strip().lower()
     staff_id = request.args.get('staff_id', '').strip()
     
@@ -5285,56 +5674,67 @@ def get_staff_news_status():
         
     today_str = get_now_ist().strftime("%Y-%m-%d")
     
-    # Query for articles matching this staff member
-    or_clauses = []
-    if email:
-        or_clauses.append({"author_email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}})
-    if staff_id:
-        or_clauses.append({"staff_id": staff_id})
-        
-    query_identity = {"$or": or_clauses} if len(or_clauses) > 1 else or_clauses[0]
-    
-    # Check if article already uploaded today
-    today_query = {
-        "$and": [
-            query_identity,
-            {"date": today_str}
-        ]
-    }
-    
-    today_article = news_col.find_one(today_query)
-    if today_article:
-        today_article['_id'] = str(today_article['_id'])
-        today_article['image_url'] = today_article.get('image') or today_article.get('image_url') or ''
-        return jsonify({
-            "can_upload": False,
-            "limit_reached": True,
-            "today": today_str,
-            "today_article": today_article,
-            "message": f"Daily limit reached: You have already published your 1 News & Insights article for today ({today_str}). Next submission opens tomorrow."
-        }), 200
-        
-    # Get past articles by this staff member
     try:
-        past_articles = list(news_col.find(query_identity).sort("date", -1).limit(20))
-        for a in past_articles:
-            a['_id'] = str(a['_id'])
-            a['image_url'] = a.get('image') or a.get('image_url') or ''
-    except Exception as e:
+        if email and staff_id:
+            today_rows = execute_turso2_query(
+                "SELECT * FROM news WHERE date = ? AND (LOWER(author_email) = ? OR staff_id = ?)",
+                [today_str, email, staff_id]
+            )
+            past_rows = execute_turso2_query(
+                "SELECT * FROM news WHERE LOWER(author_email) = ? OR staff_id = ? ORDER BY date DESC LIMIT 20",
+                [email, staff_id]
+            )
+        elif email:
+            today_rows = execute_turso2_query(
+                "SELECT * FROM news WHERE date = ? AND LOWER(author_email) = ?",
+                [today_str, email]
+            )
+            past_rows = execute_turso2_query(
+                "SELECT * FROM news WHERE LOWER(author_email) = ? ORDER BY date DESC LIMIT 20",
+                [email]
+            )
+        else:
+            today_rows = execute_turso2_query(
+                "SELECT * FROM news WHERE date = ? AND staff_id = ?",
+                [today_str, staff_id]
+            )
+            past_rows = execute_turso2_query(
+                "SELECT * FROM news WHERE staff_id = ? ORDER BY date DESC LIMIT 20",
+                [staff_id]
+            )
+            
+        if today_rows:
+            today_art = today_rows[0]
+            today_art['_id'] = today_art.get('id')
+            today_art['image_url'] = today_art.get('image') or ''
+            return jsonify({
+                "can_upload": False,
+                "limit_reached": True,
+                "today": today_str,
+                "today_article": today_art,
+                "message": f"Daily limit reached: You have already published your 1 News & Insights article for today ({today_str}). Next submission opens tomorrow."
+            }), 200
+            
         past_articles = []
-        
-    return jsonify({
-        "can_upload": True,
-        "limit_reached": False,
-        "today": today_str,
-        "today_article": None,
-        "past_articles": past_articles,
-        "message": f"Daily quota available: You are allowed to upload 1 article today ({today_str})."
-    }), 200
+        for a in past_rows:
+            a['_id'] = a.get('id')
+            a['image_url'] = a.get('image') or ''
+            past_articles.append(a)
+            
+        return jsonify({
+            "can_upload": True,
+            "limit_reached": False,
+            "today": today_str,
+            "today_article": None,
+            "past_articles": past_articles,
+            "message": f"Daily quota available: You are allowed to upload 1 article today ({today_str})."
+        }), 200
+    except Exception as e:
+        logging.error(f"Error checking staff news status in Turso 2: {e}")
+        return jsonify({"can_upload": True, "limit_reached": False, "today": today_str, "past_articles": []}), 200
 
 @app.route('/api/staff/news', methods=['POST'])
 def add_staff_news():
-    if news_col is None: return jsonify({"error": "DB error"}), 500
     data = request.get_json(force=True, silent=True) or {}
     
     email = data.get('author_email', '').strip().lower()
@@ -5355,54 +5755,70 @@ def add_staff_news():
         
     today_str = get_now_ist().strftime("%Y-%m-%d")
     
-    # 1-per-day enforcement
-    or_clauses = []
-    if email:
-        or_clauses.append({"author_email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}})
-    if staff_id:
-        or_clauses.append({"staff_id": staff_id})
-    query_identity = {"$or": or_clauses} if len(or_clauses) > 1 else or_clauses[0]
-    
-    existing_today = news_col.find_one({
-        "$and": [
-            query_identity,
-            {"date": today_str}
-        ]
-    })
-    
-    if existing_today:
-        return jsonify({
-            "error": f"Daily limit reached: You have already published 1 News & Insights article today ({today_str}). Only 1 article per staff member per day is allowed. Please try again tomorrow.",
-            "limit_reached": True,
-            "today": today_str,
-            "published_title": existing_today.get('title', '')
-        }), 429
+    try:
+        if email and staff_id:
+            existing = execute_turso2_query(
+                "SELECT * FROM news WHERE date = ? AND (LOWER(author_email) = ? OR staff_id = ?)",
+                [today_str, email, staff_id]
+            )
+        elif email:
+            existing = execute_turso2_query(
+                "SELECT * FROM news WHERE date = ? AND LOWER(author_email) = ?",
+                [today_str, email]
+            )
+        else:
+            existing = execute_turso2_query(
+                "SELECT * FROM news WHERE date = ? AND staff_id = ?",
+                [today_str, staff_id]
+            )
+            
+        if existing:
+            return jsonify({
+                "error": f"Daily limit reached: You have already published 1 News & Insights article today ({today_str}). Only 1 article per staff member per day is allowed. Please try again tomorrow.",
+                "limit_reached": True,
+                "today": today_str,
+                "published_title": existing[0].get('title', '')
+            }), 429
+            
+        article_id = str(uuid.uuid4())
+        category = data.get('category', 'Chamber Insights').strip() or 'Chamber Insights'
+        image = (data.get('image') or data.get('image_url') or '').strip()
+        icon = data.get('icon', '⚖️').strip() or '⚖️'
+        created_at = get_now_ist().isoformat()
         
-    new_article = {
-        "title": title,
-        "category": data.get('category', 'Chamber Insights').strip() or 'Chamber Insights',
-        "date": today_str,
-        "author": author_name,
-        "author_email": email,
-        "staff_id": staff_id,
-        "summary": summary,
-        "content": content or summary,
-        "icon": data.get('icon', '⚖️').strip() or '⚖️',
-        "image": (data.get('image') or data.get('image_url') or '').strip(),
-        "order": 1,
-        "is_staff_post": True,
-        "created_at": get_now_ist().isoformat()
-    }
-    
-    result = news_col.insert_one(new_article)
-    new_article['_id'] = str(result.inserted_id)
-    new_article['image_url'] = new_article['image']
-    
-    return jsonify({
-        "success": True,
-        "message": "News & Insights article published successfully! (Daily quota: 1/1 used for today)",
-        "article": new_article
-    }), 201
+        execute_turso2_query(
+            'INSERT INTO news (id, title, category, date, author, author_email, staff_id, summary, content, icon, image, display_order, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [article_id, title, category, today_str, author_name, email, staff_id, summary, content or summary, icon, image, 1, created_at]
+        )
+        
+        new_article = {
+            "_id": article_id,
+            "id": article_id,
+            "title": title,
+            "category": category,
+            "date": today_str,
+            "author": author_name,
+            "author_email": email,
+            "staff_id": staff_id,
+            "summary": summary,
+            "content": content or summary,
+            "icon": icon,
+            "image": image,
+            "image_url": image,
+            "order": 1,
+            "is_staff_post": True,
+            "created_at": created_at
+        }
+        
+        invalidate_all_public_caches()
+        return jsonify({
+            "success": True,
+            "message": "News & Insights article published successfully! (Daily quota: 1/1 used for today)",
+            "article": new_article
+        }), 201
+    except Exception as e:
+        logging.error(f"Error adding staff news to Turso 2: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # =========================================================
 # TODAY'S OPINION (Day-wise Chamber Editorial & Insights)
@@ -5455,33 +5871,33 @@ def mark_opinions_seeded():
 
 @app.route('/api/opinions', methods=['GET'])
 def get_opinions():
-    if opinions_col is None:
-        return jsonify([])
-    try:
-        if not is_opinions_seeded():
-            if opinions_col.count_documents({}) == 0:
-                opinions_col.insert_many(get_default_opinions())
-            mark_opinions_seeded()
-    except Exception as e:
-        logging.error(f"Error seeding opinions: {e}")
-        
-    try:
-        date_filter = request.args.get('date')
-        query = {"date": date_filter} if date_filter else {}
-        
-        opinions = list(opinions_col.find(query).sort([("date", -1), ("order", 1)]))
-        for op in opinions:
-            op['_id'] = str(op['_id'])
-            op['category'] = op.get('category') or 'Legal Editorial'
-            op['author'] = op.get('author') or 'Chamber Counsel'
-        return jsonify(opinions), 200
-    except Exception as e:
-        logging.error(f"Error fetching opinions: {e}")
-        return jsonify([]), 200
+    date_filter = request.args.get('date')
+    if date_filter:
+        try:
+            rows = execute_turso2_query('SELECT * FROM opinions WHERE date = ? ORDER BY date DESC, display_order ASC', [date_filter])
+            opinions = []
+            for r in rows:
+                opinions.append({
+                    "_id": r.get('id'),
+                    "id": r.get('id'),
+                    "title": r.get('title') or '',
+                    "date": r.get('date') or '',
+                    "author": r.get('author') or 'Chamber Counsel',
+                    "category": r.get('category') or 'Legal Editorial',
+                    "message": r.get('message') or '',
+                    "order": int(r.get('display_order') or r.get('order') or 1),
+                    "created_at": r.get('created_at') or ''
+                })
+            return jsonify(opinions), 200
+        except Exception as e:
+            logging.error(f"Error fetching opinions from Turso 2: {e}")
+            return jsonify([]), 200
+
+    bundle = get_public_bundle()
+    return jsonify(bundle.get("opinions", [])), 200
 
 @app.route('/api/opinions', methods=['POST'])
 def add_opinion():
-    if opinions_col is None: return jsonify({"error": "DB error"}), 500
     try:
         data = request.get_json(force=True, silent=True) or {}
         title = data.get('title', '').strip()
@@ -5494,50 +5910,79 @@ def add_opinion():
         if not message:
             return jsonify({"error": "Opinion message content is required"}), 400
             
+        op_id = str(uuid.uuid4())
+        author = data.get('author', 'Chamber Counsel').strip()
+        category = data.get('category', 'Legal Editorial').strip()
+        order_val = int(data.get('order', 1))
+        created_at = now_ist.strftime("%Y-%m-%d %H:%M:%S")
+        
+        execute_turso2_query(
+            'INSERT INTO opinions (id, title, date, author, category, message, display_order, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [op_id, title, date_val, author, category, message, order_val, created_at]
+        )
+        
         new_op = {
+            "_id": op_id,
+            "id": op_id,
             "title": title,
             "date": date_val,
-            "author": data.get('author', 'Chamber Counsel').strip(),
-            "category": data.get('category', 'Legal Editorial').strip(),
+            "author": author,
+            "category": category,
             "message": message,
-            "order": int(data.get('order', 1)),
-            "created_at": now_ist.strftime("%Y-%m-%d %H:%M:%S")
+            "order": order_val,
+            "created_at": created_at
         }
-        result = opinions_col.insert_one(new_op)
-        new_op['_id'] = str(result.inserted_id)
+        invalidate_all_public_caches()
         return jsonify(new_op), 201
     except Exception as e:
-        logging.error(f"Error adding opinion: {e}")
+        logging.error(f"Error adding opinion to Turso 2: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/opinions/<id>', methods=['PUT'])
 def update_opinion(id):
-    if opinions_col is None: return jsonify({"error": "DB error"}), 500
     try:
         data = request.get_json(force=True, silent=True) or {}
-        update_fields = {}
-        if 'title' in data: update_fields['title'] = data['title'].strip()
-        if 'date' in data: update_fields['date'] = data['date'].strip()
-        if 'author' in data: update_fields['author'] = data['author'].strip()
-        if 'category' in data: update_fields['category'] = data['category'].strip()
-        if 'message' in data: update_fields['message'] = data['message'].strip()
-        if 'order' in data: update_fields['order'] = int(data['order'])
-        
-        opinions_col.update_one({"_id": ObjectId(id)}, {"$set": update_fields})
+        fields = []
+        params = []
+        if 'title' in data:
+            fields.append("title = ?")
+            params.append(data['title'].strip())
+        if 'date' in data:
+            fields.append("date = ?")
+            params.append(data['date'].strip())
+        if 'author' in data:
+            fields.append("author = ?")
+            params.append(data['author'].strip())
+        if 'category' in data:
+            fields.append("category = ?")
+            params.append(data['category'].strip())
+        if 'message' in data:
+            fields.append("message = ?")
+            params.append(data['message'].strip())
+        if 'order' in data or 'display_order' in data:
+            fields.append("display_order = ?")
+            params.append(int(data.get('order') or data.get('display_order') or 1))
+            
+        if not fields:
+            return jsonify({"success": True}), 200
+            
+        params.append(str(id))
+        sql = f"UPDATE opinions SET {', '.join(fields)} WHERE id = ?"
+        execute_turso2_query(sql, params)
+        invalidate_all_public_caches()
         return jsonify({"success": True}), 200
     except Exception as e:
-        logging.error(f"Error updating opinion {id}: {e}")
+        logging.error(f"Error updating opinion {id} in Turso 2: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/opinions/<id>', methods=['DELETE'])
 def delete_opinion(id):
-    if opinions_col is None: return jsonify({"error": "DB error"}), 500
     try:
-        opinions_col.delete_one({"_id": ObjectId(id)})
-        mark_opinions_seeded()
+        execute_turso2_query("DELETE FROM opinions WHERE id = ?", [str(id)])
+        invalidate_all_public_caches()
         return jsonify({"success": True}), 200
     except Exception as e:
-        logging.error(f"Error deleting opinion {id}: {e}")
+        logging.error(f"Error deleting opinion {id} from Turso 2: {e}")
         return jsonify({"error": str(e)}), 500
 
 # =========================================================

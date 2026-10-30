@@ -674,7 +674,7 @@
             <a class="nav-link-soc" onclick="switchSection('databases')">
                 <span class="nav-icon">🗄️</span>
                 <span>4. Database & Storage</span>
-                <span class="nav-badge-pill" id="badge-db-status" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7;">2 CLOUDS</span>
+                <span class="nav-badge-pill" id="badge-db-status" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7;">3 CLOUDS</span>
             </a>
 
             <div class="nav-category">Audits & Incidents</div>
@@ -1157,11 +1157,11 @@
                             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
                                 <span style="font-size: 1.8rem;">🗄️</span>
                                 <h3 style="margin: 0; font-size: 1.35rem; color: var(--accent); font-weight: 900;">
-                                    Dual-Cloud Database Architecture, Storage Telemetry & Governance
+                                    Tri-Cloud Database Architecture, Storage Telemetry & Governance
                                 </h3>
                             </div>
                             <p style="margin: 0; color: var(--text-muted); font-size: 0.88rem; max-width: 820px;">
-                                Real-time storage telemetry, data segregation boundaries, access control permissions, and tamper-prevention shields for <strong>MongoDB Atlas</strong> (Operational Core) and <strong>Turso Cloud</strong> (Archival Vault).
+                                Real-time storage telemetry, data segregation boundaries, access control permissions, and tamper-prevention shields for <strong>MongoDB Atlas</strong> (Operational Core), <strong>Turso Cloud 1</strong> (Archival Vault), and <strong>Turso Cloud 2</strong> (Editorial & Opinions Cloud).
                             </p>
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
@@ -1173,8 +1173,8 @@
                     </div>
                 </div>
 
-                <!-- Dual Database Live Overview Cards -->
-                <div class="overview-grid" style="grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); margin-bottom: 28px;">
+                <!-- Tri-Database Live Overview Cards -->
+                <div class="overview-grid" style="grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); margin-bottom: 28px;">
                     <!-- MongoDB Atlas Card -->
                     <div class="soc-panel" style="border-top: 4px solid #10b981; position: relative;">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
@@ -1183,7 +1183,7 @@
                                     <span style="font-size: 1.5rem;">🍃</span>
                                     <h4 style="margin: 0; font-size: 1.15rem; color: #ffffff; font-weight: 800;">MongoDB Atlas Cloud</h4>
                                 </div>
-                                <span style="font-size: 0.75rem; color: #10b981; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Operational Data Engine</span>
+                                <span style="font-size: 0.75rem; color: #10b981; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Operational Core (NoSQL)</span>
                             </div>
                             <span id="mongo-status-badge" class="nav-badge-pill" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid #10b981;">
                                 ● ONLINE · TLS 1.3
@@ -1227,20 +1227,20 @@
                                 <strong>🔑 Primary Controller:</strong> <span style="color: #ffffff;">Chamber Admin & Staff (RBAC Governed)</span>
                             </div>
                             <div style="color: var(--text-muted);">
-                                <strong>📦 Scope:</strong> All active operations, appointments, active cases, fees, staff, opinions, news & settings.
+                                <strong>📦 Scope:</strong> Active Cases, Appointments, OTP, Staff, Fees, Books & Settings.
                             </div>
                         </div>
                     </div>
 
-                    <!-- Turso Edge Database Card -->
+                    <!-- Turso 1 Archival Database Card -->
                     <div class="soc-panel" style="border-top: 4px solid var(--cyan); position: relative;">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
                             <div>
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <span style="font-size: 1.5rem;">⚡</span>
-                                    <h4 style="margin: 0; font-size: 1.15rem; color: #ffffff; font-weight: 800;">Turso Cloud Database</h4>
+                                    <h4 style="margin: 0; font-size: 1.15rem; color: #ffffff; font-weight: 800;">Turso Cloud 1 (Archival)</h4>
                                 </div>
-                                <span style="font-size: 0.75rem; color: var(--cyan); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Archival Vault (libSQL Edge)</span>
+                                <span style="font-size: 0.75rem; color: var(--cyan); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Clients Directory Vault (libSQL)</span>
                             </div>
                             <span id="turso-status-badge" class="nav-badge-pill" style="background: rgba(0, 242, 254, 0.15); color: #a5f3fc; border: 1px solid var(--cyan);">
                                 ● ONLINE · Ed25519
@@ -1268,7 +1268,7 @@
                         <div style="margin-bottom: 16px;">
                             <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 6px;">
                                 <span style="color: var(--text-muted);">Storage Capacity (Turso 5GB Starter Tier):</span>
-                                <span style="font-weight: 700; color: #ffffff;"><span id="turso-used-mb">0.19 MB</span> / 5,120.0 MB (5.0 GB)</span>
+                                <span style="font-weight: 700; color: #ffffff;"><span id="turso-used-mb">0.19 MB</span> / 5,120.0 MB</span>
                             </div>
                             <div style="width: 100%; height: 10px; background: rgba(255, 255, 255, 0.1); border-radius: 999px; overflow: hidden; position: relative;">
                                 <div id="turso-progress-bar" style="width: 0.01%; height: 100%; background: linear-gradient(90deg, #00f2fe, #4facfe); border-radius: 999px; transition: width 0.5s ease;"></div>
@@ -1284,7 +1284,64 @@
                                 <strong>🔑 Primary Controller:</strong> <span style="color: #ffffff;">Admin Archival Lock (Zero Direct Client Access)</span>
                             </div>
                             <div style="color: var(--text-muted);">
-                                <strong>📦 Scope:</strong> Exclusively Clients Directory / History, final closing remarks & document photos.
+                                <strong>📦 Scope:</strong> Exclusively Clients Directory / History, final case remarks & document photos.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Turso 2 Content Database Card -->
+                    <div class="soc-panel" style="border-top: 4px solid #a855f7; position: relative;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 1.5rem;">📰</span>
+                                    <h4 style="margin: 0; font-size: 1.15rem; color: #ffffff; font-weight: 800;">Turso Cloud 2 (Content)</h4>
+                                </div>
+                                <span style="font-size: 0.75rem; color: #c084fc; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">News & Opinions Cloud (libSQL)</span>
+                            </div>
+                            <span id="turso2-status-badge" class="nav-badge-pill" style="background: rgba(168, 85, 247, 0.15); color: #d8b4fe; border: 1px solid #a855f7;">
+                                ● ONLINE · Ed25519
+                            </span>
+                        </div>
+
+                        <div style="background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center;">
+                                <div>
+                                    <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase;">News Articles</div>
+                                    <div id="turso2-news-count" style="font-size: 1.25rem; font-weight: 800; color: #ffffff; margin-top: 2px;">2</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase;">Legal Opinions</div>
+                                    <div id="turso2-opinions-count" style="font-size: 1.25rem; font-weight: 800; color: #ffffff; margin-top: 2px;">3</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase;">Pipeline Latency</div>
+                                    <div id="turso2-latency" style="font-size: 1.25rem; font-weight: 800; color: #c084fc; margin-top: 2px;">~85ms</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Storage Capacity Bar -->
+                        <div style="margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 6px;">
+                                <span style="color: var(--text-muted);">Storage Capacity (Turso 5GB Starter Tier):</span>
+                                <span style="font-weight: 700; color: #ffffff;"><span id="turso2-used-mb">0.05 MB</span> / 5,120.0 MB</span>
+                            </div>
+                            <div style="width: 100%; height: 10px; background: rgba(255, 255, 255, 0.1); border-radius: 999px; overflow: hidden; position: relative;">
+                                <div id="turso2-progress-bar" style="width: 0.01%; height: 100%; background: linear-gradient(90deg, #a855f7, #c084fc); border-radius: 999px; transition: width 0.5s ease;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-dim); margin-top: 6px;">
+                                <span>Used: <strong id="turso2-used-pct" style="color: #d8b4fe;">0.01%</strong></span>
+                                <span>Remaining: <strong id="turso2-free-gb" style="color: #c084fc;">4.999 GB (99.99% Free)</strong></span>
+                            </div>
+                        </div>
+
+                        <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 12px; font-size: 0.8rem; line-height: 1.5;">
+                            <div style="color: var(--text-muted); margin-bottom: 4px;">
+                                <strong>🔑 Primary Controller:</strong> <span style="color: #ffffff;">Editorial Admin & Staff (1 Post/Day Guard)</span>
+                            </div>
+                            <div style="color: var(--text-muted);">
+                                <strong>📦 Scope:</strong> Exclusively 📰 News & Insights and ✍️ Today's Legal Opinions.
                             </div>
                         </div>
                     </div>
@@ -1423,21 +1480,21 @@
                                     <td>TLS 1.3 / HTTPS</td>
                                     <td><span class="badge-status status-high" style="background: rgba(16,185,129,0.15); color: #6ee7b7; border-color: #10b981;">SECURE</span></td>
                                 </tr>
-                                <tr>
+                                <tr style="background: rgba(168, 85, 247, 0.05); border-left: 3px solid #a855f7;">
                                     <td><strong>📰 News & Legal Insights</strong></td>
-                                    <td><span style="color: #10b981; font-weight: 700;">MongoDB Atlas</span></td>
+                                    <td><span style="color: #c084fc; font-weight: 800;">Turso 2 Cloud (libSQL)</span></td>
                                     <td>Published high court legal articles, commentary, chamber press updates</td>
-                                    <td>Admin Editorial Control</td>
-                                    <td>TLS 1.3 / HTTPS</td>
-                                    <td><span class="badge-status status-high" style="background: rgba(16,185,129,0.15); color: #6ee7b7; border-color: #10b981;">SECURE</span></td>
+                                    <td>Editorial Admin & Staff (1 Post/Day Guard)</td>
+                                    <td>libSQL Pipeline / HTTPS</td>
+                                    <td><span class="badge-status status-high" style="background: rgba(168,85,247,0.15); color: #d8b4fe; border-color: #a855f7;">DEDICATED CLOUD</span></td>
                                 </tr>
-                                <tr>
+                                <tr style="background: rgba(168, 85, 247, 0.05); border-left: 3px solid #a855f7;">
                                     <td><strong>✍️ Today's Opinions</strong></td>
-                                    <td><span style="color: #10b981; font-weight: 700;">MongoDB Atlas</span></td>
+                                    <td><span style="color: #c084fc; font-weight: 800;">Turso 2 Cloud (libSQL)</span></td>
                                     <td>Senior advocate jurisprudence notes, case law interpretations</td>
-                                    <td>Lead Counsel Exclusive</td>
-                                    <td>TLS 1.3 / HTTPS</td>
-                                    <td><span class="badge-status status-high" style="background: rgba(16,185,129,0.15); color: #6ee7b7; border-color: #10b981;">SECURE</span></td>
+                                    <td>Lead Counsel & Editorial Admin</td>
+                                    <td>libSQL Pipeline / HTTPS</td>
+                                    <td><span class="badge-status status-high" style="background: rgba(168,85,247,0.15); color: #d8b4fe; border-color: #a855f7;">DEDICATED CLOUD</span></td>
                                 </tr>
                                 <tr>
                                     <td><strong>📖 Expertise & Books</strong></td>
@@ -1473,7 +1530,7 @@
                                 </tr>
                                 <tr style="background: rgba(0, 242, 254, 0.05); border-left: 3px solid var(--cyan);">
                                     <td><strong>📁 Clients Directory / History</strong></td>
-                                    <td><span style="color: var(--cyan); font-weight: 800;">Turso Cloud (libSQL)</span></td>
+                                    <td><span style="color: var(--cyan); font-weight: 800;">Turso 1 Cloud (libSQL)</span></td>
                                     <td>Permanent finished case files, closing remarks, completion dates, billing totals</td>
                                     <td>Admin-Only Archival Lock (Zero Client Access)</td>
                                     <td>libSQL Pipeline / HTTPS</td>
@@ -1481,8 +1538,11 @@
                                 </tr>
                                 <tr style="background: rgba(0, 242, 254, 0.05); border-left: 3px solid var(--cyan);">
                                     <td><strong>🖼️ Case Document Images</strong></td>
-                                    <td><span style="color: var(--cyan); font-weight: 800;">Turso Cloud (libSQL)</span></td>
+                                    <td><span style="color: var(--cyan); font-weight: 800;">Turso 1 Cloud (libSQL)</span></td>
                                     <td>Court judgment copies, decrees, orders, client verification photos (up to 3)</td>
+                                    <td>Admin-Only Archival Lock</td>
+                                    <td>libSQL Pipeline / HTTPS</td>
+                                    <td><span class="badge-status status-high" style="background: rgba(0,242,254,0.15); color: #a5f3fc; border-color: var(--cyan);">PROTECTED</span></td>
                                     <td>Admin-Only Archival Lock</td>
                                     <td>libSQL Pipeline / HTTPS</td>
                                     <td><span class="badge-status status-high" style="background: rgba(0,242,254,0.15); color: #a5f3fc; border-color: var(--cyan);">PROTECTED</span></td>
@@ -1815,7 +1875,7 @@
                     mBar.style.width = `${Math.max(1, mStorage.used_percentage || 1)}%`;
                 }
 
-                // Turso Cloud Elements
+                // Turso 1 Cloud Elements
                 const turso = data.turso || {};
                 const tStorage = turso.storage || {};
                 const tBadge = document.getElementById('turso-status-badge');
@@ -1841,6 +1901,34 @@
                 const tBar = document.getElementById('turso-progress-bar');
                 if (tBar) {
                     tBar.style.width = `${Math.max(0.5, tStorage.used_percentage || 0.5)}%`;
+                }
+
+                // Turso 2 Cloud Elements (Content / News & Opinions)
+                const turso2 = data.turso2 || {};
+                const t2Storage = turso2.storage || {};
+                const t2Badge = document.getElementById('turso2-status-badge');
+                if (t2Badge) {
+                    t2Badge.innerText = `● ${turso2.status} · ${turso2.latency_ms}ms · Ed25519`;
+                    t2Badge.style.background = turso2.status === 'ONLINE' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(239, 68, 68, 0.2)';
+                    t2Badge.style.color = turso2.status === 'ONLINE' ? '#d8b4fe' : '#fca5a5';
+                    t2Badge.style.borderColor = turso2.status === 'ONLINE' ? '#a855f7' : '#ef4444';
+                }
+                const t2News = document.getElementById('turso2-news-count');
+                if (t2News) t2News.innerText = turso2.news_count || 0;
+                const t2Opinions = document.getElementById('turso2-opinions-count');
+                if (t2Opinions) t2Opinions.innerText = turso2.opinions_count || 0;
+                const t2Lat = document.getElementById('turso2-latency');
+                if (t2Lat) t2Lat.innerText = `${turso2.latency_ms}ms`;
+
+                const t2UsedMb = document.getElementById('turso2-used-mb');
+                if (t2UsedMb) t2UsedMb.innerText = `${t2Storage.used_mb || 0} MB`;
+                const t2UsedPct = document.getElementById('turso2-used-pct');
+                if (t2UsedPct) t2UsedPct.innerText = `${t2Storage.used_percentage || 0}%`;
+                const t2FreeGb = document.getElementById('turso2-free-gb');
+                if (t2FreeGb) t2FreeGb.innerText = `${t2Storage.free_gb || 5.0} GB (${t2Storage.free_percentage || 100}% Free)`;
+                const t2Bar = document.getElementById('turso2-progress-bar');
+                if (t2Bar) {
+                    t2Bar.style.width = `${Math.max(0.5, t2Storage.used_percentage || 0.5)}%`;
                 }
 
             } catch (err) {
