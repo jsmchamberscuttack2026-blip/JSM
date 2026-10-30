@@ -2318,22 +2318,33 @@
                     <div id="view-file-notes-display" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; color: #334155; line-height: 1.6; white-space: pre-wrap; min-height: 60px;">No notes recorded.</div>
                 </div>
 
-                <!-- Case File Document Images (Up to 3) with full-screen zoom -->
+                <!-- Case File Document Images (Up to 3) with full-screen zoom & upload -->
                 <div style="margin-bottom: 1.8rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
                         <h4 style="margin: 0; color: #0A192F; font-size: 1rem;">📷 Case File Images & Documents</h4>
-                        <span id="view-file-images-count" style="font-size: 0.8rem; background: #e2e8f0; padding: 2px 8px; border-radius: 12px; color: #475569; font-weight: 700;">0 Images</span>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <span id="view-file-images-count" style="font-size: 0.8rem; background: #e2e8f0; padding: 2px 8px; border-radius: 12px; color: #475569; font-weight: 700;">0 Images</span>
+                            <label for="view-file-image-upload-input" class="btn" style="background: #2563eb; color: white; padding: 4px 12px; font-size: 0.82rem; font-weight: 600; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; margin: 0;">
+                                📤 Upload Images (Up to 3)
+                            </label>
+                            <input type="file" id="view-file-image-upload-input" accept="image/*" multiple onchange="uploadImagesToCurrentArchivedFile(event)" style="display: none;">
+                        </div>
                     </div>
                     <div id="view-file-images-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px;">
                         <!-- Images rendered dynamically -->
                     </div>
                 </div>
 
-                <!-- Action Toolbar (View, Print & Delete Only - No Edit for Finished Files) -->
+                <!-- Action Toolbar (Print, Edit Case File, and Delete) -->
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 1.2rem;">
-                    <button class="btn btn-primary" onclick="printCurrentArchivedFile()" style="background: #0A192F; color: white; display: flex; align-items: center; gap: 6px; padding: 0.6rem 1.2rem; border-radius: 8px;">
-                        🖨️ Print Final Report
-                    </button>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="printCurrentArchivedFile()" style="background: #0A192F; color: white; display: flex; align-items: center; gap: 6px; padding: 0.6rem 1.2rem; border-radius: 8px;">
+                            🖨️ Print Final Report
+                        </button>
+                        <button class="btn btn-outline" onclick="editCurrentArchivedFile()" style="border-color: #D4AF37; color: #0A192F; background: #fffdf5; font-weight: 700; display: flex; align-items: center; gap: 6px; padding: 0.6rem 1.2rem; border-radius: 8px;">
+                            ✏️ Edit Finished Case File
+                        </button>
+                    </div>
                     <button class="btn" onclick="deleteCurrentArchivedFile()" style="background: #ef4444; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 8px;">
                         🗑️ Delete Record
                     </button>
@@ -2348,6 +2359,6 @@
         <span onclick="closeImageLightbox()" style="position: absolute; top: 20px; right: 30px; font-size: 2.5rem; color: white; cursor: pointer;">&times;</span>
     </div>
 
-    <script src="js/admin.js?v=42"></script>
+    <script src="js/admin.js?v=43"></script>
 </body>
 </html>

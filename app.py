@@ -4283,22 +4283,37 @@ def get_special_otp_logs():
         return jsonify({"error": str(e)}), 500
 
 
+_advocates_cache = None
+_advocates_cache_time = 0
+
+def invalidate_advocates_cache():
+    global _advocates_cache, _advocates_cache_time
+    _advocates_cache = None
+    _advocates_cache_time = 0
+
 def ensure_chamber_owner_advocate():
     try:
-        setting_doc = settings_col.find_one({"_id": "office_info"}) or {}
+        # Fast check: if owner already exists, return immediately without loading large settings doc
+        owner_adv = advocates_col.find_one({"is_owner": True}, {"_id": 1})
+        if owner_adv:
+            return
+
+        setting_doc = settings_col.find_one(
+            {"_id": "office_info"},
+            {"about_chamber_owner_name": 1, "email": 1, "phone": 1, "address": 1}
+        ) or {}
         owner_name = str(setting_doc.get("about_chamber_owner_name", "") or "").strip() or "Adv. Jayasankar Mishra"
         owner_email = str(setting_doc.get("email", "") or "").strip() or "jsmchamberscuttack2026@gmail.com"
         owner_phone = str(setting_doc.get("phone", "") or "").strip() or "+91 736353763"
-        owner_img = setting_doc.get("about_chamber_owner_image") or setting_doc.get("about_chamber_image1") or "assets/images/advocate_logo.jpg"
+        owner_img = "assets/images/advocate_logo.jpg"
         owner_specialty = "35 years of advocacy; specialized in Constitutional Law, Civil Law, Insurance and Banking Law, Education and Technical Education Law, Service and Industrial Law, Land."
         owner_role = "Chamber Owner & Lead Counsel"
         owner_location = str(setting_doc.get("address", "") or "").strip() or "High Court of Orissa, Cuttack"
 
-        owner_adv = advocates_col.find_one({"is_owner": True})
-        if not owner_adv:
-            owner_adv = advocates_col.find_one({"name": owner_name})
-            
-        if not owner_adv:
+        existing = advocates_col.find_one({"name": owner_name})
+        if existing:
+            advocates_col.update_one({"_id": existing["_id"]}, {"$set": {"is_owner": True}})
+        else:
             advocates_col.insert_one({
                 "is_owner": True,
                 "name": owner_name,
@@ -4315,19 +4330,30 @@ def ensure_chamber_owner_advocate():
                 "access_voice": True,
                 "welcome_mail_sent": True
             })
-        else:
-            if not owner_adv.get("is_owner"):
-                advocates_col.update_one({"_id": owner_adv["_id"]}, {"$set": {"is_owner": True}})
     except Exception as e:
         logging.error(f"Error ensuring chamber owner advocate: {e}")
 
 @app.route('/api/advocates', methods=['GET'])
 def get_advocates():
-    ensure_chamber_owner_advocate()
+    global _advocates_cache, _advocates_cache_time
+    now = time.time()
+    if _advocates_cache is not None and (now - _advocates_cache_time < 30):
+        return jsonify(_advocates_cache), 200
+
     advocates = []
-    for adv in advocates_col.find().sort([("is_owner", -1), ("_id", 1)]):
-        adv['_id'] = str(adv['_id'])
-        advocates.append(adv)
+    try:
+        ensure_chamber_owner_advocate()
+        for adv in advocates_col.find().sort([("is_owner", -1), ("_id", 1)]):
+            adv['_id'] = str(adv['_id'])
+            advocates.append(adv)
+        _advocates_cache = advocates
+        _advocates_cache_time = now
+    except Exception as e:
+        logging.error(f"Error fetching advocates: {e}")
+        if _advocates_cache is not None:
+            return jsonify(_advocates_cache), 200
+        return jsonify([]), 200
+        
     return jsonify(advocates), 200
 
 def save_advocate_image_file(adv_id, img_data):
@@ -4405,6 +4431,7 @@ def add_advocate():
     if image_url:
         save_advocate_image_file(adv_id, image_url)
     
+    invalidate_advocates_cache()
     return jsonify({"message": "Advocate added", "id": adv_id, "password": "OTP Only"}), 201
 
 @app.route('/api/advocates/<id>/send-welcome-mail', methods=['POST'])
@@ -4571,6 +4598,7 @@ def update_advocate(id):
             if office_update:
                 settings_col.update_one({"_id": "office_info"}, {"$set": office_update}, upsert=True)
                 
+        invalidate_advocates_cache()
         return jsonify({"message": "Advocate updated successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -4583,6 +4611,7 @@ def delete_advocate(id):
             return jsonify({"error": "Chamber Owner is permanent and cannot be deleted."}), 400
         result = advocates_col.delete_one({"_id": ObjectId(id)})
         if result.deleted_count:
+            invalidate_advocates_cache()
             return jsonify({"message": "Advocate deleted"}), 200
         return jsonify({"error": "Advocate not found"}), 404
     except Exception as e:
@@ -4705,6 +4734,7 @@ def update_advocate_access(id):
                 "access_voice": data.get('access_voice', False)
             }}
         )
+        invalidate_advocates_cache()
         return jsonify({"message": "Access updated"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

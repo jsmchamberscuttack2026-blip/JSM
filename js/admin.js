@@ -691,8 +691,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${imagesBadge}</td>
                     <td><span class="badge" style="background: #e2e8f0; color: #334155; font-weight: 700;">${c.status || 'Finished & Archived'}</span></td>
                     <td style="text-align: right; white-space: nowrap;">
-                        <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.82rem; margin-right: 6px;" onclick="openArchivedFileModal('${c._id}')">📂 Open File</button>
-                        <button class="btn" style="background:#e74c3c; color:white; padding: 4px 10px; font-size: 0.82rem;" onclick="deleteArchivedCase('${c._id}')">Delete</button>
+                        <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.82rem; margin-right: 4px;" onclick="openArchivedFileModal('${c._id}')">📂 Open File</button>
+                        <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.82rem; margin-right: 4px; border-color: #D4AF37; color: #0A192F; font-weight: 600;" onclick="openAddArchivedCaseModalById('${c._id}')">✏️ Edit</button>
+                        <button class="btn" style="background:#e74c3c; color:white; padding: 4px 8px; font-size: 0.82rem;" onclick="deleteArchivedCase('${c._id}')">Delete</button>
                     </td>
                 `;
                 archivedCasesTbody.appendChild(tr);
@@ -1575,19 +1576,114 @@ if (officeInfoForm) {
                         <img src="${imgSrc}" style="width: 100%; height: 160px; object-fit: cover; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'" onclick="openImageLightbox('${imgSrc}')">
                         <div style="padding: 6px 10px; background: white; font-size: 0.78rem; font-weight: 700; color: #475569; display: flex; justify-content: space-between; align-items: center;">
                             <span>Document #${idx + 1}</span>
-                            <span style="color: #2563eb; cursor: pointer;" onclick="openImageLightbox('${imgSrc}')">🔍 Zoom</span>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span style="color: #2563eb; cursor: pointer;" onclick="openImageLightbox('${imgSrc}')">🔍 Zoom</span>
+                                <span style="color: #ef4444; cursor: pointer;" title="Remove this document" onclick="removeImageFromCurrentArchivedFile(${idx})">🗑️ Delete</span>
+                            </div>
                         </div>
                     `;
                     imagesGrid.appendChild(card);
                 });
             } else {
-                imagesGrid.innerHTML = '<div style="grid-column: 1 / -1; padding: 1.5rem; background: #f8fafc; border-radius: 8px; text-align: center; color: #94a3b8; font-size: 0.9rem;">No document images attached to this case. Click "Edit Details / Images" to upload up to 3 images.</div>';
+                imagesGrid.innerHTML = '<div style="grid-column: 1 / -1; padding: 1.5rem; background: #f8fafc; border-radius: 8px; text-align: center; color: #94a3b8; font-size: 0.9rem;">No document images attached to this finished case yet. Click "📤 Upload Images" above to add up to 3 case files.</div>';
             }
 
             document.getElementById('view-archived-file-modal').style.display = 'flex';
         } catch (err) {
             console.error(err);
             showToast('Failed to load case file details.', 'error');
+        }
+    };
+
+    window.openAddArchivedCaseModalById = async function(id) {
+        let found = (window.allArchivedCasesList || []).find(c => (c._id === id || c.id === id));
+        if (!found) {
+            try {
+                const res = await fetch(`/api/cases/${id}`);
+                if (res.ok) found = await res.json();
+            } catch(e) {}
+        }
+        if (found) {
+            window.openAddArchivedCaseModal(found);
+        } else {
+            showToast("Case record not found.", "error");
+        }
+    };
+
+    window.uploadImagesToCurrentArchivedFile = async function(event) {
+        if (!window.activeViewedArchivedCase) return;
+        const files = Array.from(event.target.files || []);
+        if (!files.length) return;
+
+        let currentImages = Array.isArray(window.activeViewedArchivedCase.images) ? [...window.activeViewedArchivedCase.images] : [];
+        const remainingSlots = 3 - currentImages.length;
+        if (remainingSlots <= 0) {
+            showToast('Maximum 3 images allowed per finished case. Please remove an existing image first.', 'error');
+            event.target.value = '';
+            return;
+        }
+
+        const filesToProcess = files.slice(0, remainingSlots);
+        const readPromises = filesToProcess.map(file => {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.readAsDataURL(file);
+            });
+        });
+
+        try {
+            showToast('Processing and uploading images to Turso...');
+            const newImages = await Promise.all(readPromises);
+            const updatedImages = [...currentImages, ...newImages].slice(0, 3);
+            const id = window.activeViewedArchivedCase._id || window.activeViewedArchivedCase.id;
+
+            const res = await fetch(`/api/archived-cases/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ images: updatedImages })
+            });
+
+            if (res.ok) {
+                showToast('Images successfully saved to Turso Directory!');
+                window.activeViewedArchivedCase.images = updatedImages;
+                await window.loadArchivedCases();
+                window.openArchivedFileModal(id);
+            } else {
+                showToast('Failed to save uploaded images to Turso.', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Error uploading images to Turso.', 'error');
+        }
+        event.target.value = '';
+    };
+
+    window.removeImageFromCurrentArchivedFile = async function(index) {
+        if (!window.activeViewedArchivedCase) return;
+        if (!confirm('Are you sure you want to remove this document image?')) return;
+        
+        let currentImages = Array.isArray(window.activeViewedArchivedCase.images) ? [...window.activeViewedArchivedCase.images] : [];
+        currentImages.splice(index, 1);
+        const id = window.activeViewedArchivedCase._id || window.activeViewedArchivedCase.id;
+
+        try {
+            const res = await fetch(`/api/archived-cases/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ images: currentImages })
+            });
+            if (res.ok) {
+                showToast('Document image removed successfully!');
+                window.activeViewedArchivedCase.images = currentImages;
+                await window.loadArchivedCases();
+                window.openArchivedFileModal(id);
+            } else {
+                showToast('Failed to remove image from Turso.', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Error removing image.', 'error');
         }
     };
 
@@ -2659,9 +2755,23 @@ window.printCaseDetails = async function(id) {
                     <h3>Administrative Notes</h3>
                     <p>${c.notes ? c.notes.replace(/\n/g, '<br>') : 'No notes recorded.'}</p>
                 </div>
+
+                ${(c.images && Array.isArray(c.images) && c.images.length > 0) ? `
+                <div class="section">
+                    <h3>Attached Case Documents (${c.images.length})</h3>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px;">
+                        ${c.images.map((img, idx) => `
+                            <div style="border: 1px solid #ccc; padding: 6px; border-radius: 6px; background: #fafafa;">
+                                <img src="${img}" style="max-height: 200px; max-width: 240px; object-fit: contain; display: block;">
+                                <div style="font-size: 11px; text-align: center; color: #555; padding-top: 4px; font-weight: bold;">Document #${idx + 1}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>` : ''}
                 
-                <div style="text-align: center; margin-top: 50px;">
-                    <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background: #0A192F; color: white; border: none; border-radius: 4px;">Print Report</button>
+                <div style="text-align: center; margin-top: 40px; display: flex; justify-content: center; gap: 15px;">
+                    <button onclick="window.print()" style="padding: 10px 24px; font-size: 15px; cursor: pointer; background: #0A192F; color: white; border: none; border-radius: 6px; font-weight: bold;">🖨️ Print Report</button>
+                    <button onclick="if(window.opener && window.opener.openAddArchivedCaseModalById) { window.opener.openAddArchivedCaseModalById('${id}'); window.close(); } else { alert('Please edit from the admin dashboard.'); }" style="padding: 10px 24px; font-size: 15px; cursor: pointer; background: #D4AF37; color: #0A192F; border: 1px solid #0A192F; border-radius: 6px; font-weight: bold;">✏️ Edit Case</button>
                 </div>
             </body>
             </html>
