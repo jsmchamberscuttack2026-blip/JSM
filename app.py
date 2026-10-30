@@ -1716,6 +1716,7 @@ def get_public_bundle():
                 for s in services_col.find().sort("order", 1):
                     sc = dict(s)
                     sc['_id'] = str(sc['_id'])
+                    sc['id'] = str(sc['_id'])
                     srvs.append(sc)
             return srvs
         except Exception as e:
@@ -1936,12 +1937,41 @@ def serve_index():
         # Ensure owner name in index.html is updated server-side for initial crawl
         html = re.sub(r'(<h2\s+id=["\']about-doc-owner-name["\'][^>]*>)(.*?)(</h2>)', f'\\g<1>{owner_name}\\g<3>', html)
         
+        # Dynamically render active services and 3D books into #services-grid in index.html
+        srv_cards_html = []
+        for idx, srv in enumerate(bundle.get("services", [])):
+            s_id = str(srv.get("_id") or srv.get("id"))
+            s_title = srv.get("title") or "Legal Expertise"
+            s_desc = srv.get("short_desc") or srv.get("summary") or ""
+            s_icon = srv.get("icon") or "⚖"
+            is_img_icon = s_icon.startswith(('data:', 'http://', 'https://', '/'))
+            if is_img_icon:
+                icon_html = f'<img src="{s_icon}" style="width: 38px; height: 38px; object-fit: contain; border-radius: 6px;">'
+            else:
+                icon_html = s_icon
+            num_str = f"{idx + 1:02d}"
+            card_html = f'''
+                <div class="service-card" onclick="openServiceBook('{s_id}')" style="cursor: pointer;">
+                    <div class="service-number">{num_str}</div>
+                    <div class="service-icon" style="display: flex; align-items: center; justify-content: center; overflow: hidden;">{icon_html}</div>
+                    <h3>{s_title}</h3>
+                    <p>{s_desc}</p>
+                    <div class="service-link" role="button" tabindex="0" onclick="event.stopPropagation(); openServiceBook('{s_id}')" style="cursor: pointer;">
+                        Explore Service →
+                    </div>
+                </div>'''
+            srv_cards_html.append(card_html)
+        
+        if srv_cards_html:
+            new_grid = f'<div class="service-grid" id="services-grid">{"".join(srv_cards_html)}\n            </div>'
+            html = re.sub(r'<div class="service-grid" id="services-grid">.*?</div>', new_grid, html, count=1, flags=re.DOTALL)
+
         # Inject ultra-lightweight hydration script right before </head> for instantaneous 0ms frame-1 render (98% smaller payload)
         slim_bundle = make_slim_public_bundle(bundle)
         hydration_json = json.dumps(slim_bundle, ensure_ascii=False)
         hydration_script = f'<script id="__INITIAL_DATA__">window.__INITIAL_DATA__ = {hydration_json};</script>'
         html = html.replace('</head>', f'{hydration_script}\n</head>', 1)
-        
+
         _public_cache["index_html"] = html
         return Response(html, mimetype='text/html')
     except Exception as e:
@@ -5785,49 +5815,123 @@ DEFAULT_SERVICES = [
 
 @app.route('/api/services', methods=['GET'])
 def get_services():
+    # If explicitly requested with fresh timestamp or no-store (e.g. Admin Dashboard), query MongoDB directly
+    if request.args.get('t') or request.headers.get('Cache-Control') == 'no-store':
+        srvs = []
+        try:
+            if services_col is not None:
+                for s in services_col.find().sort("order", 1):
+                    sc = dict(s)
+                    sc['_id'] = str(sc['_id'])
+                    sc['id'] = str(sc['_id'])
+                    srvs.append(sc)
+                return jsonify(srvs), 200
+        except Exception as e:
+            logging.error(f"Error fetching direct services: {e}")
     bundle = get_public_bundle()
     return jsonify(bundle.get("services", [])), 200
 
-@app.route('/api/services', methods=['POST'])
+@app.route('/api/services', methods=['POST', 'OPTIONS'])
 def add_service():
+    if request.method == 'OPTIONS':
+        return '', 204
     if services_col is None: return jsonify({"error": "DB error"}), 500
     data = request.get_json(force=True, silent=True) or {}
     title = data.get('title', '').strip()
     if not title:
         return jsonify({"error": "Service title is required"}), 400
+    
+    book_pages = data.get('book_pages', [])
+    if not book_pages or not isinstance(book_pages, list):
+        book_pages = [{
+            "chapter": f"{title} Practice & Overview",
+            "content": data.get('short_desc', '').strip() or f"Comprehensive legal representation and strategic counsel in {title}.",
+            "images": []
+        }]
+
     new_service = {
         "title": title,
         "short_desc": data.get('short_desc', '').strip(),
-        "icon": data.get('icon', '⚖').strip(),
+        "icon": data.get('icon', '⚖').strip() or '⚖',
         "order": int(data.get('order', 99)),
-        "book_pages": data.get('book_pages', [])
+        "book_pages": book_pages
     }
     result = services_col.insert_one(new_service)
     new_service['_id'] = str(result.inserted_id)
+    new_service['id'] = str(result.inserted_id)
     invalidate_all_public_caches()
     return jsonify(new_service), 201
 
-@app.route('/api/services/<id>', methods=['PUT'])
+@app.route('/api/services/<id>', methods=['PUT', 'POST', 'OPTIONS'])
 def update_service(id):
+    if request.method == 'OPTIONS':
+        return '', 204
     if services_col is None: return jsonify({"error": "DB error"}), 500
     data = request.get_json(force=True, silent=True) or {}
     update_fields = {}
     if 'title' in data: update_fields['title'] = data['title'].strip()
     if 'short_desc' in data: update_fields['short_desc'] = data['short_desc'].strip()
     if 'icon' in data: update_fields['icon'] = data['icon'].strip()
-    if 'order' in data: update_fields['order'] = int(data['order'])
+    if 'order' in data:
+        try:
+            update_fields['order'] = int(data['order'])
+        except Exception:
+            pass
     if 'book_pages' in data: update_fields['book_pages'] = data['book_pages']
     
-    services_col.update_one({"_id": ObjectId(id)}, {"$set": update_fields})
-    invalidate_all_public_caches()
-    return jsonify({"success": True}), 200
+    clean_id = str(id).strip()
+    updated = False
+    try:
+        res = services_col.update_one({"_id": ObjectId(clean_id)}, {"$set": update_fields})
+        if res.matched_count > 0:
+            updated = True
+    except Exception:
+        pass
+    if not updated:
+        try:
+            services_col.update_one({"_id": clean_id}, {"$set": update_fields})
+        except Exception:
+            pass
 
-@app.route('/api/services/<id>', methods=['DELETE'])
-def delete_service(id):
-    if services_col is None: return jsonify({"error": "DB error"}), 500
-    services_col.delete_one({"_id": ObjectId(id)})
     invalidate_all_public_caches()
-    return jsonify({"success": True}), 200
+    return jsonify({"success": True, "id": clean_id}), 200
+
+@app.route('/api/services/<id>', methods=['DELETE', 'POST', 'OPTIONS'])
+@app.route('/api/services/<id>/delete', methods=['POST', 'DELETE', 'OPTIONS'])
+def delete_service(id):
+    if request.method == 'OPTIONS':
+        return '', 204
+    if services_col is None: return jsonify({"error": "DB error"}), 500
+    
+    clean_id = str(id).strip()
+    deleted = False
+    try:
+        del_res = services_col.delete_one({"_id": ObjectId(clean_id)})
+        if del_res.deleted_count > 0:
+            deleted = True
+    except Exception:
+        pass
+
+    if not deleted:
+        try:
+            del_res2 = services_col.delete_one({"_id": clean_id})
+            if del_res2.deleted_count > 0:
+                deleted = True
+        except Exception:
+            pass
+
+    invalidate_all_public_caches()
+    return jsonify({"success": True, "deleted": deleted, "id": clean_id}), 200
+
+@app.route('/api/services/delete', methods=['POST', 'OPTIONS'])
+def delete_service_post():
+    if request.method == 'OPTIONS':
+        return '', 204
+    data = request.get_json(force=True, silent=True) or {}
+    srv_id = data.get('id') or data.get('_id')
+    if not srv_id:
+        return jsonify({"error": "Missing service id"}), 400
+    return delete_service(srv_id)
 
 # ==========================================
 # NEWS AND INSIGHTS MANAGEMENT API

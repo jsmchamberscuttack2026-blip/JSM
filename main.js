@@ -957,7 +957,7 @@ function doOpenServiceBook(service) {
 
 window.openServiceBook = function(idOrTitle) {
     if (!window.allServicesData || window.allServicesData.length === 0) {
-        fetch('/api/services')
+        fetch('/api/services?t=' + Date.now(), { cache: 'no-store' })
             .then(res => res.json())
             .then(data => {
                 window.allServicesData = data;
@@ -993,8 +993,11 @@ window.openServiceBook = function(idOrTitle) {
         if ((tStr === '3rd' || tStr === '3d') && window.allServicesData[2]) return doOpenServiceBook(window.allServicesData[2]);
         if (tStr === '4th' && window.allServicesData[3]) return doOpenServiceBook(window.allServicesData[3]);
         
-        // 3. Match by exact _id
-        let matched = window.allServicesData.find(s => s._id === target || s._id === tStr);
+        // 3. Match by exact _id or id
+        let matched = window.allServicesData.find(s => {
+            const sid = (s._id || s.id || '').toString();
+            return sid === target || sid === tStr;
+        });
         
         // 4. Match by exact title
         if (!matched) {
@@ -1024,18 +1027,19 @@ window.renderServices = function(data) {
     const grid = document.getElementById('services-grid');
     if (!grid) return;
     grid.innerHTML = data.map((srv, idx) => {
+        const srvId = (srv._id || srv.id || idx).toString();
         const isImageIcon = srv.icon && (srv.icon.startsWith('data:') || srv.icon.startsWith('http') || srv.icon.startsWith('/'));
         const iconRender = isImageIcon
             ? `<img src="${srv.icon}" style="width: 38px; height: 38px; object-fit: contain; border-radius: 6px;">`
             : (srv.icon || '⚖');
 
         return `
-            <div class="service-card" onclick="openServiceBook('${srv._id}')" style="cursor: pointer;">
+            <div class="service-card" onclick="openServiceBook('${srvId}')" style="cursor: pointer;">
                 <div class="service-number">${String(idx + 1).padStart(2, '0')}</div>
                 <div class="service-icon" style="display: flex; align-items: center; justify-content: center; overflow: hidden;">${iconRender}</div>
                 <h3>${srv.title}</h3>
                 <p>${srv.short_desc || srv.summary || ''}</p>
-                <div class="service-link" role="button" tabindex="0" onclick="event.stopPropagation(); openServiceBook('${srv._id}')" style="cursor: pointer;">
+                <div class="service-link" role="button" tabindex="0" onclick="event.stopPropagation(); openServiceBook('${srvId}')" style="cursor: pointer;">
                     Explore Service →
                 </div>
             </div>
@@ -1057,7 +1061,7 @@ async function loadPublicServices(force = false) {
         return;
     }
     try {
-        const res = await fetch('/api/services', { cache: 'no-store' });
+        const res = await fetch('/api/services?t=' + Date.now(), { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
@@ -1173,6 +1177,9 @@ window.openExpertiseFullscreen = function() {
     window.closeAboutFullscreen(true);
     window.closeStaffsFullscreen(true);
     window.closeContactFullscreen(true);
+    if (typeof loadPublicServices === 'function') {
+        loadPublicServices(true);
+    }
     const el = document.getElementById('expertise-fullscreen-view');
     if (el) {
         el.style.display = 'flex';

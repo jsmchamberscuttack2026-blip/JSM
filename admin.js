@@ -3194,13 +3194,66 @@ window.showConfirmModal = function(title, message, confirmCallback) {
 // ==========================================
 window.globalServicesData = [];
 
+window.deleteService = async function(id) {
+    id = String(id || '').trim();
+    if (!id || id === 'undefined' || id === 'null') {
+        showToast('Invalid service ID', 'error');
+        return;
+    }
+    if (!confirm('Are you sure you want to delete this expertise service and its 3D book? This will permanently remove it from the chamber website.')) return;
+    try {
+        let res = await fetch(`/api/services/${encodeURIComponent(id)}`, { 
+            method: 'DELETE',
+            headers: { 'X-Admin-Request': 'true' }
+        });
+        
+        // Fallback for network environments or proxies that block HTTP DELETE
+        if (!res.ok) {
+            res = await fetch(`/api/services/${encodeURIComponent(id)}/delete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Admin-Request': 'true' }
+            });
+        }
+        
+        if (res.ok) {
+            showToast('Expertise service & 3D book deleted successfully.', 'success');
+            const modal = document.getElementById('service-modal');
+            if (modal) modal.style.display = 'none';
+            await window.loadAdminServices();
+        } else {
+            const data = await res.json().catch(() => ({}));
+            showToast(data.error || 'Failed to delete service', 'error');
+        }
+    } catch (err) {
+        console.error('Delete service error:', err);
+        // Secondary fallback
+        try {
+            const res2 = await fetch(`/api/services/${encodeURIComponent(id)}/delete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Admin-Request': 'true' }
+            });
+            if (res2.ok) {
+                showToast('Expertise service & 3D book deleted successfully.', 'success');
+                const modal = document.getElementById('service-modal');
+                if (modal) modal.style.display = 'none';
+                await window.loadAdminServices();
+                return;
+            }
+        } catch (e2) {}
+        showToast('Error deleting service', 'error');
+    }
+};
+
 window.loadAdminServices = async function() {
     const list = document.getElementById('admin-services-list');
     if (!list) return;
     try {
-        const res = await fetch('/api/services?t=' + Date.now(), { cache: 'no-store' });
+        const res = await fetch('/api/services?t=' + Date.now(), { 
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-store', 'X-Admin-Request': 'true' }
+        });
         const services = await res.json();
-        window.globalServicesData = services;
+        window.globalServicesData = Array.isArray(services) ? services : [];
         list.innerHTML = '';
 
         if (!services || services.length === 0) {
@@ -3209,7 +3262,8 @@ window.loadAdminServices = async function() {
         }
 
         services.forEach((s) => {
-            const pagesCount = s.book_pages ? s.book_pages.length : 0;
+            const sId = String(s._id || s.id || '');
+            const pagesCount = (s.book_pages && Array.isArray(s.book_pages)) ? s.book_pages.length : (s.pages ? s.pages.length : 0);
             const card = document.createElement('div');
             card.style.background = '#ffffff';
             card.style.border = '1px solid #e2e8f0';
@@ -3230,7 +3284,7 @@ window.loadAdminServices = async function() {
                             ${iconHtml}
                         </div>
                         <div>
-                            <h4 style="margin: 0; color: #0f172a; font-size: 1.15rem;">${s.title}</h4>
+                            <h4 style="margin: 0; color: #0f172a; font-size: 1.15rem;">${s.title || 'Untitled Book'}</h4>
                             <span style="display: inline-block; background: #fef3c7; color: #92400e; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 9999px; margin-top: 4px;">
                                 📖 ${pagesCount} 3D Book ${pagesCount === 1 ? 'Page' : 'Pages'}
                             </span>
@@ -3238,15 +3292,15 @@ window.loadAdminServices = async function() {
                     </div>
                 </div>
 
-                <p style="margin: 0; font-size: 0.9rem; color: #475569; line-height: 1.5; flex-grow: 1;">
-                    ${s.short_desc || 'No summary provided.'}
+                <p style="margin: 0.8rem 0; font-size: 0.9rem; color: #475569; line-height: 1.5; flex-grow: 1;">
+                    ${s.short_desc || s.summary || 'No summary provided.'}
                 </p>
 
                 <div style="display: flex; gap: 8px; margin-top: 0.5rem; padding-top: 1rem; border-top: 1px solid #f1f5f9;">
-                    <button class="btn btn-outline" onclick="openEditServiceModal('${s._id}')" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; border-color: var(--primary); color: var(--primary);">
+                    <button type="button" class="btn btn-outline" onclick="openEditServiceModal('${sId}')" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; border-color: var(--primary); color: var(--primary);">
                         ✏️ Edit & Pages
                     </button>
-                    <button class="btn btn-error" onclick="deleteService('${s._id}')" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                    <button type="button" class="btn btn-error" onclick="deleteService('${sId}')" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: #ef4444; color: white;">
                         🗑️ Delete
                     </button>
                 </div>
@@ -3309,41 +3363,56 @@ window.openAddServiceModal = function() {
     document.getElementById('service-modal-title').innerText = 'Add New Legal Expertise & 3D Book';
     document.getElementById('service-save-btn').innerText = '💾 Save Service & Book Content';
     
+    const modalDelBtn = document.getElementById('service-modal-del-btn');
+    if (modalDelBtn) modalDelBtn.style.display = 'none';
+
     const container = document.getElementById('service-pages-container');
     container.innerHTML = '';
     addPageToServiceForm('Overview & Legal Scope', '', []);
-    addPageToServiceForm('Our Strategic Approach', '', []);
     
     document.getElementById('service-modal').style.display = 'flex';
 };
 
 window.openEditServiceModal = function(id) {
-    const s = window.globalServicesData.find(x => x._id === id);
+    id = String(id || '').trim();
+    const s = window.globalServicesData.find(x => String(x._id || x.id || '') === id);
     if (!s) return;
 
-    document.getElementById('service-form-id').value = s._id;
+    const sId = String(s._id || s.id || '');
+    document.getElementById('service-form-id').value = sId;
     document.getElementById('service-form-title').value = s.title || '';
     document.getElementById('service-form-icon').value = s.icon || '⚖';
     window.updateServiceIconPreview(s.icon || '⚖');
-    document.getElementById('service-form-desc').value = s.short_desc || '';
-    document.getElementById('service-modal-title').innerText = 'Edit ' + s.title + ' (3D Book)';
+    document.getElementById('service-form-desc').value = s.short_desc || s.summary || '';
+    document.getElementById('service-modal-title').innerText = 'Edit ' + (s.title || 'Legal Expertise') + ' (3D Book)';
     document.getElementById('service-save-btn').innerText = '💾 Update Service & Book Content';
+
+    const modalDelBtn = document.getElementById('service-modal-del-btn');
+    if (modalDelBtn) {
+        modalDelBtn.style.display = 'inline-block';
+        modalDelBtn.onclick = function() {
+            closeServiceModal();
+            deleteService(sId);
+        };
+    }
 
     const container = document.getElementById('service-pages-container');
     container.innerHTML = '';
-    if (s.book_pages && s.book_pages.length > 0) {
-        s.book_pages.forEach(p => {
+    const pages = (s.book_pages && s.book_pages.length > 0) ? s.book_pages : (s.pages || []);
+    if (pages.length > 0) {
+        pages.forEach(p => {
             addPageToServiceForm(p.chapter || '', p.content || '', p.images || []);
         });
     } else {
-        addPageToServiceForm('Overview & Legal Scope', '', []);
+        addPageToServiceForm('Overview & Legal Scope', s.short_desc || s.summary || '', []);
     }
 
     document.getElementById('service-modal').style.display = 'flex';
 };
 
 window.closeServiceModal = function() {
-    document.getElementById('service-modal').style.display = 'none';
+    const modal = document.getElementById('service-modal');
+    if (modal) modal.style.display = 'none';
 };
 
 window.handlePageImageSlotUpload = async function(input) {
@@ -3404,10 +3473,10 @@ window.addPageToServiceForm = function(chapter = '', content = '', images = []) 
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <strong style="color: var(--primary); font-size: 0.9rem;">📄 Page ${pageIndex} Chapter Title:</strong>
             <button type="button" onclick="this.closest('.service-page-item').remove(); renumberServicePages();" class="btn" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 2px 6px; font-size: 0.85rem;">
-                ✕ Remove
+                ✕ Remove Page
             </button>
         </div>
-        <input type="text" class="form-control page-chapter-input" value="${chapter.replace(/"/g, '&quot;')}" placeholder="e.g. Chapter 1: Pre-trial Procedures & Injunctions" required>
+        <input type="text" class="form-control page-chapter-input" value="${chapter.replace(/"/g, '&quot;')}" placeholder="e.g. Chapter 1: Pre-trial Procedures & Injunctions">
         
         <div style="background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px; margin-top: 4px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -3445,13 +3514,14 @@ window.addPageToServiceForm = function(chapter = '', content = '', images = []) 
         </div>
 
         <label style="font-size: 0.8rem; font-weight: 600; color: #475569; margin-top: 4px;">Book Page Text Content:</label>
-        <textarea class="form-control page-content-input" rows="4" placeholder="Enter in-depth legal expertise text that clients will read in the 3D book..." required>${content}</textarea>
+        <textarea class="form-control page-content-input" rows="4" placeholder="Enter in-depth legal expertise text that clients will read in the 3D book...">${content}</textarea>
     `;
     container.appendChild(pageCard);
 };
 
 window.renumberServicePages = function() {
     const container = document.getElementById('service-pages-container');
+    if (!container) return;
     const items = container.querySelectorAll('.service-page-item');
     items.forEach((item, index) => {
         const strong = item.querySelector('strong');
@@ -3460,17 +3530,22 @@ window.renumberServicePages = function() {
 };
 
 window.saveServiceForm = async function(e) {
-    e.preventDefault();
-    const id = document.getElementById('service-form-id').value;
+    if (e && e.preventDefault) e.preventDefault();
+    const id = document.getElementById('service-form-id').value.trim();
     const title = document.getElementById('service-form-title').value.trim();
     const icon = document.getElementById('service-form-icon').value.trim() || '⚖';
     const short_desc = document.getElementById('service-form-desc').value.trim();
 
+    if (!title) {
+        showToast('Please enter a service/book title', 'error');
+        return;
+    }
+
     const pageItems = document.querySelectorAll('.service-page-item');
     const book_pages = [];
     pageItems.forEach(item => {
-        const chapter = item.querySelector('.page-chapter-input').value.trim();
-        const content = item.querySelector('.page-content-input').value.trim();
+        const chapter = (item.querySelector('.page-chapter-input')?.value || '').trim();
+        const content = (item.querySelector('.page-content-input')?.value || '').trim();
         const imgInputs = item.querySelectorAll('.page-img-data');
         const images = [];
         imgInputs.forEach(inp => {
@@ -3479,32 +3554,45 @@ window.saveServiceForm = async function(e) {
             }
         });
         if (chapter || content || images.length > 0) {
-            book_pages.push({ chapter, content, images });
+            book_pages.push({ 
+                chapter: chapter || 'Practice Overview', 
+                content: content || 'In-depth practice monograph content coming soon.', 
+                images 
+            });
         }
     });
 
+    // If no explicit pages were added, auto-generate initial overview page
     if (book_pages.length === 0) {
-        showToast('Please add at least 1 book page for clients to read.', 'error');
-        return;
+        book_pages.push({
+            chapter: title + ' Practice Scope',
+            content: short_desc || `Distinguished legal consultation and representation in ${title}.`,
+            images: []
+        });
     }
 
     const saveBtn = document.getElementById('service-save-btn');
-    saveBtn.innerText = 'Saving...';
-    saveBtn.disabled = true;
+    if (saveBtn) {
+        saveBtn.innerText = 'Saving...';
+        saveBtn.disabled = true;
+    }
 
     try {
-        const url = id ? `/api/services/${id}` : '/api/services';
+        const url = id ? `/api/services/${encodeURIComponent(id)}` : '/api/services';
         const method = id ? 'PUT' : 'POST';
         const res = await fetch(url, {
             method: method,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Admin-Request': 'true'
+            },
             body: JSON.stringify({ title, icon, short_desc, book_pages })
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (res.ok) {
-            showToast(id ? 'Service & 3D book updated successfully!' : 'Service created successfully!', 'success');
+            showToast(id ? 'Legal Expertise & 3D book updated successfully!' : 'New Legal Expertise & 3D book created successfully!', 'success');
             closeServiceModal();
-            loadAdminServices();
+            await window.loadAdminServices();
         } else {
             showToast(data.error || 'Failed to save service', 'error');
         }
@@ -3512,23 +3600,10 @@ window.saveServiceForm = async function(e) {
         console.error(err);
         showToast('Error saving service', 'error');
     } finally {
-        saveBtn.disabled = false;
-        saveBtn.innerText = '💾 Save Service & Book Content';
-    }
-};
-
-window.deleteService = async function(id) {
-    if (!confirm('Are you sure you want to delete this expertise service and its 3D book?')) return;
-    try {
-        const res = await fetch(`/api/services/${id}`, { method: 'DELETE' });
-        if (res.ok) {
-            showToast('Service deleted.', 'success');
-            loadAdminServices();
-        } else {
-            showToast('Failed to delete service', 'error');
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerText = id ? '💾 Update Service & Book Content' : '💾 Save Service & Book Content';
         }
-    } catch (err) {
-        showToast('Error deleting service', 'error');
     }
 };
 

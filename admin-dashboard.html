@@ -1737,9 +1737,14 @@
                     </div>
                 </div>
 
-                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1.2rem;">
-                    <button type="button" class="btn btn-outline" onclick="closeServiceModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="service-save-btn">💾 Save Service & Book Content</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1.2rem;">
+                    <div>
+                        <button type="button" class="btn btn-error" id="service-modal-del-btn" style="display: none; background: #ef4444; color: white; padding: 0.5rem 1rem; font-size: 0.9rem;">🗑️ Delete This Book</button>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="button" class="btn btn-outline" onclick="closeServiceModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="service-save-btn">💾 Save Service & Book Content</button>
+                    </div>
                 </div>
             </form>
         </div>
