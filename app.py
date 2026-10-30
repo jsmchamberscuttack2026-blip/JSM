@@ -1,6 +1,7 @@
 import concurrent.futures
 import os
 import time
+import urllib.request
 from flask import Flask, request, jsonify, send_from_directory, send_file, Response
 import re
 import base64
@@ -95,6 +96,169 @@ except Exception as e:
     security_blocked_ips_col = None
     security_audit_scans_col = None
     logging.error(f"Error connecting to MongoDB: {e}")
+
+# =========================================================
+#  TURSO DATABASE INTEGRATION (Clients Directory / History)
+# =========================================================
+TURSO_DATABASE_URL = os.environ.get("TURSO_DATABASE_URL", "libsql://jsm-chamber-jsmcuttack.aws-ap-south-1.turso.io")
+TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "")
+
+def get_turso_pipeline_url():
+    url = (TURSO_DATABASE_URL or "").strip()
+    if url.startswith("libsql://"):
+        url = "https://" + url[len("libsql://"):]
+    elif url.startswith("http://"):
+        url = "https://" + url[len("http://"):]
+    elif not url.startswith("https://"):
+        url = "https://" + url
+    if not url.endswith("/v2/pipeline"):
+        url = url.rstrip("/") + "/v2/pipeline"
+    return url
+
+def execute_turso_query(sql, params=None):
+    if not TURSO_AUTH_TOKEN:
+        logging.warning("TURSO_AUTH_TOKEN is not configured; skipping Turso query.")
+        return []
+    
+    def format_arg(val):
+        if val is None:
+            return {'type': 'null'}
+        elif isinstance(val, bool):
+            return {'type': 'integer', 'value': '1' if val else '0'}
+        elif isinstance(val, int):
+            return {'type': 'integer', 'value': str(val)}
+        elif isinstance(val, float):
+            return {'type': 'float', 'value': val}
+        else:
+            return {'type': 'text', 'value': str(val)}
+
+    stmt = {'sql': sql}
+    if params:
+        stmt['args'] = [format_arg(p) for p in params]
+
+    pipeline_url = get_turso_pipeline_url()
+    payload = {'requests': [{'type': 'execute', 'stmt': stmt}]}
+    req = urllib.request.Request(
+        pipeline_url,
+        data=json.dumps(payload).encode('utf-8'),
+        headers={
+            'Authorization': f'Bearer {TURSO_AUTH_TOKEN}',
+            'Content-Type': 'application/json'
+        },
+        method='POST'
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            results = data.get('results', [])
+            if not results:
+                return []
+            res = results[0]
+            if res.get('type') == 'error':
+                raise Exception(res.get('error', 'Turso query failed'))
+            resp_obj = res.get('response', {}).get('result', {})
+            cols = [c['name'] for c in resp_obj.get('cols', [])]
+            rows = []
+            for row in resp_obj.get('rows', []):
+                row_dict = {}
+                for col_name, cell in zip(cols, row):
+                    row_dict[col_name] = cell.get('value')
+                rows.append(row_dict)
+            return rows
+    except Exception as e:
+        logging.error(f"Turso HTTP query error: {e}")
+        raise e
+
+def init_turso_db():
+    try:
+        create_sql = '''
+        CREATE TABLE IF NOT EXISTS clients_history (
+            id TEXT PRIMARY KEY,
+            client_name TEXT NOT NULL,
+            email TEXT,
+            phone TEXT,
+            case_type TEXT,
+            chamber_case_number TEXT,
+            court_case_number TEXT,
+            total_fee REAL DEFAULT 0,
+            fee_paid REAL DEFAULT 0,
+            status TEXT DEFAULT 'Finished & Archived',
+            completion_date TEXT,
+            notes TEXT,
+            status_history TEXT,
+            bills TEXT,
+            case_files TEXT,
+            hearing_history TEXT,
+            created_at TEXT
+        );
+        '''
+        execute_turso_query(create_sql)
+        logging.info("Turso clients_history table verified/initialized successfully.")
+    except Exception as e:
+        logging.error(f"Failed to initialize Turso database: {e}")
+
+def save_case_to_turso_history(case_data):
+    """Automatically inserts or replaces a finished case into Turso database."""
+    try:
+        case_id = str(case_data.get('_id', case_data.get('id', '')))
+        if not case_id:
+            return False
+            
+        client_name = case_data.get('client_name') or 'Unknown'
+        email = case_data.get('email') or ''
+        phone = case_data.get('phone') or ''
+        case_type = case_data.get('case_type') or 'General'
+        chamber_case_number = case_data.get('chamber_case_number') or ''
+        court_case_number = case_data.get('court_case_number') or ''
+        try:
+            total_fee = float(case_data.get('total_fee', 0) or 0)
+        except Exception:
+            total_fee = 0.0
+        try:
+            fee_paid = float(case_data.get('fee_paid', 0) or 0)
+        except Exception:
+            fee_paid = 0.0
+            
+        status = case_data.get('status') or 'Finished & Archived'
+        completion_date = case_data.get('completion_date') or datetime.now().strftime("%Y-%m-%d %I:%M %p")
+        notes = case_data.get('notes') or ''
+        
+        status_history = json.dumps(case_data.get('status_history', [])) if isinstance(case_data.get('status_history'), (list, dict)) else str(case_data.get('status_history') or '')
+        bills = json.dumps(case_data.get('bills', [])) if isinstance(case_data.get('bills'), (list, dict)) else str(case_data.get('bills') or '')
+        case_files = json.dumps(case_data.get('case_files', [])) if isinstance(case_data.get('case_files'), (list, dict)) else str(case_data.get('case_files') or '')
+        hearing_history = json.dumps(case_data.get('hearing_history', [])) if isinstance(case_data.get('hearing_history'), (list, dict)) else str(case_data.get('hearing_history') or '')
+        created_at = case_data.get('created_at') or ''
+
+        upsert_sql = '''
+        INSERT OR REPLACE INTO clients_history (
+            id, client_name, email, phone, case_type, chamber_case_number, court_case_number,
+            total_fee, fee_paid, status, completion_date, notes, status_history, bills, case_files, hearing_history, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        '''
+        execute_turso_query(upsert_sql, [
+            case_id, client_name, email, phone, case_type, chamber_case_number, court_case_number,
+            total_fee, fee_paid, status, completion_date, notes, status_history, bills, case_files, hearing_history, created_at
+        ])
+        logging.info(f"Case {case_id} ({client_name}) successfully transferred to Turso clients_history.")
+        return True
+    except Exception as e:
+        logging.error(f"Error saving case to Turso history: {e}")
+        return False
+
+def delete_case_from_turso_history(case_id):
+    try:
+        execute_turso_query("DELETE FROM clients_history WHERE id = ?", [str(case_id)])
+        logging.info(f"Case {case_id} deleted from Turso history.")
+        return True
+    except Exception as e:
+        logging.error(f"Error deleting case from Turso history: {e}")
+        return False
+
+# Initialize Turso on application startup
+try:
+    init_turso_db()
+except Exception as e:
+    logging.warning(f"Initial Turso connection attempt: {e}")
 
 # =========================================================
 #  PUBLIC WEBSITE STATUS (ON / OFF) & CYBER DEFENSE LOCKDOWN
@@ -3009,18 +3173,98 @@ def get_cases():
 
 @app.route('/api/archived-cases', methods=['GET'])
 def get_archived_cases():
-    cases = list(cases_col.find({"status": "Finished & Archived"}).sort('_id', -1))
-    for c in cases: c['_id'] = str(c['_id'])
-    return jsonify(cases), 200
+    turso_cases = []
+    try:
+        rows = execute_turso_query("SELECT * FROM clients_history ORDER BY completion_date DESC, created_at DESC")
+        for r in rows:
+            case_obj = {
+                "_id": r.get('id'),
+                "id": r.get('id'),
+                "client_name": r.get('client_name') or 'Unknown',
+                "email": r.get('email') or '',
+                "phone": r.get('phone') or '',
+                "case_type": r.get('case_type') or 'General',
+                "chamber_case_number": r.get('chamber_case_number') or '',
+                "court_case_number": r.get('court_case_number') or '',
+                "total_fee": float(r.get('total_fee') or 0),
+                "fee_paid": float(r.get('fee_paid') or 0),
+                "status": r.get('status') or 'Finished & Archived',
+                "completion_date": r.get('completion_date') or '',
+                "notes": r.get('notes') or '',
+                "created_at": r.get('created_at') or ''
+            }
+            for jfield in ['status_history', 'bills', 'case_files', 'hearing_history']:
+                raw = r.get(jfield)
+                if raw and isinstance(raw, str):
+                    try:
+                        case_obj[jfield] = json.loads(raw)
+                    except Exception:
+                        case_obj[jfield] = []
+                else:
+                    case_obj[jfield] = raw or []
+            turso_cases.append(case_obj)
+    except Exception as e:
+        logging.error(f"Error reading from Turso clients_history: {e}")
+
+    # If Turso has archived cases, return them
+    if turso_cases:
+        return jsonify(turso_cases), 200
+
+    # Fallback to MongoDB if Turso is empty or unreachable
+    mongo_cases = list(cases_col.find({"status": "Finished & Archived"}).sort('_id', -1))
+    for c in mongo_cases:
+        c['_id'] = str(c['_id'])
+        try:
+            save_case_to_turso_history(c)
+        except Exception:
+            pass
+    return jsonify(mongo_cases), 200
 
 
 
 @app.route('/api/cases/<id>', methods=['GET'])
 def get_single_case(id):
-    c = cases_col.find_one({"_id": ObjectId(id)})
+    c = None
+    try:
+        c = cases_col.find_one({"_id": ObjectId(id)})
+    except Exception:
+        c = None
+        
+    if not c:
+        try:
+            rows = execute_turso_query("SELECT * FROM clients_history WHERE id = ?", [str(id)])
+            if rows:
+                r = rows[0]
+                c = {
+                    "_id": r.get('id'),
+                    "id": r.get('id'),
+                    "client_name": r.get('client_name') or 'Unknown',
+                    "email": r.get('email') or '',
+                    "phone": r.get('phone') or '',
+                    "case_type": r.get('case_type') or 'General',
+                    "chamber_case_number": r.get('chamber_case_number') or '',
+                    "court_case_number": r.get('court_case_number') or '',
+                    "total_fee": float(r.get('total_fee') or 0),
+                    "fee_paid": float(r.get('fee_paid') or 0),
+                    "status": r.get('status') or 'Finished & Archived',
+                    "completion_date": r.get('completion_date') or '',
+                    "notes": r.get('notes') or '',
+                    "created_at": r.get('created_at') or ''
+                }
+                for jfield in ['status_history', 'bills', 'case_files', 'hearing_history']:
+                    raw = r.get(jfield)
+                    if raw and isinstance(raw, str):
+                        try:
+                            c[jfield] = json.loads(raw)
+                        except Exception:
+                            c[jfield] = []
+                    else:
+                        c[jfield] = raw or []
+        except Exception as e:
+            logging.error(f"Error fetching case from Turso: {e}")
+
     if c:
         c['_id'] = str(c['_id'])
-        
         email = c.get('email', '')
         if email:
             logs = list(email_logs_col.find({"recipient": email}).sort('_id', -1))
@@ -3067,6 +3311,10 @@ def update_case(id):
             {"_id": ObjectId(id)},
             {"$set": update_fields}
         )
+        if data.get('status') in ["Finished & Archived", "Completed & Archived", "Completed", "Finished"]:
+            fresh_case = cases_col.find_one({"_id": ObjectId(id)})
+            if fresh_case:
+                save_case_to_turso_history(fresh_case)
     
     # Send email if newly assigned to a valid email
     if new_staff_email is not None and new_staff_email != '' and new_staff_email != old_staff_email:
@@ -3361,8 +3609,27 @@ def delete_bill(case_id, bill_id):
 
 @app.route('/api/cases/<id>', methods=['DELETE'])
 def delete_case(id):
-    cases_col.delete_one({"_id": ObjectId(id)})
+    try:
+        cases_col.delete_one({"_id": ObjectId(id)})
+    except Exception as me:
+        logging.error(f"Error deleting case from MongoDB: {me}")
+    try:
+        delete_case_from_turso_history(id)
+    except Exception as te:
+        logging.error(f"Error deleting case from Turso: {te}")
     return jsonify({"message": "Case deleted"}), 200
+
+@app.route('/api/archived-cases/<id>', methods=['DELETE'])
+def delete_archived_case(id):
+    try:
+        cases_col.delete_one({"_id": ObjectId(id)})
+    except Exception:
+        pass
+    try:
+        delete_case_from_turso_history(id)
+    except Exception as te:
+        logging.error(f"Error deleting case from Turso: {te}")
+    return jsonify({"message": "Archived case deleted from Turso history"}), 200
 
 @app.route('/api/cases/<id>/finish', methods=['POST'])
 def finish_case(id):
@@ -3372,7 +3639,21 @@ def finish_case(id):
     paid = float(case.get('fee_paid', 0))
     if paid < total:
         return jsonify({"unpaid": str(total - paid)}), 200
-    cases_col.update_one({"_id": ObjectId(id)}, {"$set": {"status": "Finished & Archived"}})
+    
+    completion_time = datetime.now().strftime("%Y-%m-%d %I:%M %p")
+    cases_col.update_one({"_id": ObjectId(id)}, {"$set": {
+        "status": "Finished & Archived",
+        "completion_date": completion_time
+    }})
+    case['status'] = "Finished & Archived"
+    case['completion_date'] = completion_time
+
+    # Automatically transfer finished case to Turso database (Clients Directory / History)
+    try:
+        save_case_to_turso_history(case)
+    except Exception as te:
+        logging.error(f"Failed to auto-transfer finished case to Turso: {te}")
+
     email = case.get('email')
     name = case.get('client_name')
     if email:
