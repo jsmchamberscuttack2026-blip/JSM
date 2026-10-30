@@ -630,17 +630,28 @@ document.addEventListener('DOMContentLoaded', () => {
     window.allArchivedCasesList = [];
 
     window.loadArchivedCases = async function() {
-        if (!archivedCasesTbody) return;
         try {
             const response = await fetch('/api/archived-cases', { cache: 'no-store' });
+            if (!response.ok) return;
             const cases = await response.json();
-            const newDataString = JSON.stringify(cases);
-            if (newDataString === archivedCasesCache && document.getElementById('archived-cases-search') && document.getElementById('archived-cases-search').value.trim() !== '') {
+            window.allArchivedCasesList = Array.isArray(cases) ? cases : [];
+
+            // Update Dashboard Stat Card
+            const statClients = document.getElementById('stat-clients');
+            if (statClients) {
+                statClients.innerText = window.allArchivedCasesList.length;
+            }
+
+            const searchInput = document.getElementById('archived-cases-search');
+            if (searchInput && searchInput.value.trim() !== '') {
+                window.filterArchivedCasesTable();
                 return;
             }
-            archivedCasesCache = newDataString;
-            window.allArchivedCasesList = cases || [];
-            window.renderArchivedCasesTable(window.allArchivedCasesList);
+
+            const tbody = document.getElementById('archived-cases-tbody');
+            if (tbody) {
+                window.renderArchivedCasesTable(window.allArchivedCasesList);
+            }
         } catch (err) {
             console.error(err);
         }
@@ -2432,6 +2443,12 @@ window.showSection = function(sectionId) {
     }
     if (sectionId === 'cases-manage' && typeof window.loadCases === 'function') {
         window.loadCases();
+    }
+    if (sectionId === 'clients' && typeof window.loadArchivedCases === 'function') {
+        window.loadArchivedCases();
+    }
+    if (sectionId === 'dashboard' && typeof window.loadArchivedCases === 'function') {
+        window.loadArchivedCases();
     }
 };
 
