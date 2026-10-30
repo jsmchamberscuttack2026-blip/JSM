@@ -299,11 +299,36 @@
 
             <div id="content-clients" style="display:block;">
                 <div class="card">
-                    <h3>Clients Directory</h3>
-                    <table class="data-table" style="margin-top: 1rem;" id="staff-clients-table">
-                        <thead><tr><th>Name</th><th>Email</th><th>Case Type</th><th>Status</th></tr></thead>
-                        <tbody id="staff-clients-tbody"></tbody>
-                    </table>
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <h3 style="margin: 0; color: var(--color-primary);">Clients Directory / History</h3>
+                            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.88rem;">Search finished case files and view documents / images.</p>
+                        </div>
+                        <button class="btn btn-outline" onclick="loadStaffClients()" style="padding: 0.5rem 1rem; border-radius: 8px;">🔄 Refresh</button>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div style="margin-top: 1rem; display: flex; gap: 10px; align-items: center; background: #f8fafc; padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <span>🔍</span>
+                        <input type="text" id="staff-clients-search" oninput="filterStaffClientsTable()" placeholder="Search by Chamber Case #, Court Case #, or Client Name..." style="flex: 1; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0.5rem 0.8rem; font-size: 0.9rem; outline: none;">
+                        <button class="btn btn-outline" onclick="clearStaffClientsSearch()" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;">Clear</button>
+                    </div>
+
+                    <div style="overflow-x: auto; margin-top: 1rem;">
+                        <table class="data-table" id="staff-clients-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>Case Numbers</th>
+                                    <th>Client Name</th>
+                                    <th>Case Type</th>
+                                    <th>Documents</th>
+                                    <th>Status</th>
+                                    <th style="text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="staff-clients-tbody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </section>
@@ -1382,22 +1407,132 @@
 
         
         let staffClientsCache = "";
+        window.staffAllClientsList = [];
+
         async function loadStaffClients() {
             try {
                 const res = await fetch('/api/archived-cases');
                 const clients = await res.json();
                 
                 const newDataString = JSON.stringify(clients);
-                if (newDataString === staffClientsCache) return;
+                if (newDataString === staffClientsCache && document.getElementById('staff-clients-search') && document.getElementById('staff-clients-search').value.trim() !== '') return;
                 staffClientsCache = newDataString;
-                
-                const tbody = document.getElementById('staff-clients-tbody');
-                tbody.innerHTML = '';
-                clients.forEach(c => {
-                    tbody.innerHTML += `<tr><td style="padding:10px; border-bottom:1px solid #eee;"><a href="#" onclick="printCaseDetails('${c._id}'); return false;" style="color: #0A192F; font-weight: bold; text-decoration: underline; cursor: pointer;">${c.client_name}</a></td><td style="padding:10px; border-bottom:1px solid #eee;">${c.email}</td><td style="padding:10px; border-bottom:1px solid #eee;">${c.case_type}</td><td style="padding:10px; border-bottom:1px solid #eee;">${c.status}</td></tr>`;
-                });
+                window.staffAllClientsList = clients || [];
+                renderStaffClientsTable(window.staffAllClientsList);
             } catch(e) { console.error(e); }
         }
+
+        window.renderStaffClientsTable = function(list) {
+            const tbody = document.getElementById('staff-clients-tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            if (list && list.length > 0) {
+                list.forEach(c => {
+                    const imagesCount = Array.isArray(c.images) ? c.images.length : 0;
+                    const docBadge = imagesCount > 0 
+                        ? `<span style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; font-size: 0.78rem; padding: 2px 7px; border-radius: 10px; font-weight: 700; cursor: pointer;" onclick="openStaffArchivedFile('${c._id}')">🖼️ ${imagesCount} Docs</span>`
+                        : `<span style="color: #94a3b8; font-size: 0.78rem;">None</span>`;
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">
+                                <div style="font-weight: 700; color: #0A192F;">🏛️ ${c.chamber_case_number || 'Not Assigned'}</div>
+                                <div style="font-size: 0.8rem; color: #64748b;">⚖️ ${c.court_case_number || 'N/A'}</div>
+                            </td>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">
+                                <a href="#" onclick="openStaffArchivedFile('${c._id}'); return false;" style="color: #0A192F; font-weight: bold; text-decoration: underline; cursor: pointer;">${c.client_name}</a>
+                                ${c.phone ? `<div style="font-size: 0.78rem; color: #64748b;">📞 ${c.phone}</div>` : ''}
+                            </td>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">${c.case_type || 'General'}</td>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">${docBadge}</td>
+                            <td style="padding:10px; border-bottom:1px solid #eee;"><span class="badge" style="background: #e2e8f0; color: #334155;">${c.status || 'Finished'}</span></td>
+                            <td style="padding:10px; border-bottom:1px solid #eee; text-align: right;">
+                                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem;" onclick="openStaffArchivedFile('${c._id}')">📂 Open File</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem; color: #94a3b8;">No matching finished cases found.</td></tr>';
+            }
+        };
+
+        window.filterStaffClientsTable = function() {
+            const q = (document.getElementById('staff-clients-search')?.value || '').trim().toLowerCase();
+            if (!q) {
+                renderStaffClientsTable(window.staffAllClientsList);
+                return;
+            }
+            const filtered = (window.staffAllClientsList || []).filter(c => {
+                const chamber = (c.chamber_case_number || '').toLowerCase();
+                const court = (c.court_case_number || '').toLowerCase();
+                const name = (c.client_name || '').toLowerCase();
+                const type = (c.case_type || '').toLowerCase();
+                return chamber.includes(q) || court.includes(q) || name.includes(q) || type.includes(q);
+            });
+            renderStaffClientsTable(filtered);
+        };
+
+        window.clearStaffClientsSearch = function() {
+            const input = document.getElementById('staff-clients-search');
+            if (input) input.value = '';
+            renderStaffClientsTable(window.staffAllClientsList);
+        };
+
+        window.openStaffArchivedFile = async function(id) {
+            try {
+                const res = await fetch(`/api/cases/${id}`);
+                const c = await res.json();
+                
+                document.getElementById('staff-view-client-name').innerText = c.client_name || 'Client Details';
+                document.getElementById('staff-view-chamber-no').innerText = c.chamber_case_number || 'Not Assigned';
+                document.getElementById('staff-view-court-no').innerText = c.court_case_number || 'N/A';
+                document.getElementById('staff-view-case-type').innerText = c.case_type || 'General Legal File';
+                document.getElementById('staff-view-email').innerText = c.email || 'N/A';
+                document.getElementById('staff-view-phone').innerText = c.phone || 'N/A';
+                document.getElementById('staff-view-notes').innerText = c.notes && c.notes.trim() ? c.notes : 'No extra notes recorded.';
+
+                const grid = document.getElementById('staff-view-images-grid');
+                grid.innerHTML = '';
+                const images = Array.isArray(c.images) ? c.images : [];
+                if (images.length > 0) {
+                    images.forEach((img, idx) => {
+                        grid.innerHTML += `
+                            <div style="border-radius: 8px; overflow: hidden; border: 1px solid #cbd5e1; background: #000;">
+                                <img src="${img}" style="width: 100%; height: 140px; object-fit: cover; cursor: pointer;" onclick="openStaffImageLightbox('${img}')">
+                                <div style="padding: 4px 8px; background: white; font-size: 0.75rem; font-weight: 700; color: #475569;">Document #${idx+1}</div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    grid.innerHTML = '<div style="grid-column: 1 / -1; padding: 1rem; background: #f8fafc; border-radius: 6px; text-align: center; color: #94a3b8; font-size: 0.85rem;">No document images attached.</div>';
+                }
+
+                document.getElementById('staff-view-archived-modal').style.display = 'flex';
+                window.staffActiveCaseId = id;
+            } catch(e) {
+                console.error(e);
+                showToast('Failed to load case file.', 'error');
+            }
+        };
+
+        window.closeStaffArchivedModal = function() {
+            const m = document.getElementById('staff-view-archived-modal');
+            if (m) m.style.display = 'none';
+        };
+
+        window.openStaffImageLightbox = function(src) {
+            const modal = document.getElementById('staff-image-lightbox');
+            const img = document.getElementById('staff-lightbox-img');
+            if (!modal || !img) return;
+            img.src = src;
+            modal.style.display = 'flex';
+        };
+
+        window.closeStaffImageLightbox = function() {
+            const modal = document.getElementById('staff-image-lightbox');
+            if (modal) modal.style.display = 'none';
+        };
 
 
 
@@ -1821,6 +1956,67 @@ window.showToast = function(message, type = 'success') {
     }, 4000);
 };
 </script>
+
+    <!-- STAFF VIEW ARCHIVED FILE MODAL -->
+    <div id="staff-view-archived-modal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 10001; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div class="modal-content" style="background: white; border-radius: 14px; max-width: 750px; width: 95%; max-height: 90vh; overflow-y: auto; padding: 0; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
+            <div style="background: #0A192F; color: white; padding: 1.2rem 1.6rem; border-top-left-radius: 14px; border-top-right-radius: 14px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.6rem;">📂</span>
+                    <div>
+                        <h3 id="staff-view-client-name" style="margin: 0; font-size: 1.25rem; color: #D4AF37;">Case File Details</h3>
+                        <span style="font-size: 0.72rem; background: rgba(212,175,55,0.2); border: 1px solid #D4AF37; color: #D4AF37; padding: 2px 7px; border-radius: 4px; font-weight: 700;">Finished Case Archive</span>
+                    </div>
+                </div>
+                <span onclick="closeStaffArchivedModal()" style="font-size: 1.8rem; cursor: pointer; color: #cbd5e1; line-height: 1;">&times;</span>
+            </div>
+
+            <div style="padding: 1.6rem;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 1.2rem;">
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #D4AF37; padding: 10px 14px; border-radius: 8px;">
+                        <small style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 0.75rem;">Chamber Case Number</small>
+                        <div id="staff-view-chamber-no" style="font-size: 1rem; font-weight: 700; color: #0A192F; margin-top: 3px;">-</div>
+                    </div>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #3b82f6; padding: 10px 14px; border-radius: 8px;">
+                        <small style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 0.75rem;">Court Case Number</small>
+                        <div id="staff-view-court-no" style="font-size: 1rem; font-weight: 700; color: #0A192F; margin-top: 3px;">-</div>
+                    </div>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #10b981; padding: 10px 14px; border-radius: 8px;">
+                        <small style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 0.75rem;">Case Type</small>
+                        <div id="staff-view-case-type" style="font-size: 1rem; font-weight: 700; color: #0A192F; margin-top: 3px;">-</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.2rem; background: #fff; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; font-size: 0.88rem;">
+                    <div>📧 <strong>Email:</strong> <span id="staff-view-email" style="color: #475569;">N/A</span></div>
+                    <div>📞 <strong>Phone:</strong> <span id="staff-view-phone" style="color: #475569;">N/A</span></div>
+                </div>
+
+                <div style="margin-bottom: 1.2rem;">
+                    <h4 style="margin: 0 0 6px 0; color: #0A192F; font-size: 0.95rem;">📝 Case Notes</h4>
+                    <div id="staff-view-notes" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; color: #334155; line-height: 1.5; font-size: 0.9rem; min-height: 50px;">-</div>
+                </div>
+
+                <div style="margin-bottom: 1.2rem;">
+                    <h4 style="margin: 0 0 8px 0; color: #0A192F; font-size: 0.95rem;">📷 Attached Case Documents / Images</h4>
+                    <div id="staff-view-images-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px;"></div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
+                    <button class="btn btn-primary" onclick="printCaseDetails(window.staffActiveCaseId)" style="background: #0A192F; color: white; display: flex; align-items: center; gap: 6px; padding: 0.5rem 1rem; border-radius: 8px;">
+                        🖨️ Print Report
+                    </button>
+                    <button type="button" class="btn btn-outline" onclick="closeStaffArchivedModal()" style="border-radius: 8px; padding: 0.5rem 1rem;">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff Image Lightbox -->
+    <div id="staff-image-lightbox" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10002; align-items: center; justify-content: center; padding: 20px;" onclick="closeStaffImageLightbox()">
+        <img id="staff-lightbox-img" src="" style="max-width: 90vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); object-fit: contain;">
+        <span onclick="closeStaffImageLightbox()" style="position: absolute; top: 20px; right: 30px; font-size: 2.5rem; color: white; cursor: pointer;">&times;</span>
+    </div>
 
 </body>
 </html>

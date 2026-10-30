@@ -623,10 +623,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ==========================================
-    // Clients Directory / History
+    // Clients Directory / History (Turso Database)
     // ==========================================
     const archivedCasesTbody = document.getElementById('archived-cases-tbody');
     let archivedCasesCache = "";
+    window.allArchivedCasesList = [];
 
     window.loadArchivedCases = async function() {
         if (!archivedCasesTbody) return;
@@ -634,33 +635,84 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/archived-cases', { cache: 'no-store' });
             const cases = await response.json();
             const newDataString = JSON.stringify(cases);
-            if (newDataString === archivedCasesCache) return;
-            archivedCasesCache = newDataString;
-
-            if (cases.length > 0) {
-                archivedCasesTbody.innerHTML = '';
-                cases.forEach(c => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td><a href="#" onclick="printCaseDetails('${c._id}'); return false;" style="color: #0A192F; font-weight: bold; text-decoration: underline; cursor: pointer;">${c.client_name}</a></td>
-                        <td>${c.email}</td>
-                        <td>${c.case_type}</td>
-                        <td><span class="badge" style="background: #e0e0e0; color: #555;">${c.status}</span></td>
-                        <td><button class="btn" style="background:#e74c3c; color:white; padding: 4px 8px;" onclick="deleteArchivedCase('${c._id}')">Delete</button></td>
-                    `;
-                    archivedCasesTbody.appendChild(tr);
-                });
-            } else {
-                archivedCasesTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999; padding: 2rem;">No finished cases found.</td></tr>';
+            if (newDataString === archivedCasesCache && document.getElementById('archived-cases-search') && document.getElementById('archived-cases-search').value.trim() !== '') {
+                return;
             }
+            archivedCasesCache = newDataString;
+            window.allArchivedCasesList = cases || [];
+            window.renderArchivedCasesTable(window.allArchivedCasesList);
         } catch (err) {
             console.error(err);
         }
     };
 
+    window.renderArchivedCasesTable = function(casesToRender) {
+        if (!archivedCasesTbody) return;
+        if (casesToRender && casesToRender.length > 0) {
+            archivedCasesTbody.innerHTML = '';
+            casesToRender.forEach(c => {
+                const tr = document.createElement('tr');
+                const imagesCount = Array.isArray(c.images) ? c.images.length : 0;
+                const imagesBadge = imagesCount > 0 
+                    ? `<span style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; font-size: 0.78rem; padding: 2px 8px; border-radius: 12px; font-weight: 700; cursor: pointer;" onclick="openArchivedFileModal('${c._id}')">🖼️ ${imagesCount} Document${imagesCount > 1 ? 's' : ''}</span>`
+                    : `<span style="color: #94a3b8; font-size: 0.8rem;">No images</span>`;
+
+                tr.innerHTML = `
+                    <td>
+                        <div style="font-weight: 700; color: #0A192F;">🏛️ ${c.chamber_case_number || 'Not Assigned'}</div>
+                        <div style="font-size: 0.82rem; color: #64748b;">⚖️ ${c.court_case_number || 'N/A'}</div>
+                    </td>
+                    <td>
+                        <a href="#" onclick="openArchivedFileModal('${c._id}'); return false;" style="color: #0A192F; font-weight: bold; text-decoration: underline; font-size: 1rem; cursor: pointer;">
+                            ${c.client_name}
+                        </a>
+                        ${c.phone ? `<div style="font-size: 0.8rem; color: #64748b;">📞 ${c.phone}</div>` : ''}
+                    </td>
+                    <td><span style="font-weight: 600; color: #334155;">${c.case_type || 'General'}</span></td>
+                    <td>${imagesBadge}</td>
+                    <td><span class="badge" style="background: #e2e8f0; color: #334155; font-weight: 700;">${c.status || 'Finished & Archived'}</span></td>
+                    <td style="text-align: right; white-space: nowrap;">
+                        <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.82rem; margin-right: 6px;" onclick="openArchivedFileModal('${c._id}')">📂 Open File</button>
+                        <button class="btn" style="background:#e74c3c; color:white; padding: 4px 10px; font-size: 0.82rem;" onclick="deleteArchivedCase('${c._id}')">Delete</button>
+                    </td>
+                `;
+                archivedCasesTbody.appendChild(tr);
+            });
+        } else {
+            archivedCasesTbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999; padding: 2.5rem; font-size: 0.95rem;">No matching finished case files found in Clients Directory.</td></tr>';
+        }
+    };
+
+    window.filterArchivedCasesTable = function() {
+        const query = (document.getElementById('archived-cases-search')?.value || '').trim().toLowerCase();
+        if (!query) {
+            window.renderArchivedCasesTable(window.allArchivedCasesList);
+            return;
+        }
+        const filtered = (window.allArchivedCasesList || []).filter(c => {
+            const chamber = (c.chamber_case_number || '').toLowerCase();
+            const court = (c.court_case_number || '').toLowerCase();
+            const name = (c.client_name || '').toLowerCase();
+            const type = (c.case_type || '').toLowerCase();
+            return chamber.includes(query) || court.includes(query) || name.includes(query) || type.includes(query);
+        });
+        window.renderArchivedCasesTable(filtered);
+    };
+
+    window.clearArchivedSearch = function() {
+        const input = document.getElementById('archived-cases-search');
+        if (input) input.value = '';
+        window.renderArchivedCasesTable(window.allArchivedCasesList);
+    };
+
     if (archivedCasesTbody) {
         loadArchivedCases();
-        setInterval(loadArchivedCases, 1000);
+        setInterval(() => {
+            const searchInput = document.getElementById('archived-cases-search');
+            if (!searchInput || !searchInput.value.trim()) {
+                loadArchivedCases();
+            }
+        }, 5000);
     }
     
     // Email Logs Auto-Refresh
@@ -1319,6 +1371,245 @@ if (officeInfoForm) {
             showToast('Error deleting case.', 'error');
         }
     }
+
+    // ==========================================
+    // ADD & EDIT FINISHED CASE IN TURSO (CLIENTS DIRECTORY)
+    // ==========================================
+    window.currentArchivedImages = [];
+    window.activeViewedArchivedCase = null;
+
+    window.openAddArchivedCaseModal = function(editCase = null) {
+        const modal = document.getElementById('add-archived-case-modal');
+        const form = document.getElementById('archived-case-form');
+        if (!modal || !form) return;
+
+        form.reset();
+        window.currentArchivedImages = [];
+        window.updateArchivedImagesPreview();
+
+        if (editCase) {
+            document.getElementById('archived-modal-title').innerText = '✏️ Edit Finished Case File';
+            document.getElementById('archived-form-id').value = editCase._id || editCase.id;
+            document.getElementById('archived-form-client-name').value = editCase.client_name || '';
+            document.getElementById('archived-form-chamber-number').value = editCase.chamber_case_number || '';
+            document.getElementById('archived-form-court-number').value = editCase.court_case_number || '';
+            document.getElementById('archived-form-case-type').value = editCase.case_type || '';
+            document.getElementById('archived-form-phone').value = editCase.phone || '';
+            document.getElementById('archived-form-email').value = editCase.email || '';
+            document.getElementById('archived-form-notes').value = editCase.notes || '';
+            
+            if (Array.isArray(editCase.images)) {
+                window.currentArchivedImages = [...editCase.images].slice(0, 3);
+            }
+            window.updateArchivedImagesPreview();
+        } else {
+            document.getElementById('archived-modal-title').innerText = '📁 Add Finished Case File (Clients Directory)';
+            document.getElementById('archived-form-id').value = '';
+        }
+
+        modal.style.display = 'flex';
+    };
+
+    window.closeAddArchivedCaseModal = function() {
+        const modal = document.getElementById('add-archived-case-modal');
+        if (modal) modal.style.display = 'none';
+    };
+
+    window.handleArchivedImageSelection = function(event) {
+        const files = Array.from(event.target.files || []);
+        if (!files.length) return;
+
+        const remainingSlots = 3 - window.currentArchivedImages.length;
+        if (remainingSlots <= 0) {
+            showToast('Maximum 3 images allowed per case file.', 'error');
+            return;
+        }
+
+        const filesToProcess = files.slice(0, remainingSlots);
+        filesToProcess.forEach(file => {
+            if (!file.type.startsWith('image/')) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (window.currentArchivedImages.length < 3) {
+                    window.currentArchivedImages.push(e.target.result);
+                    window.updateArchivedImagesPreview();
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Reset file input
+        event.target.value = '';
+    };
+
+    window.updateArchivedImagesPreview = function() {
+        const grid = document.getElementById('archived-images-preview-grid');
+        const counter = document.getElementById('archived-images-counter');
+        if (!grid) return;
+
+        grid.innerHTML = '';
+        if (counter) counter.innerText = `${window.currentArchivedImages.length} / 3 Added`;
+
+        window.currentArchivedImages.forEach((imgSrc, index) => {
+            const div = document.createElement('div');
+            div.style.cssText = 'position: relative; border-radius: 8px; overflow: hidden; border: 1px solid #cbd5e1; height: 95px; background: #000;';
+            div.innerHTML = `
+                <img src="${imgSrc}" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" onclick="openImageLightbox('${imgSrc}')">
+                <button type="button" onclick="removeArchivedImage(${index})" style="position: absolute; top: 4px; right: 4px; background: rgba(239, 68, 68, 0.9); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; line-height: 1;">&times;</button>
+            `;
+            grid.appendChild(div);
+        });
+    };
+
+    window.removeArchivedImage = function(index) {
+        window.currentArchivedImages.splice(index, 1);
+        window.updateArchivedImagesPreview();
+    };
+
+    window.saveArchivedCaseForm = async function(e) {
+        e.preventDefault();
+        const submitBtn = document.getElementById('archived-form-submit-btn');
+        const origText = submitBtn ? submitBtn.innerText : 'Save';
+        if (submitBtn) {
+            submitBtn.innerText = 'Saving to Turso...';
+            submitBtn.disabled = true;
+        }
+
+        const id = document.getElementById('archived-form-id').value;
+        const payload = {
+            client_name: document.getElementById('archived-form-client-name').value.trim(),
+            chamber_case_number: document.getElementById('archived-form-chamber-number').value.trim(),
+            court_case_number: document.getElementById('archived-form-court-number').value.trim(),
+            case_type: document.getElementById('archived-form-case-type').value.trim(),
+            phone: document.getElementById('archived-form-phone').value.trim(),
+            email: document.getElementById('archived-form-email').value.trim(),
+            notes: document.getElementById('archived-form-notes').value.trim(),
+            images: window.currentArchivedImages
+        };
+
+        try {
+            const url = id ? `/api/archived-cases/${id}` : '/api/archived-cases';
+            const method = id ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                showToast(id ? 'Finished case updated successfully!' : 'Finished case file saved to Turso Directory!');
+                window.closeAddArchivedCaseModal();
+                archivedCasesCache = "";
+                await window.loadArchivedCases();
+                if (window.activeViewedArchivedCase && window.activeViewedArchivedCase._id === id) {
+                    window.openArchivedFileModal(id);
+                }
+            } else {
+                const errData = await res.json().catch(() => ({}));
+                showToast(errData.error || 'Failed to save case file', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Server error saving case to Turso.', 'error');
+        } finally {
+            if (submitBtn) {
+                submitBtn.innerText = origText;
+                submitBtn.disabled = false;
+            }
+        }
+    };
+
+    // ==========================================
+    // DETAILED ARCHIVED CASE FILE MODAL (VIEW / ZOOM)
+    // ==========================================
+    window.openArchivedFileModal = async function(id) {
+        try {
+            const res = await fetch(`/api/cases/${id}`);
+            if (!res.ok) {
+                showToast('Case file not found', 'error');
+                return;
+            }
+            const c = await res.json();
+            window.activeViewedArchivedCase = c;
+
+            document.getElementById('view-file-client-name').innerText = c.client_name || 'Client Details';
+            document.getElementById('view-file-chamber-no').innerText = c.chamber_case_number || 'Not Assigned';
+            document.getElementById('view-file-court-no').innerText = c.court_case_number || 'N/A';
+            document.getElementById('view-file-case-type').innerText = c.case_type || 'General Legal File';
+            document.getElementById('view-file-email').innerText = c.email || 'N/A';
+            document.getElementById('view-file-phone').innerText = c.phone || 'N/A';
+            document.getElementById('view-file-completion-date').innerText = c.completion_date || c.created_at || 'Archived';
+            document.getElementById('view-file-notes-display').innerText = c.notes && c.notes.trim() ? c.notes : 'No extra notes recorded for this closed file.';
+
+            // Render Document Images
+            const imagesGrid = document.getElementById('view-file-images-grid');
+            const imagesCount = document.getElementById('view-file-images-count');
+            imagesGrid.innerHTML = '';
+            const images = Array.isArray(c.images) ? c.images : [];
+            imagesCount.innerText = `${images.length} Image${images.length !== 1 ? 's' : ''}`;
+
+            if (images.length > 0) {
+                images.forEach((imgSrc, idx) => {
+                    const card = document.createElement('div');
+                    card.style.cssText = 'position: relative; border-radius: 10px; overflow: hidden; border: 1.5px solid #e2e8f0; background: #000; box-shadow: 0 4px 12px rgba(0,0,0,0.08);';
+                    card.innerHTML = `
+                        <img src="${imgSrc}" style="width: 100%; height: 160px; object-fit: cover; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'" onclick="openImageLightbox('${imgSrc}')">
+                        <div style="padding: 6px 10px; background: white; font-size: 0.78rem; font-weight: 700; color: #475569; display: flex; justify-content: space-between; align-items: center;">
+                            <span>Document #${idx + 1}</span>
+                            <span style="color: #2563eb; cursor: pointer;" onclick="openImageLightbox('${imgSrc}')">🔍 Zoom</span>
+                        </div>
+                    `;
+                    imagesGrid.appendChild(card);
+                });
+            } else {
+                imagesGrid.innerHTML = '<div style="grid-column: 1 / -1; padding: 1.5rem; background: #f8fafc; border-radius: 8px; text-align: center; color: #94a3b8; font-size: 0.9rem;">No document images attached to this case. Click "Edit Details / Images" to upload up to 3 images.</div>';
+            }
+
+            document.getElementById('view-archived-file-modal').style.display = 'flex';
+        } catch (err) {
+            console.error(err);
+            showToast('Failed to load case file details.', 'error');
+        }
+    };
+
+    window.closeViewArchivedFileModal = function() {
+        const modal = document.getElementById('view-archived-file-modal');
+        if (modal) modal.style.display = 'none';
+        window.activeViewedArchivedCase = null;
+    };
+
+    window.editCurrentArchivedFile = function() {
+        if (!window.activeViewedArchivedCase) return;
+        const caseToEdit = window.activeViewedArchivedCase;
+        window.closeViewArchivedFileModal();
+        window.openAddArchivedCaseModal(caseToEdit);
+    };
+
+    window.deleteCurrentArchivedFile = async function() {
+        if (!window.activeViewedArchivedCase) return;
+        const id = window.activeViewedArchivedCase._id || window.activeViewedArchivedCase.id;
+        window.closeViewArchivedFileModal();
+        await window.deleteArchivedCase(id);
+    };
+
+    window.printCurrentArchivedFile = function() {
+        if (!window.activeViewedArchivedCase) return;
+        const id = window.activeViewedArchivedCase._id || window.activeViewedArchivedCase.id;
+        window.printCaseDetails(id);
+    };
+
+    window.openImageLightbox = function(src) {
+        const modal = document.getElementById('image-lightbox-modal');
+        const img = document.getElementById('lightbox-img');
+        if (!modal || !img) return;
+        img.src = src;
+        modal.style.display = 'flex';
+    };
+
+    window.closeImageLightbox = function() {
+        const modal = document.getElementById('image-lightbox-modal');
+        if (modal) modal.style.display = 'none';
+    };
 
     async function loadSystemConfig() {
         try {
