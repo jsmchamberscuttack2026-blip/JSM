@@ -2517,6 +2517,12 @@ select:focus-visible{
             opacity: 1;
             transform: translateY(0);
         }
+
+        /* Modern Web Performance: Off-screen sections skip layout calculation until scroll */
+        #opinions, #services, #people, #contact {
+            content-visibility: auto;
+            contain-intrinsic-size: 700px;
+        }
     </style>
 
 </head>
@@ -3265,7 +3271,7 @@ Clear communication
                 <div class="about-fullscreen-grid" style="display: grid; grid-template-columns: minmax(280px, 380px) 1fr; gap: 40px; align-items: center;">
                     <!-- Full Uncropped Owner Image -->
                     <div style="width: 100%; max-width: 380px; margin: 0 auto; border: 3px solid #D4AF37; border-radius: 12px; box-shadow: 0 12px 35px rgba(10,22,40,0.18); background: #0A1628; padding: 8px; box-sizing: border-box;">
-                        <img id="about-doc-owner-img" src="assets/images/advocate_logo.jpg" alt="Chamber Owner" style="width: 100%; height: auto; max-height: 520px; object-fit: contain; display: block; border-radius: 8px; margin: 0 auto;">
+                        <img id="about-doc-owner-img" src="assets/images/advocate_logo.jpg" alt="Chamber Owner" loading="lazy" decoding="async" style="width: 100%; height: auto; max-height: 520px; object-fit: contain; display: block; border-radius: 8px; margin: 0 auto;">
                     </div>
 
                     <!-- Owner Credentials & Authority -->

@@ -377,7 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
 
           if (photoSrc && photoSrc.length > 20) {
-              imageHtml = `<img src="${photoSrc}" alt="${adv.name} - Chamber Member" class="advocate-image" loading="eager" width="400" height="300">`;
+              imageHtml = `<img src="${photoSrc}" alt="${adv.name} - Chamber Member" class="advocate-image" loading="lazy" decoding="async" width="400" height="300">`;
           } else {
               const initial = (adv.name || '⚖').trim().charAt(0).toUpperCase();
               imageHtml = `
@@ -432,18 +432,20 @@ document.addEventListener('DOMContentLoaded', () => {
       if (window.__INITIAL_DATA__.advocates) window.renderAdvocates(window.__INITIAL_DATA__.advocates);
   }
 
-  // Background sync for settings
-  fetch('/api/settings').then(res => {
-      if (res.status === 503) {
-          if (typeof showRepairScreenNow === 'function') showRepairScreenNow();
-          return null;
-      }
-      return res.json();
-  }).then(info => {
-      if (info) window.applyChamberSettings(info);
-  }).catch(err => console.error("Error background loading settings:", err));
+  // Background sync for settings (skip initial blocking fetch if already hydrated)
+  if (!window.__INITIAL_DATA__ || !window.__INITIAL_DATA__.settings) {
+      fetch('/api/settings').then(res => {
+          if (res.status === 503) {
+              if (typeof showRepairScreenNow === 'function') showRepairScreenNow();
+              return null;
+          }
+          return res.json();
+      }).then(info => {
+          if (info) window.applyChamberSettings(info);
+      }).catch(err => console.error("Error background loading settings:", err));
+  }
 
-  // Background sync for advocates
+  // Background sync for advocates (skip initial blocking fetch if already hydrated)
   const advocatesGrid = document.getElementById('advocates-grid');
   if (advocatesGrid) {
       let advocatesCache = window.__INITIAL_DATA__ && window.__INITIAL_DATA__.advocates ? JSON.stringify(window.__INITIAL_DATA__.advocates) : "";
@@ -459,7 +461,6 @@ document.addEventListener('DOMContentLoaded', () => {
               console.error('Error background updating advocates:', err);
           }
       }
-      // If no initial data, load immediately, else sync periodically
       if (!window.__INITIAL_DATA__ || !window.__INITIAL_DATA__.advocates) {
           loadAdvocates();
       }
@@ -1048,9 +1049,12 @@ if (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.services) {
 }
 
 // Load and render public services dynamically into #services-grid
-async function loadPublicServices() {
-    if (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.services && (!window.allServicesData || window.allServicesData.length === 0)) {
-        window.renderServices(window.__INITIAL_DATA__.services);
+async function loadPublicServices(force = false) {
+    if (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.services && !force) {
+        if (!window.allServicesData || window.allServicesData.length === 0) {
+            window.renderServices(window.__INITIAL_DATA__.services);
+        }
+        return;
     }
     try {
         const res = await fetch('/api/services', { cache: 'no-store' });
@@ -1285,7 +1289,7 @@ window.renderNews = function(data) {
             : `<span style="margin-right: 6px;">${item.icon || '⚖️'}</span>`;
 
         const imgHtml = item.image_url
-            ? `<div class="news-card-img"><img src="${item.image_url}" alt="${item.title}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'"></div>`
+            ? `<div class="news-card-img"><img src="${item.image_url}" alt="${item.title}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'"></div>`
             : `<div class="news-card-img" style="background: linear-gradient(135deg, #071322, #102138); display: flex; align-items: center; justify-content: center; color: #D4AF37; font-size: 2rem; border-bottom: 1px solid rgba(212,175,55,0.2);">${item.icon && !item.icon.startsWith('data:') && !item.icon.startsWith('http') ? item.icon : '📰'}</div>`;
 
         return `
@@ -1321,9 +1325,12 @@ if (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.news) {
     window.renderNews(window.__INITIAL_DATA__.news);
 }
 
-window.loadPublicNews = async function() {
-    if (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.news && (!window.allNewsData || window.allNewsData.length === 0)) {
-        window.renderNews(window.__INITIAL_DATA__.news);
+window.loadPublicNews = async function(force = false) {
+    if (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.news && !force) {
+        if (!window.allNewsData || window.allNewsData.length === 0) {
+            window.renderNews(window.__INITIAL_DATA__.news);
+        }
+        return;
     }
     try {
         const res = await fetch('/api/news', { cache: 'no-store' });
@@ -1435,9 +1442,12 @@ if (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.opinions) {
     window.renderOpinions(window.__INITIAL_DATA__.opinions);
 }
 
-window.loadPublicOpinions = async function() {
-    if (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.opinions && (!window.allOpinionsData || window.allOpinionsData.length === 0)) {
-        window.renderOpinions(window.__INITIAL_DATA__.opinions);
+window.loadPublicOpinions = async function(force = false) {
+    if (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.opinions && !force) {
+        if (!window.allOpinionsData || window.allOpinionsData.length === 0) {
+            window.renderOpinions(window.__INITIAL_DATA__.opinions);
+        }
+        return;
     }
     try {
         const res = await fetch('/api/opinions', { cache: 'no-store' });
