@@ -1726,7 +1726,7 @@
             
             const btn = document.getElementById('btn-complete-profile');
             btn.disabled = true;
-            btn.innerHTML = '<span>Saving to Turso Cloud Database...</span>';
+            btn.innerHTML = '<span>Saving...</span>';
             
             try {
                 const payload = {
@@ -1745,19 +1745,31 @@
                     clientProfileData = d.case || clientProfileData;
                     clientProfileData.profile_completed = true;
                     
+                    // Instantly display "Saved" with checkmark without showing Turso database text
+                    btn.innerHTML = '<span style="color:#ffffff; font-weight:700;">Saved</span> <i data-lucide="check" style="width:16px;height:16px;stroke:#ffffff;"></i>';
+                    btn.style.background = '#10b981';
+                    btn.style.borderColor = '#10b981';
+                    if (window.lucide) lucide.createIcons();
+                    
                     showToast("Profile configured successfully! Welcome to your Chamber Portal.");
-                    hideOnboardingModal();
-                    cacheStr = "";
-                    loadCaseData();
+                    setTimeout(() => {
+                        hideOnboardingModal();
+                        cacheStr = "";
+                        loadCaseData();
+                    }, 400);
                 } else {
                     showToast(d.error || "Failed to complete profile.", "error");
                     btn.disabled = false;
+                    btn.style.background = '';
+                    btn.style.borderColor = '';
                     btn.innerHTML = '<span>Complete Profile &amp; Enter Portal</span> <i data-lucide="check" style="width:16px;height:16px;"></i>';
                     if (window.lucide) lucide.createIcons();
                 }
             } catch(err) {
                 showToast("Network error. Please try again.", "error");
                 btn.disabled = false;
+                btn.style.background = '';
+                btn.style.borderColor = '';
                 btn.innerHTML = '<span>Complete Profile &amp; Enter Portal</span> <i data-lucide="check" style="width:16px;height:16px;"></i>';
                 if (window.lucide) lucide.createIcons();
             }
@@ -1833,10 +1845,20 @@
                 const d = await res.json();
                 if (res.ok) {
                     clientProfileData = d.case || clientProfileData;
+                    btn.innerHTML = '<span style="color:#ffffff; font-weight:700;">Saved</span> <i data-lucide="check" style="width:16px;height:16px;stroke:#ffffff;"></i>';
+                    btn.style.background = '#10b981';
+                    if (window.lucide) lucide.createIcons();
                     showToast("Profile updated & synced successfully!");
-                    closeClientProfileModal();
-                    cacheStr = "";
-                    loadCaseData();
+                    setTimeout(() => {
+                        closeClientProfileModal();
+                        cacheStr = "";
+                        loadCaseData();
+                        btn.disabled = false;
+                        btn.style.background = '';
+                        btn.innerHTML = '<i data-lucide="save" style="width:16px;height:16px;"></i> Save Changes';
+                        if (window.lucide) lucide.createIcons();
+                    }, 400);
+                    return;
                 } else {
                     showToast(d.error || "Failed to update profile.", "error");
                 }

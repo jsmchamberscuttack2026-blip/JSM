@@ -1,4 +1,5 @@
 import concurrent.futures
+import threading
 import os
 import time
 import urllib.request
@@ -292,6 +293,20 @@ def save_client_to_turso_profile(case_data):
         logging.error(f"Error saving client profile to Turso 1: {e}")
         return False
 
+def save_client_to_turso_profile_async(case_data):
+    """Spawns an asynchronous background worker to sync client profile to Turso Database 1
+    without delaying the client's HTTP response."""
+    if not case_data:
+        return
+    try:
+        case_copy = dict(case_data)
+        if '_id' in case_copy:
+            case_copy['_id'] = str(case_copy['_id'])
+        t = threading.Thread(target=save_client_to_turso_profile, args=(case_copy,), daemon=True)
+        t.start()
+    except Exception as e:
+        logging.error(f"Error starting background Turso client profile sync thread: {e}")
+
 def save_case_to_turso_history(case_data):
     """Automatically inserts or replaces a finished case into Turso database."""
     try:
@@ -493,7 +508,8 @@ def is_ip_blocked(ip):
     now_ts = datetime.now().timestamp()
     if now_ts - _blocked_ips_cache["ts"] >= 5.0:
         try:
-            docs = list(security_blocked_ips_col.find({"active": True}, {"ip": 1}))
+            # Only IPs manually blacklisted by the Security Officer are globally blocked
+            docs = list(security_blocked_ips_col.find({"active": True, "blocked_by": "Security Officer"}, {"ip": 1}))
             _blocked_ips_cache["ips"] = {d.get("ip") for d in docs if d.get("ip")}
             _blocked_ips_cache["ts"] = now_ts
         except Exception:
@@ -758,12 +774,13 @@ def check_waf_rate_limit(ip, path):
     now_ts = datetime.now().timestamp()
     window = 60.0  # 1 minute window
     
-    # Sensitive endpoints have tighter rate limit
-    is_sensitive = path.startswith(('/api/admin-login', '/api/client-login', '/api/forgot-password', '/api/verify-code', '/api/admin-verify-otp'))
-    limit = 20 if is_sensitive else 120
+    # Portal login & authentication routes have their own brute-force security controls (client IP lock, staff lock, admin lock)
+    if path.startswith(('/api/client-', '/api/staff-', '/api/admin-', '/api/forgot-password', '/api/verify-code', '/api/client-lock-status', '/client-', '/staff-', '/admin-')):
+        return True, 0
+        
+    limit = 500
     
     timestamps = _waf_rate_limit_table.get(ip, [])
-    # Prune timestamps older than 60 seconds
     timestamps = [t for t in timestamps if now_ts - t < window]
     timestamps.append(now_ts)
     _waf_rate_limit_table[ip] = timestamps
@@ -4008,10 +4025,11 @@ def get_security_database_stats():
         logging.error(f"Error fetching MongoDB stats for SOC: {me}")
         mongo_latency_ms = round((time.time() - mongo_t0) * 1000, 1)
 
-    # 2. Probe Turso 1 Cloud Database (Clients Directory / History)
+    # 2. Probe Turso 1 Cloud Database (Clients Directory / History & Client Profiles)
     turso_t0 = time.time()
     turso_connected = False
     turso_rows_count = 0
+    turso_profiles_count = 0
     turso_data_bytes = 0
     turso_latency_ms = 0
     turso_images_count = 0
@@ -4028,6 +4046,22 @@ def get_security_database_stats():
                 elif 'sum' in k.lower() or 'length' in k.lower():
                     try: turso_data_bytes = int(v or 0)
                     except: pass
+
+        # Probe Turso 1 client_profiles table
+        try:
+            p_res = execute_turso_query("SELECT count(*), sum(length(client_name) + length(email) + length(phone) + length(address) + length(profile_image)) FROM client_profiles")
+            if p_res and len(p_res) > 0:
+                turso_connected = True
+                p_row = p_res[0]
+                for k, v in p_row.items():
+                    if 'count' in k.lower():
+                        try: turso_profiles_count = int(v or 0)
+                        except: pass
+                    elif 'sum' in k.lower() or 'length' in k.lower():
+                        try: turso_data_bytes += int(v or 0)
+                        except: pass
+        except Exception as pe:
+            logging.error(f"Error querying Turso 1 client_profiles stats: {pe}")
 
         img_rows = execute_turso_query("SELECT images FROM clients_history WHERE images IS NOT NULL AND images != ''")
         for r in img_rows:
@@ -4086,7 +4120,7 @@ def get_security_database_stats():
 
     # 2. Turso 1 Starter Plan: 5.0 GB (5,120 MB)
     turso_limit_mb = 5120.0
-    turso_used_mb = round((turso_data_bytes + (turso_rows_count * 1024)) / (1024 * 1024), 2)
+    turso_used_mb = round((turso_data_bytes + ((turso_rows_count + turso_profiles_count) * 1024)) / (1024 * 1024), 2)
     turso_free_mb = max(0.0, round(turso_limit_mb - turso_used_mb, 2))
     turso_used_pct = round((turso_used_mb / turso_limit_mb) * 100, 3)
 
@@ -4142,8 +4176,10 @@ def get_security_database_stats():
             "region": "AWS Cloud (AWS-ap-south-1 Mumbai)",
             "status": "ONLINE" if turso_connected else "OFFLINE",
             "latency_ms": turso_latency_ms,
-            "table_name": "clients_history",
+            "tables": ["client_profiles", "clients_history"],
+            "table_name": "clients_history & client_profiles",
             "finished_cases_count": turso_rows_count,
+            "client_profiles_count": turso_profiles_count,
             "archived_documents_count": turso_images_count,
             "storage": {
                 "limit_gb": 5.0,
@@ -4154,8 +4190,9 @@ def get_security_database_stats():
                 "used_percentage": turso_used_pct,
                 "free_percentage": round(100 - turso_used_pct, 2)
             },
-            "controller": "Strict Admin-Only Archival Protocol (Zero Client Write Privileges)",
+            "controller": "Strict Admin Archival Lock & Verified Client Vault",
             "controlled_modules": [
+                "👤 Verified Client Profiles (Identity, Photos, Addresses, Contact, Case Links)",
                 "📁 Clients Directory & Permanent Finished Case Records",
                 "🏛️ Chamber Case Numbers & Court Case Numbers Archive",
                 "📝 Closing Case Judgment Summaries & Final Remarks",
@@ -4202,6 +4239,67 @@ def get_security_database_stats():
                 "Decoupled Micro-Cloud Content Architecture"
             ]
         }
+    }), 200
+
+@app.route('/api/security/turso-vault-records', methods=['GET'])
+def get_security_turso_vault_records():
+    """Returns live telemetry of all verified client profiles and archived finished cases
+    stored in Turso Cloud 1 Vault for Cyber Sentinel SOC inspection."""
+    profiles = []
+    archived_cases = []
+    error = None
+    try:
+        p_rows = execute_turso_query("SELECT * FROM client_profiles ORDER BY updated_at DESC, created_at DESC")
+        profiles = p_rows or []
+    except Exception as pe:
+        logging.error(f"Error reading client_profiles from Turso 1 for SOC: {pe}")
+        error = str(pe)
+
+    try:
+        c_rows = execute_turso_query("SELECT * FROM clients_history ORDER BY completion_date DESC, created_at DESC")
+        for r in (c_rows or []):
+            case_obj = {
+                "_id": r.get('id'),
+                "id": r.get('id'),
+                "client_name": r.get('client_name') or 'Unknown Litigant',
+                "email": r.get('email') or '',
+                "phone": r.get('phone') or '',
+                "case_type": r.get('case_type') or 'General',
+                "chamber_case_number": r.get('chamber_case_number') or '',
+                "court_case_number": r.get('court_case_number') or '',
+                "total_fee": float(r.get('total_fee') or 0),
+                "fee_paid": float(r.get('fee_paid') or 0),
+                "status": r.get('status') or 'Finished & Archived',
+                "completion_date": r.get('completion_date') or '',
+                "notes": r.get('notes') or '',
+                "created_at": r.get('created_at') or '',
+                "address": r.get('address') or '',
+                "profile_image": r.get('profile_image') or '',
+                "terms_accepted": bool(r.get('terms_accepted') == '1' or r.get('terms_accepted') == 1),
+                "profile_completed": bool(r.get('profile_completed') == '1' or r.get('profile_completed') == 1)
+            }
+            raw_img = r.get('images')
+            if raw_img and isinstance(raw_img, str):
+                try: case_obj['images'] = json.loads(raw_img)
+                except Exception: case_obj['images'] = []
+            else:
+                case_obj['images'] = raw_img or []
+            archived_cases.append(case_obj)
+    except Exception as ce:
+        logging.error(f"Error reading clients_history from Turso 1 for SOC: {ce}")
+        if not error:
+            error = str(ce)
+
+    return jsonify({
+        "success": True,
+        "database": "jsm-chamber-jsmcuttack",
+        "engine": "Turso libSQL Cloud Database 1 (AWS ap-south-1)",
+        "timestamp_ist": get_now_ist().strftime("%d %b %Y, %I:%M:%S %p"),
+        "profiles_count": len(profiles),
+        "cases_count": len(archived_cases),
+        "profiles": profiles,
+        "archived_cases": archived_cases,
+        "error": error
     }), 200
 
 @app.route('/security-dashboard.html')
@@ -5069,8 +5167,8 @@ def complete_client_profile(id):
         updated_case = cases_col.find_one({"_id": ObjectId(id)})
         if updated_case:
             updated_case['_id'] = str(updated_case['_id'])
-            # Save into Turso Database 1
-            save_client_to_turso_profile(updated_case)
+            # Save into Turso Database 1 asynchronously in background without blocking response
+            save_client_to_turso_profile_async(updated_case)
             
         return jsonify({
             "success": True,
@@ -5104,7 +5202,8 @@ def update_client_profile(id):
         updated_case = cases_col.find_one({"_id": ObjectId(id)})
         if updated_case:
             updated_case['_id'] = str(updated_case['_id'])
-            save_client_to_turso_profile(updated_case)
+            # Save into Turso Database 1 asynchronously in background without blocking response
+            save_client_to_turso_profile_async(updated_case)
             
         return jsonify({"success": True, "message": "Profile updated successfully.", "case": updated_case}), 200
     except Exception as e:
