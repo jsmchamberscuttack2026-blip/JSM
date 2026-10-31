@@ -7366,6 +7366,15 @@ def delete_opinion(id):
         logging.error(f"Error deleting opinion {id} from Turso 2: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/health', methods=['GET'])
+def health_check_main_server():
+    """Lightweight server heartbeat endpoint for the dedicated Cyber Sentinel SOC to monitor Server A."""
+    return jsonify({
+        "status": "UP",
+        "service": "Main Chamber Operations Server (Project A)",
+        "timestamp": get_now_ist().strftime("%Y-%m-%d %H:%M:%S IST")
+    }), 200
+
 @app.route('/api/health/databases', methods=['GET'])
 def health_check_all_databases():
     """Diagnostic health check verifying live connectivity to all 3 cloud databases."""
