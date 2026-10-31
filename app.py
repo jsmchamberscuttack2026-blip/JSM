@@ -4243,48 +4243,46 @@ def get_security_database_stats():
 
 @app.route('/api/security/turso-vault-records', methods=['GET'])
 def get_security_turso_vault_records():
-    """Returns live telemetry of all verified client profiles and archived finished cases
+    """Returns zero-PII security verification records of all verified client profiles and archived finished cases
     stored in Turso Cloud 1 Vault for Cyber Sentinel SOC inspection."""
     profiles = []
     archived_cases = []
     error = None
     try:
-        p_rows = execute_turso_query("SELECT * FROM client_profiles ORDER BY updated_at DESC, created_at DESC")
-        profiles = p_rows or []
+        p_rows = execute_turso_query("SELECT id, case_type, chamber_case_number, court_case_number, terms_accepted, terms_accepted_at, profile_completed, profile_completed_at, created_at, updated_at FROM client_profiles ORDER BY updated_at DESC, created_at DESC")
+        for r in (p_rows or []):
+            profiles.append({
+                "id": r.get('id') or '',
+                "chamber_case_number": r.get('chamber_case_number') or 'Pending Allocation',
+                "court_case_number": r.get('court_case_number') or 'Pending Allocation',
+                "case_type": r.get('case_type') or 'General',
+                "terms_accepted": bool(r.get('terms_accepted') == '1' or r.get('terms_accepted') == 1),
+                "terms_accepted_at": r.get('terms_accepted_at') or 'Verified',
+                "profile_completed": bool(r.get('profile_completed') == '1' or r.get('profile_completed') == 1),
+                "profile_completed_at": r.get('profile_completed_at') or 'Verified',
+                "saved_at": r.get('updated_at') or r.get('created_at') or 'Recent',
+                "database_table": "client_profiles",
+                "storage_status": "Verified Profile Saved in Database"
+            })
     except Exception as pe:
         logging.error(f"Error reading client_profiles from Turso 1 for SOC: {pe}")
         error = str(pe)
 
     try:
-        c_rows = execute_turso_query("SELECT * FROM clients_history ORDER BY completion_date DESC, created_at DESC")
+        c_rows = execute_turso_query("SELECT id, case_type, chamber_case_number, court_case_number, status, completion_date, created_at, total_fee, fee_paid FROM clients_history ORDER BY completion_date DESC, created_at DESC")
         for r in (c_rows or []):
-            case_obj = {
-                "_id": r.get('id'),
-                "id": r.get('id'),
-                "client_name": r.get('client_name') or 'Unknown Litigant',
-                "email": r.get('email') or '',
-                "phone": r.get('phone') or '',
+            archived_cases.append({
+                "id": r.get('id') or '',
+                "chamber_case_number": r.get('chamber_case_number') or r.get('id') or 'Archived Case',
+                "court_case_number": r.get('court_case_number') or 'N/A',
                 "case_type": r.get('case_type') or 'General',
-                "chamber_case_number": r.get('chamber_case_number') or '',
-                "court_case_number": r.get('court_case_number') or '',
-                "total_fee": float(r.get('total_fee') or 0),
-                "fee_paid": float(r.get('fee_paid') or 0),
                 "status": r.get('status') or 'Finished & Archived',
-                "completion_date": r.get('completion_date') or '',
-                "notes": r.get('notes') or '',
-                "created_at": r.get('created_at') or '',
-                "address": r.get('address') or '',
-                "profile_image": r.get('profile_image') or '',
-                "terms_accepted": bool(r.get('terms_accepted') == '1' or r.get('terms_accepted') == 1),
-                "profile_completed": bool(r.get('profile_completed') == '1' or r.get('profile_completed') == 1)
-            }
-            raw_img = r.get('images')
-            if raw_img and isinstance(raw_img, str):
-                try: case_obj['images'] = json.loads(raw_img)
-                except Exception: case_obj['images'] = []
-            else:
-                case_obj['images'] = raw_img or []
-            archived_cases.append(case_obj)
+                "completion_date": r.get('completion_date') or r.get('created_at') or 'Archived',
+                "fee_cleared": bool(float(r.get('fee_paid') or 0) >= float(r.get('total_fee') or 0)),
+                "saved_at": r.get('completion_date') or r.get('created_at') or 'Archived',
+                "database_table": "clients_history",
+                "storage_status": "Finished Case Saved in Database"
+            })
     except Exception as ce:
         logging.error(f"Error reading clients_history from Turso 1 for SOC: {ce}")
         if not error:
@@ -4295,6 +4293,7 @@ def get_security_turso_vault_records():
         "database": "jsm-chamber-jsmcuttack",
         "engine": "Turso libSQL Cloud Database 1 (AWS ap-south-1)",
         "timestamp_ist": get_now_ist().strftime("%d %b %Y, %I:%M:%S %p"),
+        "pii_policy": "STRICT_ZERO_PII_EXCLUDED",
         "profiles_count": len(profiles),
         "cases_count": len(archived_cases),
         "profiles": profiles,

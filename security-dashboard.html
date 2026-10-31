@@ -1366,12 +1366,12 @@
                                 <h4 style="margin: 0; font-size: 1.25rem; color: #ffffff; font-weight: 900;">
                                     Turso Cloud 1 (Archival) · Clients Directory Vault Live Data
                                 </h4>
-                                <span class="nav-badge-pill" style="background: rgba(0, 242, 254, 0.15); color: #a5f3fc; border: 1px solid var(--cyan);">
-                                    ☁️ libSQL LIVE TELEMETRY
+                                <span class="nav-badge-pill" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid #10b981;">
+                                    🔒 ZERO PII POLICY · AIR-GAPPED
                                 </span>
                             </div>
                             <p style="margin: 0; color: var(--text-muted); font-size: 0.85rem;">
-                                Direct inspection of live data stored in Turso Cloud Database 1 across <code style="color:var(--cyan);">client_profiles</code> (verified client identities &amp; portrait photographs) and <code style="color:var(--cyan);">clients_history</code> (permanent finished case archives).
+                                Live verification of cases with <code style="color:var(--cyan);">👤 Verified Client Profiles</code> and <code style="color:var(--cyan);">📁 Finished &amp; Archived Cases</code> saved in Turso Database 1. <strong>Strict Data Shield:</strong> All personal client data (names, phone numbers, addresses, emails, and photos) is strictly air-gapped and excluded from this security monitor.
                             </p>
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px;">
@@ -1386,37 +1386,36 @@
                     <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
                         <div style="display: flex; gap: 4px;">
                             <button id="tab-turso-profiles" onclick="switchTursoVaultTab('profiles')" style="background: none; border: none; border-bottom: 3px solid var(--cyan); color: #ffffff; padding: 10px 18px; font-weight: 800; font-size: 0.92rem; cursor: pointer; transition: all 0.2s;">
-                                👤 Verified Client Profiles (<span id="turso-vault-profiles-badge">0</span>)
+                                👤 Verified Client Profiles Saved in DB (<span id="turso-vault-profiles-badge">0</span>)
                             </button>
                             <button id="tab-turso-cases" onclick="switchTursoVaultTab('cases')" style="background: none; border: none; border-bottom: 3px solid transparent; color: var(--text-muted); padding: 10px 18px; font-weight: 700; font-size: 0.92rem; cursor: pointer; transition: all 0.2s;">
-                                📁 Finished &amp; Archived Cases (<span id="turso-vault-cases-badge">0</span>)
+                                📁 Finished &amp; Archived Cases Saved in DB (<span id="turso-vault-cases-badge">0</span>)
                             </button>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                            <input type="text" id="turso-vault-search" oninput="filterTursoVaultData()" placeholder="Filter Turso 1 records by name, email, phone, case #..." style="background: #071322; border: 1px solid var(--border-subtle); color: #ffffff; padding: 7px 14px; border-radius: 6px; font-size: 0.82rem; min-width: 290px; outline: none;">
+                            <input type="text" id="turso-vault-search" oninput="filterTursoVaultData()" placeholder="Filter cases by chamber case #, court case #, category, record state..." style="background: #071322; border: 1px solid var(--border-subtle); color: #ffffff; padding: 7px 14px; border-radius: 6px; font-size: 0.82rem; min-width: 330px; outline: none;">
                             <button class="btn-soc btn-outline-soc" onclick="clearTursoVaultSearch()" style="padding: 7px 12px; font-size: 0.82rem;">Clear</button>
                         </div>
                     </div>
 
-                    <!-- TAB 1: Verified Client Profiles in Turso 1 -->
+                    <!-- TAB 1: Verified Client Profiles in Turso 1 (ZERO PII) -->
                     <div id="turso-vault-view-profiles" style="display: block;">
                         <div style="overflow-x: auto;">
                             <table class="soc-table" style="width: 100%;">
                                 <thead>
                                     <tr>
-                                        <th>Photograph &amp; Client Identity</th>
-                                        <th>Contact &amp; Email</th>
-                                        <th>Correspondence Address</th>
-                                        <th>Case Allocation &amp; Type</th>
-                                        <th>Terms &amp; Profile Setup</th>
-                                        <th>Last Synced IST</th>
-                                        <th style="text-align: right;">libSQL Vault Status</th>
+                                        <th>Chamber &amp; Court Case Numbers</th>
+                                        <th>Case Category</th>
+                                        <th>Turso Database Record State</th>
+                                        <th>Terms &amp; Account Setup</th>
+                                        <th>Database Saved Timestamp</th>
+                                        <th style="text-align: right;">Privacy &amp; Vault Status</th>
                                     </tr>
                                 </thead>
                                 <tbody id="turso-vault-profiles-tbody">
                                     <tr>
-                                        <td colspan="7" style="text-align: center; padding: 2.5rem; color: #94a3b8;">
-                                            Loading verified client profiles from Turso Database 1...
+                                        <td colspan="6" style="text-align: center; padding: 2.5rem; color: #94a3b8;">
+                                            Verifying client profile records saved in Turso Database 1...
                                         </td>
                                     </tr>
                                 </tbody>
@@ -1424,25 +1423,24 @@
                         </div>
                     </div>
 
-                    <!-- TAB 2: Finished & Archived Cases in Turso 1 -->
+                    <!-- TAB 2: Finished & Archived Cases in Turso 1 (ZERO PII) -->
                     <div id="turso-vault-view-cases" style="display: none;">
                         <div style="overflow-x: auto;">
                             <table class="soc-table" style="width: 100%;">
                                 <thead>
                                     <tr>
-                                        <th>Case # &amp; Title</th>
-                                        <th>Litigant / Client</th>
+                                        <th>Archived Case Numbers</th>
                                         <th>Case Category</th>
-                                        <th>Settlement Fee Total</th>
+                                        <th>Turso Database Record State</th>
+                                        <th>Settlement &amp; Fee State</th>
                                         <th>Completion Date</th>
-                                        <th>Attached Judgment Docs</th>
-                                        <th style="text-align: right;">Vault Status</th>
+                                        <th style="text-align: right;">Privacy &amp; Vault Status</th>
                                     </tr>
                                 </thead>
                                 <tbody id="turso-vault-cases-tbody">
                                     <tr>
-                                        <td colspan="7" style="text-align: center; padding: 2.5rem; color: #94a3b8;">
-                                            Loading finished case files from Turso Database 1...
+                                        <td colspan="6" style="text-align: center; padding: 2.5rem; color: #94a3b8;">
+                                            Verifying finished cases saved in Turso Database 1...
                                         </td>
                                     </tr>
                                 </tbody>
@@ -1870,23 +1868,6 @@
         </div>
     </div>
 
-    <!-- Modal: Image Lightbox for Turso Vault Media -->
-    <div class="soc-modal-overlay" id="modal-turso-image-lightbox" onclick="closeModal('modal-turso-image-lightbox')">
-        <div class="soc-modal" style="max-width: 680px; text-align: center; background: rgba(7, 19, 34, 0.95); border: 1.5px solid var(--cyan);" onclick="event.stopPropagation()">
-            <div class="soc-modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
-                <h4 id="turso-lightbox-title" style="margin: 0; color: #ffffff; font-size: 1.05rem; font-weight: 800;">Turso Cloud 1 Vault Media</h4>
-                <button onclick="closeModal('modal-turso-image-lightbox')" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer;">✕</button>
-            </div>
-            <div style="max-height: 520px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #000; border-radius: 8px; margin-bottom: 14px; padding: 6px;">
-                <img id="turso-lightbox-img" src="" style="max-width: 100%; max-height: 480px; object-fit: contain; border-radius: 6px;" alt="Vault Media">
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: var(--text-muted);">
-                <span id="turso-lightbox-caption">Encrypted Archival Document / Profile Photograph</span>
-                <button class="btn-soc btn-outline-soc" onclick="closeModal('modal-turso-image-lightbox')">Close</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Toast Notification -->
     <div id="soc-toast"><span>✅</span> <span id="soc-toast-text">Operation successful</span></div>
 
@@ -2141,9 +2122,9 @@
                 console.error(err);
                 if (syncEl) syncEl.innerText = 'Sync Error';
                 const pTbody = document.getElementById('turso-vault-profiles-tbody');
-                if (pTbody) pTbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 2rem; color: #ef4444;">Unable to connect to Turso Cloud 1 Vault. Verify Ed25519 Token.</td></tr>';
+                if (pTbody) pTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem; color: #ef4444;">Unable to connect to Turso Cloud 1 Vault. Verify Ed25519 Token.</td></tr>';
                 const cTbody = document.getElementById('turso-vault-cases-tbody');
-                if (cTbody) cTbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 2rem; color: #ef4444;">Unable to connect to Turso Cloud 1 Vault.</td></tr>';
+                if (cTbody) cTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem; color: #ef4444;">Unable to connect to Turso Cloud 1 Vault.</td></tr>';
                 if (isManual) showToast('Failed to refresh Turso Cloud 1 Vault.', 'error');
             } finally {
                 setTimeout(() => {
@@ -2158,13 +2139,11 @@
                 const filtered = window.tursoVaultProfiles.filter(p => {
                     if (!q) return true;
                     return (
-                        (p.client_name || '').toLowerCase().includes(q) ||
-                        (p.email || '').toLowerCase().includes(q) ||
-                        (p.phone || '').toLowerCase().includes(q) ||
-                        (p.address || '').toLowerCase().includes(q) ||
-                        (p.case_type || '').toLowerCase().includes(q) ||
                         (p.chamber_case_number || '').toLowerCase().includes(q) ||
                         (p.court_case_number || '').toLowerCase().includes(q) ||
+                        (p.case_type || '').toLowerCase().includes(q) ||
+                        (p.storage_status || '').toLowerCase().includes(q) ||
+                        (p.saved_at || '').toLowerCase().includes(q) ||
                         (p.id || '').toLowerCase().includes(q)
                     );
                 });
@@ -2173,13 +2152,13 @@
                 const filtered = window.tursoVaultCases.filter(c => {
                     if (!q) return true;
                     return (
-                        (c.client_name || '').toLowerCase().includes(q) ||
-                        (c.email || '').toLowerCase().includes(q) ||
-                        (c.phone || '').toLowerCase().includes(q) ||
-                        (c.case_type || '').toLowerCase().includes(q) ||
                         (c.chamber_case_number || '').toLowerCase().includes(q) ||
                         (c.court_case_number || '').toLowerCase().includes(q) ||
-                        (c.notes || '').toLowerCase().includes(q) ||
+                        (c.case_type || '').toLowerCase().includes(q) ||
+                        (c.status || '').toLowerCase().includes(q) ||
+                        (c.storage_status || '').toLowerCase().includes(q) ||
+                        (c.completion_date || '').toLowerCase().includes(q) ||
+                        (c.saved_at || '').toLowerCase().includes(q) ||
                         (c.id || '').toLowerCase().includes(q)
                     );
                 });
@@ -2198,53 +2177,46 @@
             if (!tbody) return;
 
             if (!list || list.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2.5rem; color: #94a3b8;">No client profile records matched in Turso Cloud 1 Vault.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2.5rem; color: #94a3b8;">No client profile records matched in Turso Cloud 1 Vault.</td></tr>';
                 return;
             }
 
             tbody.innerHTML = list.map(p => {
-                const hasImg = !!p.profile_image;
-                const avatarHtml = hasImg
-                    ? `<img src="${p.profile_image}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--cyan); flex-shrink: 0; cursor: pointer; box-shadow: 0 0 10px rgba(0,242,254,0.3);" onclick="viewTursoImageLightbox('${p.profile_image}', '${escapeHtml(p.client_name || 'Client')}', 'Verified Portrait Photograph (libSQL DB 1)')" alt="Client Photo" title="Click to view full photo">`
-                    : `<div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(0,242,254,0.1); border: 1.5px dashed var(--cyan); display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0; color: var(--cyan);">👤</div>`;
-
                 const termsAccepted = (p.terms_accepted == 1 || p.terms_accepted === '1' || p.terms_accepted === true);
                 const profileDone = (p.profile_completed == 1 || p.profile_completed === '1' || p.profile_completed === true);
 
                 const termsBadge = termsAccepted
-                    ? `<span class="badge-soc badge-low" style="background: rgba(16,185,129,0.15); color: #6ee7b7; border-color: #10b981; font-size: 0.72rem; padding: 2px 8px;">✅ Terms Accepted</span>`
-                    : `<span class="badge-soc badge-med" style="background: rgba(245,158,11,0.15); color: #fde68a; border-color: #f59e0b; font-size: 0.72rem; padding: 2px 8px;">⏳ Terms Pending</span>`;
+                    ? `<span class="badge-soc badge-low" style="background: rgba(16,185,129,0.15); color: #6ee7b7; border-color: #10b981; font-size: 0.72rem; padding: 2px 8px; width: fit-content;">✅ Terms Accepted</span>`
+                    : `<span class="badge-soc badge-med" style="background: rgba(245,158,11,0.15); color: #fde68a; border-color: #f59e0b; font-size: 0.72rem; padding: 2px 8px; width: fit-content;">⏳ Terms Pending</span>`;
 
                 const profileBadge = profileDone
-                    ? `<span class="badge-soc badge-low" style="background: rgba(16,185,129,0.15); color: #6ee7b7; border-color: #10b981; font-size: 0.72rem; padding: 2px 8px;">✅ Setup Completed</span>`
-                    : `<span class="badge-soc badge-med" style="background: rgba(245,158,11,0.15); color: #fde68a; border-color: #f59e0b; font-size: 0.72rem; padding: 2px 8px;">⏳ Onboarding</span>`;
+                    ? `<span class="badge-soc badge-low" style="background: rgba(16,185,129,0.15); color: #6ee7b7; border-color: #10b981; font-size: 0.72rem; padding: 2px 8px; width: fit-content;">✅ Setup Completed</span>`
+                    : `<span class="badge-soc badge-med" style="background: rgba(245,158,11,0.15); color: #fde68a; border-color: #f59e0b; font-size: 0.72rem; padding: 2px 8px; width: fit-content;">⏳ Onboarding</span>`;
 
-                const syncedAt = p.updated_at || p.created_at || 'Recent';
+                const syncedAt = p.saved_at || p.updated_at || p.created_at || 'Recent';
 
                 return `
                     <tr>
                         <td>
                             <div style="display: flex; align-items: center; gap: 12px;">
-                                ${avatarHtml}
+                                <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(0,242,254,0.1); border: 1.5px solid var(--cyan); display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0; color: var(--cyan);">👤</div>
                                 <div>
-                                    <div style="font-weight: 800; color: #ffffff; font-size: 0.95rem;">${escapeHtml(p.client_name || 'Litigant')}</div>
-                                    <div style="font-size: 0.74rem; font-family: monospace; color: var(--cyan);">ID: ${escapeHtml(p.id || 'N/A')}</div>
+                                    <div style="font-weight: 800; color: #ffffff; font-size: 0.95rem;">${escapeHtml(p.chamber_case_number || 'Chamber Record')}</div>
+                                    <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 2px;">Court #: <span style="color: #cbd5e1; font-family: monospace;">${escapeHtml(p.court_case_number || 'Pending')}</span></div>
+                                    <div style="font-size: 0.72rem; font-family: monospace; color: var(--cyan); margin-top: 2px;">Vault ID: ${escapeHtml(p.id || 'N/A')}</div>
                                 </div>
                             </div>
                         </td>
                         <td>
-                            <div style="color: #cbd5e1; font-size: 0.84rem;">📧 ${escapeHtml(p.email || 'N/A')}</div>
-                            <div style="color: var(--text-dim); font-size: 0.78rem; margin-top: 2px;">📞 ${escapeHtml(p.phone || 'N/A')}</div>
-                        </td>
-                        <td style="max-width: 220px;">
-                            <div style="color: #cbd5e1; font-size: 0.8rem; line-height: 1.35; white-space: normal;">
-                                ${escapeHtml(p.address || 'Address pending setup')}
-                            </div>
+                            <span class="badge-soc badge-info" style="font-size: 0.74rem; padding: 4px 10px; display: inline-block;">${escapeHtml(p.case_type || 'General')}</span>
                         </td>
                         <td>
-                            <span class="badge-soc badge-info" style="font-size: 0.72rem; margin-bottom: 4px; display: inline-block;">${escapeHtml(p.case_type || 'General')}</span>
-                            <div style="font-size: 0.76rem; color: var(--text-dim);">Chamber: <strong style="color:#ffffff;">${escapeHtml(p.chamber_case_number || 'N/A')}</strong></div>
-                            <div style="font-size: 0.74rem; color: var(--text-dim);">Court: <strong style="color:#cbd5e1;">${escapeHtml(p.court_case_number || 'N/A')}</strong></div>
+                            <div style="font-weight: 700; color: #6ee7b7; font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
+                                <span style="color: #10b981;">●</span> ${escapeHtml(p.storage_status || 'Verified Profile Saved in Database')}
+                            </div>
+                            <div style="font-size: 0.74rem; color: #94a3b8; font-family: monospace; margin-top: 3px;">
+                                Table: <span style="color: #ffffff; font-weight: 700;">client_profiles</span> · libSQL Cloud 1
+                            </div>
                         </td>
                         <td>
                             <div style="display: flex; flex-direction: column; gap: 4px;">
@@ -2253,12 +2225,12 @@
                             </div>
                         </td>
                         <td>
-                            <div style="font-size: 0.78rem; color: #ffffff; font-family: monospace;">${escapeHtml(syncedAt)}</div>
-                            <div style="font-size: 0.72rem; color: var(--text-dim);">Ed25519 Signed</div>
+                            <div style="font-size: 0.8rem; color: #ffffff; font-family: monospace;">${escapeHtml(syncedAt)}</div>
+                            <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 2px;">Ed25519 Cryptographically Saved</div>
                         </td>
                         <td style="text-align: right;">
-                            <span class="badge-soc" style="background: rgba(0,242,254,0.15); color: #a5f3fc; border: 1px solid var(--cyan); font-size: 0.74rem;">
-                                ☁️ libSQL DB 1
+                            <span class="badge-soc" style="background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid #10b981; font-size: 0.74rem; padding: 4px 10px; display: inline-block;">
+                                🔒 ZERO PII · AIR-GAPPED
                             </span>
                         </td>
                     </tr>
@@ -2271,52 +2243,52 @@
             if (!tbody) return;
 
             if (!list || list.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2.5rem; color: #94a3b8;">No archived case records found in Turso Cloud 1 Vault.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2.5rem; color: #94a3b8;">No archived case records found in Turso Cloud 1 Vault.</td></tr>';
                 return;
             }
 
             tbody.innerHTML = list.map(c => {
-                const totalFee = (c.total_fee || 0).toLocaleString('en-IN');
-                const feePaid = (c.fee_paid || 0).toLocaleString('en-IN');
-                const images = Array.isArray(c.images) ? c.images : [];
-
-                const docsHtml = images.length > 0
-                    ? `<div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                        ${images.slice(0, 3).map((img, i) => `
-                            <img src="${img}" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover; border: 1px solid var(--cyan); cursor: pointer;" onclick="viewTursoImageLightbox('${img}', '${escapeHtml(c.chamber_case_number || 'Archived File')}', 'Attached Judgment Document #${i+1}')" alt="Case Document">
-                        `).join('')}
-                        <span style="font-size: 0.72rem; color: var(--cyan); font-weight: 700;">(${images.length} Docs)</span>
-                       </div>`
-                    : `<span style="font-size: 0.76rem; color: var(--text-dim);">No documents</span>`;
+                const completedAt = c.completion_date || c.saved_at || 'Archived';
+                const feeBadge = c.fee_cleared
+                    ? `<span class="badge-soc badge-low" style="background: rgba(16,185,129,0.15); color: #6ee7b7; border-color: #10b981; font-size: 0.72rem; padding: 2px 8px; width: fit-content;">✅ Accounts Cleared</span>`
+                    : `<span class="badge-soc badge-med" style="background: rgba(245,158,11,0.15); color: #fde68a; border-color: #f59e0b; font-size: 0.72rem; padding: 2px 8px; width: fit-content;">⏳ Settlement Audited</span>`;
 
                 return `
                     <tr>
                         <td>
-                            <div style="font-weight: 800; color: #ffffff; font-size: 0.95rem;">${escapeHtml(c.chamber_case_number || c.id || 'Finished Case')}</div>
-                            <div style="font-size: 0.76rem; color: var(--text-dim);">Court #: ${escapeHtml(c.court_case_number || 'N/A')}</div>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(16,185,129,0.1); border: 1.5px solid #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0; color: #6ee7b7;">📁</div>
+                                <div>
+                                    <div style="font-weight: 800; color: #ffffff; font-size: 0.95rem;">${escapeHtml(c.chamber_case_number || 'Finished Case')}</div>
+                                    <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 2px;">Court #: <span style="color: #cbd5e1; font-family: monospace;">${escapeHtml(c.court_case_number || 'N/A')}</span></div>
+                                    <div style="font-size: 0.72rem; font-family: monospace; color: var(--cyan); margin-top: 2px;">Vault ID: ${escapeHtml(c.id || 'N/A')}</div>
+                                </div>
+                            </div>
                         </td>
                         <td>
-                            <div style="font-weight: 700; color: #ffffff; font-size: 0.9rem;">${escapeHtml(c.client_name || 'Litigant')}</div>
-                            <div style="font-size: 0.75rem; color: var(--text-dim);">📧 ${escapeHtml(c.email || 'N/A')}</div>
-                            <div style="font-size: 0.75rem; color: var(--text-dim);">📞 ${escapeHtml(c.phone || 'N/A')}</div>
+                            <span class="badge-soc badge-info" style="font-size: 0.74rem; padding: 4px 10px; display: inline-block;">${escapeHtml(c.case_type || 'General')}</span>
                         </td>
                         <td>
-                            <span class="badge-soc badge-info" style="font-size: 0.74rem;">${escapeHtml(c.case_type || 'General')}</span>
+                            <div style="font-weight: 700; color: #6ee7b7; font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
+                                <span style="color: #10b981;">●</span> ${escapeHtml(c.storage_status || 'Finished Case Saved in Database')}
+                            </div>
+                            <div style="font-size: 0.74rem; color: #94a3b8; font-family: monospace; margin-top: 3px;">
+                                Table: <span style="color: #ffffff; font-weight: 700;">clients_history</span> · libSQL Cloud 1
+                            </div>
                         </td>
                         <td>
-                            <div style="font-weight: 800; color: #6ee7b7; font-size: 0.9rem;">₹${totalFee}</div>
-                            <div style="font-size: 0.72rem; color: var(--text-dim);">Settled: ₹${feePaid}</div>
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                ${feeBadge}
+                                <div style="font-size: 0.72rem; color: #94a3b8;">Status: <strong style="color: #cbd5e1;">${escapeHtml(c.status || 'Finished & Archived')}</strong></div>
+                            </div>
                         </td>
                         <td>
-                            <div style="color: #cbd5e1; font-size: 0.82rem; font-family: monospace;">${escapeHtml(c.completion_date || c.created_at || 'Archived')}</div>
-                            <div style="font-size: 0.72rem; color: #10b981;">● Case Closed</div>
-                        </td>
-                        <td>
-                            ${docsHtml}
+                            <div style="color: #cbd5e1; font-size: 0.8rem; font-family: monospace;">${escapeHtml(completedAt)}</div>
+                            <div style="font-size: 0.72rem; color: #10b981; margin-top: 2px;">● Permanent Case Closed</div>
                         </td>
                         <td style="text-align: right;">
-                            <span class="badge-soc" style="background: rgba(0,242,254,0.15); color: #a5f3fc; border: 1px solid var(--cyan); font-size: 0.74rem;">
-                                🔒 PERMANENT VAULT
+                            <span class="badge-soc" style="background: rgba(0,242,254,0.15); color: #a5f3fc; border: 1px solid var(--cyan); font-size: 0.74rem; padding: 4px 10px; display: inline-block;">
+                                🔒 PERMANENT VAULT · ZERO PII
                             </span>
                         </td>
                     </tr>
