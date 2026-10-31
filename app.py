@@ -49,11 +49,25 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 
 from werkzeug.exceptions import HTTPException
-app = Flask(__name__, static_folder='.', static_url_path='')
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+app = Flask(__name__, static_folder=BASE_DIR, static_url_path='')
+
+@app.errorhandler(404)
+def handle_404(e):
+    if request.path.startswith('/api/'):
+        return jsonify({"error": "Not Found", "message": "The requested endpoint was not found on the server."}), 404
+    clean_p = request.path.strip('/')
+    candidate = os.path.join(BASE_DIR, f"{clean_p}.html")
+    if clean_p and os.path.isfile(candidate):
+        return send_from_directory(BASE_DIR, f"{clean_p}.html")
+    return redirect('/', code=302)
 
 @app.errorhandler(Exception)
 def handle_exception(e):
     if isinstance(e, HTTPException):
+        if e.code == 404 and not request.path.startswith('/api/'):
+            return handle_404(e)
         return jsonify({"error": e.name, "message": e.description}), e.code
     logging.error(f"Global Exception: {str(e)}")
     return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
@@ -1997,6 +2011,7 @@ def serve_index():
                 continue
                 
             adv_name_lower = adv_name.lower()
+            is_owner = bool(adv.get("is_owner") or "jayasankar" in adv_name_lower)
             member_sem_map = {
                 "6ae1972a7a60ae7ff4891612": (f"{base_url}/chamber-owner.jpg", 1024, 1536),
                 "6ae19bc0bc46657be3375652": (f"{base_url}/adv-harisankar-mishra.jpg", 600, 762),
@@ -2140,7 +2155,7 @@ def serve_index():
         return Response(html, mimetype='text/html')
     except Exception as e:
         logging.error(f"Error serving index.html with verification: {e}")
-        return send_from_directory('.', 'index.html')
+        return send_from_directory(BASE_DIR, 'index.html')
 
 @app.route('/chamber-owner.jpg')
 def serve_chamber_owner_image():
@@ -2167,7 +2182,7 @@ def serve_chamber_owner_image():
             })
     except Exception as e:
         logging.error(f"Error serving owner image: {e}")
-    return send_from_directory('assets/images', 'advocate_logo.jpg')
+    return send_from_directory(os.path.join(BASE_DIR, 'assets/images'), 'advocate_logo.jpg')
 
 @app.route('/chamber-logo.jpg')
 def serve_chamber_logo_image():
@@ -2194,7 +2209,7 @@ def serve_chamber_logo_image():
             })
     except Exception as e:
         logging.error(f"Error serving chamber logo: {e}")
-    return send_from_directory('assets/images', 'advocate_logo.jpg')
+    return send_from_directory(os.path.join(BASE_DIR, 'assets/images'), 'advocate_logo.jpg')
 
 @app.route('/chamber-hero-banner.jpg')
 def serve_chamber_hero_banner():
@@ -2221,7 +2236,7 @@ def serve_chamber_hero_banner():
             })
     except Exception as e:
         logging.error(f"Error serving hero banner: {e}")
-    return send_from_directory('assets/images', 'default_chamber_banner.jpg')
+    return send_from_directory(os.path.join(BASE_DIR, 'assets/images'), 'default_chamber_banner.jpg')
 
 @app.route('/chamber-staff-banner.jpg')
 def serve_chamber_staff_banner():
@@ -2248,7 +2263,7 @@ def serve_chamber_staff_banner():
             })
     except Exception as e:
         logging.error(f"Error serving staff banner: {e}")
-    return send_from_directory('assets/images', 'default_chamber_banner.jpg')
+    return send_from_directory(os.path.join(BASE_DIR, 'assets/images'), 'default_chamber_banner.jpg')
 
 @app.route('/chamber-expertise-banner.jpg')
 def serve_chamber_expertise_banner():
@@ -2275,7 +2290,7 @@ def serve_chamber_expertise_banner():
             })
     except Exception as e:
         logging.error(f"Error serving expertise banner: {e}")
-    return send_from_directory('assets/images', 'default_chamber_banner.jpg')
+    return send_from_directory(os.path.join(BASE_DIR, 'assets/images'), 'default_chamber_banner.jpg')
 
 
 @app.route('/api/news/<news_id>/image.jpg')
@@ -2304,7 +2319,7 @@ def serve_news_image(news_id):
                 })
     except Exception as e:
         logging.error(f"Error serving news image {news_id}: {e}")
-    return send_from_directory('assets/images', 'advocate_logo.jpg')
+    return send_from_directory(os.path.join(BASE_DIR, 'assets/images'), 'advocate_logo.jpg')
 
 @app.route('/google<string:code>.html')
 def serve_google_verification_file(code):
@@ -2407,42 +2422,92 @@ def serve_members_html():
 
 @app.route('/adv-harisankar-mishra.jpg')
 def serve_adv_harisankar():
-    return send_from_directory('.', 'adv-harisankar-mishra.jpg')
+    return send_from_directory(BASE_DIR, 'adv-harisankar-mishra.jpg')
 
 @app.route('/adv-chaitanya-nayak.jpg')
 def serve_adv_chaitanya():
-    return send_from_directory('.', 'adv-chaitanya-nayak.jpg')
+    return send_from_directory(BASE_DIR, 'adv-chaitanya-nayak.jpg')
 
 @app.route('/adv-susil-das.jpg')
 def serve_adv_susil():
-    return send_from_directory('.', 'adv-susil-das.jpg')
+    return send_from_directory(BASE_DIR, 'adv-susil-das.jpg')
 
 @app.route('/tabasmiti-mishra.jpg')
 def serve_tabasmiti():
-    return send_from_directory('.', 'tabasmiti-mishra.jpg')
+    return send_from_directory(BASE_DIR, 'tabasmiti-mishra.jpg')
 
 @app.route('/adv-jayasankar-mishra.jpg')
 def serve_adv_jayasankar():
     return serve_chamber_owner_image()
 
-
-
 @app.route('/admin-login.html')
 @app.route('/admin-login')
 def serve_admin_login():
-    return send_from_directory('.', 'admin-login.html')
+    return send_from_directory(BASE_DIR, 'admin-login.html')
 
 @app.route('/admin-dashboard.html')
 @app.route('/admin-dashboard')
 def serve_admin_dashboard():
-    return send_from_directory('.', 'admin-dashboard.html')
+    return send_from_directory(BASE_DIR, 'admin-dashboard.html')
+
+@app.route('/client-login.html')
+@app.route('/client-login')
+def serve_client_login():
+    return send_from_directory(BASE_DIR, 'client-login.html')
+
+@app.route('/client-dashboard.html')
+@app.route('/client-dashboard')
+def serve_client_dashboard():
+    return send_from_directory(BASE_DIR, 'client-dashboard.html')
+
+@app.route('/staff-login.html')
+@app.route('/staff-login')
+def serve_staff_login():
+    return send_from_directory(BASE_DIR, 'staff-login.html')
+
+@app.route('/staff-dashboard.html')
+@app.route('/staff-dashboard')
+def serve_staff_dashboard():
+    return send_from_directory(BASE_DIR, 'staff-dashboard.html')
+
+@app.route('/security-dashboard.html')
+@app.route('/security-dashboard')
+def serve_security_dashboard():
+    return send_from_directory(BASE_DIR, 'security-dashboard.html')
+
+@app.route('/Court-SOC')
+@app.route('/Court-SOC/')
+@app.route('/Court-SOC/index.html')
+def serve_court_soc():
+    soc_dir = os.path.join(BASE_DIR, 'Court-SOC')
+    for f in ['security-dashboard.html', 'index.html']:
+        if os.path.isfile(os.path.join(soc_dir, f)):
+            return send_from_directory(soc_dir, f)
+    return redirect('/security-dashboard.html')
 
 @app.route('/<path:path>')
 def serve_static(path):
     if not is_public_website_enabled():
-        if path.endswith('.html') and path not in ('admin-login.html', 'admin-dashboard.html', 'security-dashboard.html'):
+        whitelisted = (
+            'admin-login.html', 'admin-dashboard.html', 'security-dashboard.html',
+            'client-login.html', 'client-dashboard.html', 'staff-login.html', 'staff-dashboard.html'
+        )
+        if path.endswith('.html') and path not in whitelisted:
             return render_under_repair_page()
-    return send_from_directory('.', path)
+
+    full_path = os.path.join(BASE_DIR, path)
+    if os.path.isfile(full_path):
+        return send_from_directory(BASE_DIR, path)
+    if os.path.isfile(full_path + '.html'):
+        return send_from_directory(BASE_DIR, path + '.html')
+    if os.path.isdir(full_path):
+        for candidate in ['index.html', 'security-dashboard.html']:
+            if os.path.isfile(os.path.join(full_path, candidate)):
+                return send_from_directory(full_path, candidate)
+    if os.path.isfile(os.path.join(BASE_DIR, 'assets', path)):
+        return send_from_directory(os.path.join(BASE_DIR, 'assets'), path)
+
+    return send_from_directory(BASE_DIR, path)
 
 
 @app.route('/api/appointments/vacancy', methods=['GET'])
@@ -4301,10 +4366,6 @@ def get_security_turso_vault_records():
         "error": error
     }), 200
 
-@app.route('/security-dashboard.html')
-@app.route('/security-dashboard')
-def serve_security_dashboard():
-    return send_from_directory('.', 'security-dashboard.html')
 
 @app.route('/api/cases', methods=['POST'])
 def create_case():
@@ -5933,7 +5994,7 @@ def serve_advocate_photo(id):
         if ObjectId.is_valid(id):
             adv = advocates_col.find_one({"_id": ObjectId(id)})
         if not adv:
-            return send_from_directory('assets/images', 'advocate_logo.jpg')
+            return send_from_directory(os.path.join(BASE_DIR, 'assets/images'), 'advocate_logo.jpg')
             
         img_data = adv.get('imageUrl') or ""
         if 'base64,' in img_data:
@@ -5954,10 +6015,10 @@ def serve_advocate_photo(id):
         elif "tabasmiti" in adv_name:
             return send_file(os.path.join(app_dir, "tabasmiti-mishra.jpg"), mimetype='image/jpeg')
             
-        return send_from_directory('assets/images', 'advocate_logo.jpg')
+        return send_from_directory(os.path.join(BASE_DIR, 'assets/images'), 'advocate_logo.jpg')
     except Exception as e:
         logging.error(f"Error serving advocate photo {id}: {e}")
-        return send_from_directory('assets/images', 'advocate_logo.jpg')
+        return send_from_directory(os.path.join(BASE_DIR, 'assets/images'), 'advocate_logo.jpg')
 
 @app.route('/api/advocates', methods=['POST'])
 def add_advocate():

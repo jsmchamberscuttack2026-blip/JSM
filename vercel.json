@@ -1,5 +1,6 @@
 {
     "version": 2,
+    "cleanUrls": true,
     "builds": [
         {
             "src": "app.py",
@@ -51,6 +52,38 @@
         {
             "src": "/api/(.*)",
             "dest": "app.py"
+        },
+        {
+            "src": "/admin-login",
+            "dest": "/admin-login.html"
+        },
+        {
+            "src": "/admin-dashboard",
+            "dest": "/admin-dashboard.html"
+        },
+        {
+            "src": "/client-login",
+            "dest": "/client-login.html"
+        },
+        {
+            "src": "/client-dashboard",
+            "dest": "/client-dashboard.html"
+        },
+        {
+            "src": "/staff-login",
+            "dest": "/staff-login.html"
+        },
+        {
+            "src": "/staff-dashboard",
+            "dest": "/staff-dashboard.html"
+        },
+        {
+            "src": "/security-dashboard",
+            "dest": "/security-dashboard.html"
+        },
+        {
+            "src": "/Court-SOC/?",
+            "dest": "/Court-SOC/index.html"
         },
         {
             "src": "/(.*)",
