@@ -44,6 +44,10 @@
             "status": 404
         },
         {
+            "src": "/members",
+            "dest": "/members.html"
+        },
+        {
             "src": "/api/(.*)",
             "dest": "app.py"
         },

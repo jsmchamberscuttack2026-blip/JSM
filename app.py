@@ -1521,13 +1521,36 @@ def make_slim_public_bundle(full_bundle):
     slim["settings"]["about_chamber_owner_image"] = "/chamber-owner.jpg" if (raw_s.get("about_chamber_owner_image") or raw_s.get("about_chamber_image1")) else ""
     slim["settings"]["about_chamber_image1"] = slim["settings"]["about_chamber_owner_image"]
 
-    # 2. Advocates (replace base64 imageUrl with cached photo route)
+    # 2. Advocates (use high-resolution semantic photos for chamber members)
+    member_files = {
+        "6ae1972a7a60ae7ff4891612": "/chamber-owner.jpg",
+        "6ae19bc0bc46657be3375652": "/adv-harisankar-mishra.jpg",
+        "6ae19eccbc46657be3375653": "/adv-chaitanya-nayak.jpg",
+        "6ae19f9afcb1c10b070e8782": "/adv-susil-das.jpg",
+        "6ae1a465fcb1c10b070e8783": "/tabasmiti-mishra.jpg"
+    }
     for adv in full_bundle.get("advocates", []):
         adv_copy = dict(adv)
         adv_id = str(adv.get("_id") or adv.get("id"))
+        adv_name = str(adv.get("name") or "").lower()
         has_custom_img = bool(adv.get("imageUrl") or adv.get("image"))
-        if has_custom_img:
+        
+        if adv_id in member_files:
+            adv_copy["imageUrl"] = member_files[adv_id]
+        elif "jayasankar" in adv_name or adv.get("is_owner"):
+            adv_copy["imageUrl"] = "/chamber-owner.jpg"
+        elif "harisankar" in adv_name:
+            adv_copy["imageUrl"] = "/adv-harisankar-mishra.jpg"
+        elif "chaitanya" in adv_name:
+            adv_copy["imageUrl"] = "/adv-chaitanya-nayak.jpg"
+        elif "susil" in adv_name:
+            adv_copy["imageUrl"] = "/adv-susil-das.jpg"
+        elif "tabasmiti" in adv_name:
+            adv_copy["imageUrl"] = "/tabasmiti-mishra.jpg"
+        elif has_custom_img:
             adv_copy["imageUrl"] = f"/api/advocates/{adv_id}/photo.jpg"
+        elif os.path.exists(os.path.join(os.path.abspath(os.path.dirname(__file__)), f"assets/images/members/{adv_id}.jpg")):
+            adv_copy["imageUrl"] = f"/assets/images/members/{adv_id}.jpg"
         else:
             adv_copy["imageUrl"] = "/assets/images/advocate_logo.jpg"
         adv_copy.pop("image", None)
@@ -1863,14 +1886,31 @@ def serve_index():
             if not adv_name:
                 continue
                 
-            is_owner = bool(adv.get("is_owner"))
-            local_img = f"assets/images/members/{adv_id}.jpg"
-            if is_owner:
-                member_img = f"{base_url}/chamber-owner.jpg"
-            elif os.path.exists(local_img):
-                member_img = f"{base_url}/assets/images/members/{adv_id}.jpg"
+            adv_name_lower = adv_name.lower()
+            member_sem_map = {
+                "6ae1972a7a60ae7ff4891612": (f"{base_url}/chamber-owner.jpg", 1024, 1536),
+                "6ae19bc0bc46657be3375652": (f"{base_url}/adv-harisankar-mishra.jpg", 600, 762),
+                "6ae19eccbc46657be3375653": (f"{base_url}/adv-chaitanya-nayak.jpg", 600, 800),
+                "6ae19f9afcb1c10b070e8782": (f"{base_url}/adv-susil-das.jpg", 600, 800),
+                "6ae1a465fcb1c10b070e8783": (f"{base_url}/tabasmiti-mishra.jpg", 600, 800)
+            }
+            
+            if adv_id in member_sem_map:
+                member_img, img_w, img_h = member_sem_map[adv_id]
+            elif "jayasankar" in adv_name_lower or is_owner:
+                member_img, img_w, img_h = f"{base_url}/chamber-owner.jpg", 1024, 1536
+            elif "harisankar" in adv_name_lower:
+                member_img, img_w, img_h = f"{base_url}/adv-harisankar-mishra.jpg", 600, 762
+            elif "chaitanya" in adv_name_lower:
+                member_img, img_w, img_h = f"{base_url}/adv-chaitanya-nayak.jpg", 600, 800
+            elif "susil" in adv_name_lower:
+                member_img, img_w, img_h = f"{base_url}/adv-susil-das.jpg", 600, 800
+            elif "tabasmiti" in adv_name_lower:
+                member_img, img_w, img_h = f"{base_url}/tabasmiti-mishra.jpg", 600, 800
+            elif os.path.exists(os.path.join(os.path.abspath(os.path.dirname(__file__)), f"assets/images/members/{adv_id}.jpg")):
+                member_img, img_w, img_h = f"{base_url}/assets/images/members/{adv_id}.jpg", 600, 800
             else:
-                member_img = f"{base_url}/assets/images/advocate_logo.jpg"
+                member_img, img_w, img_h = f"{base_url}/assets/images/advocate_logo.jpg", 500, 500
                 
             member_id = f"{base_url}/#owner" if is_owner else f"{base_url}/#member-{adv_id}"
             employee_refs.append({"@id": member_id})
@@ -1879,8 +1919,22 @@ def serve_index():
                 "@type": "Person",
                 "@id": member_id,
                 "name": adv_name,
-                "image": member_img,
+                "jobTitle": adv.get("role") or ("Chamber Owner & Lead Counsel" if is_owner else "Advocate & Chamber Member"),
+                "image": {
+                    "@type": "ImageObject",
+                    "@id": f"{member_img}#image",
+                    "url": member_img,
+                    "contentUrl": member_img,
+                    "caption": f"{adv_name} - Chamber Member | JSM. Chambers",
+                    "width": img_w,
+                    "height": img_h
+                },
+                "url": f"{base_url}/members.html#{adv_id}",
+                "mainEntityOfPage": f"{base_url}/members.html",
                 "worksFor": {
+                    "@id": f"{base_url}/#organization"
+                },
+                "memberOf": {
                     "@id": f"{base_url}/#organization"
                 }
             }
@@ -2153,9 +2207,43 @@ def serve_robots_txt():
 Allow: /
 Allow: /chamber-owner.jpg
 Allow: /chamber-logo.jpg
+Allow: /adv-*.jpg
+Allow: /tabasmiti-mishra.jpg
+Allow: /assets/
+Allow: /assets/images/
+Allow: /assets/images/members/
+Allow: /*.jpg$
+Allow: /*.png$
+Allow: /members.html
+Allow: /members
+Allow: /api/advocates
+Allow: /api/settings
+Allow: /api/public/bundle
 Disallow: /admin-dashboard.html
 Disallow: /admin-login.html
+Disallow: /security-dashboard.html
+Disallow: /staff-dashboard.html
+Disallow: /staff-login.html
 Disallow: /api/
+
+User-agent: Googlebot
+Allow: /
+Allow: /members.html
+Allow: /chamber-owner.jpg
+Allow: /adv-*.jpg
+Allow: /tabasmiti-mishra.jpg
+Allow: /assets/images/members/
+
+User-agent: Googlebot-Image
+Allow: /
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.png$
+Allow: /chamber-owner.jpg
+Allow: /adv-*.jpg
+Allow: /tabasmiti-mishra.jpg
+Allow: /assets/images/
+Allow: /assets/images/members/
 
 Sitemap: {base_url}/sitemap.xml
 """
@@ -2166,30 +2254,22 @@ def serve_sitemap_xml():
     base = request.url_root.rstrip('/')
     now = datetime.utcnow().strftime('%Y-%m-%d')
     
-    # Generate image entries for all advocates & chamber members
-    all_advocates = list(advocates_col.find().sort([("is_owner", -1), ("_id", 1)]))
-    image_entries = []
+    # Semantic mapping for member images
+    semantic_member_images = [
+        {"url": f"{base}/chamber-owner.jpg", "title": "Adv. Jayasankar Mishra - Chamber Owner & Lead Counsel | JSM. Chambers", "caption": "Adv. Jayasankar Mishra, Chamber Owner and Lead Counsel at JSM. Chambers, High Court of Orissa"},
+        {"url": f"{base}/adv-harisankar-mishra.jpg", "title": "Adv. Harisankar Mishra - Advocate & Senior Chamber Member | JSM. Chambers", "caption": "Adv. Harisankar Mishra, Advocate with 32 years of legal practice in Constitutional and Appellate Law"},
+        {"url": f"{base}/adv-chaitanya-nayak.jpg", "title": "Adv. Chaitanya Nayak - Advocate & Chamber Member | JSM. Chambers", "caption": "Adv. Chaitanya Nayak, Advocate specialized in Civil and Criminal Courtroom Litigation"},
+        {"url": f"{base}/adv-susil-das.jpg", "title": "Adv. Susil Das - Advocate & Chamber Member | JSM. Chambers", "caption": "Adv. Susil Das, Advocate and Legal Counsel at JSM. Chambers, High Court of Orissa"},
+        {"url": f"{base}/tabasmiti-mishra.jpg", "title": "Tabasmiti Mishra - Law Intern & Legal Researcher | JSM. Chambers", "caption": "Tabasmiti Mishra, Legal Researcher and Intern at JSM. Chambers"}
+    ]
     
-    for adv in all_advocates:
-        adv_id = str(adv["_id"])
-        adv_name = adv.get("name", "").strip()
-        if not adv_name:
-            continue
-        is_owner = bool(adv.get("is_owner"))
-        local_file = f"assets/images/members/{adv_id}.jpg"
-        if is_owner:
-            img_url = f"{base}/chamber-owner.jpg"
-            title = f"{adv_name} - Chamber Owner | JSM. Chambers"
-        elif os.path.exists(local_file):
-            img_url = f"{base}/assets/images/members/{adv_id}.jpg"
-            title = f"{adv_name} | JSM. Chambers"
-        else:
-            img_url = f"{base}/assets/images/advocate_logo.jpg"
-            title = f"{adv_name} | JSM. Chambers"
-            
+    image_entries = []
+    for img in semantic_member_images:
         image_entries.append(f"""    <image:image>
-      <image:loc>{img_url}</image:loc>
-      <image:title>{title}</image:title>
+      <image:loc>{img['url']}</image:loc>
+      <image:title>{img['title']}</image:title>
+      <image:caption>{img['caption']}</image:caption>
+      <image:geo_location>Cuttack, Odisha, India</image:geo_location>
     </image:image>""")
         
     images_xml = "\n".join(image_entries)
@@ -2205,13 +2285,45 @@ def serve_sitemap_xml():
 {images_xml}
   </url>
   <url>
-    <loc>{base}/client-portal.html</loc>
+    <loc>{base}/members.html</loc>
+    <lastmod>{now}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.95</priority>
+{images_xml}
+  </url>
+  <url>
+    <loc>{base}/client-login.html</loc>
     <lastmod>{now}</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.5</priority>
   </url>
 </urlset>"""
     return Response(sitemap, mimetype='application/xml')
+
+@app.route('/members.html')
+@app.route('/members')
+def serve_members_html():
+    return send_from_directory('.', 'members.html')
+
+@app.route('/adv-harisankar-mishra.jpg')
+def serve_adv_harisankar():
+    return send_from_directory('.', 'adv-harisankar-mishra.jpg')
+
+@app.route('/adv-chaitanya-nayak.jpg')
+def serve_adv_chaitanya():
+    return send_from_directory('.', 'adv-chaitanya-nayak.jpg')
+
+@app.route('/adv-susil-das.jpg')
+def serve_adv_susil():
+    return send_from_directory('.', 'adv-susil-das.jpg')
+
+@app.route('/tabasmiti-mishra.jpg')
+def serve_tabasmiti():
+    return send_from_directory('.', 'tabasmiti-mishra.jpg')
+
+@app.route('/adv-jayasankar-mishra.jpg')
+def serve_adv_jayasankar():
+    return serve_chamber_owner_image()
 
 
 
@@ -5234,11 +5346,29 @@ def save_advocate_image_file(adv_id, img_data):
 @app.route('/api/advocates/<id>/photo.jpg')
 def serve_advocate_photo(id):
     try:
-        local_file = f"assets/images/members/{id}.jpg"
+        app_dir = os.path.abspath(os.path.dirname(__file__))
+        semantic_map = {
+            "6ae1972a7a60ae7ff4891612": "chamber-owner.jpg",
+            "6ae19bc0bc46657be3375652": "adv-harisankar-mishra.jpg",
+            "6ae19eccbc46657be3375653": "adv-chaitanya-nayak.jpg",
+            "6ae19f9afcb1c10b070e8782": "adv-susil-das.jpg",
+            "6ae1a465fcb1c10b070e8783": "tabasmiti-mishra.jpg"
+        }
+        
+        # Check semantic file in root or assets
+        if id in semantic_map:
+            sem_name = semantic_map[id]
+            root_file = os.path.join(app_dir, sem_name)
+            if os.path.exists(root_file):
+                return send_file(root_file, mimetype='image/jpeg', max_age=86400)
+
+        local_file = os.path.join(app_dir, f"assets/images/members/{id}.jpg")
         if os.path.exists(local_file):
             return send_file(local_file, mimetype='image/jpeg', max_age=86400)
             
-        adv = advocates_col.find_one({"_id": ObjectId(id)})
+        adv = None
+        if ObjectId.is_valid(id):
+            adv = advocates_col.find_one({"_id": ObjectId(id)})
         if not adv:
             return send_from_directory('assets/images', 'advocate_logo.jpg')
             
@@ -5250,6 +5380,16 @@ def serve_advocate_photo(id):
                 
         if adv.get('is_owner'):
             return serve_chamber_owner_image()
+            
+        adv_name = (adv.get('name') or '').lower()
+        if "harisankar" in adv_name:
+            return send_file(os.path.join(app_dir, "adv-harisankar-mishra.jpg"), mimetype='image/jpeg')
+        elif "chaitanya" in adv_name:
+            return send_file(os.path.join(app_dir, "adv-chaitanya-nayak.jpg"), mimetype='image/jpeg')
+        elif "susil" in adv_name:
+            return send_file(os.path.join(app_dir, "adv-susil-das.jpg"), mimetype='image/jpeg')
+        elif "tabasmiti" in adv_name:
+            return send_file(os.path.join(app_dir, "tabasmiti-mishra.jpg"), mimetype='image/jpeg')
             
         return send_from_directory('assets/images', 'advocate_logo.jpg')
     except Exception as e:

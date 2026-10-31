@@ -1,10 +1,43 @@
 User-agent: *
 Allow: /
 Allow: /chamber-owner.jpg
+Allow: /chamber-logo.jpg
+Allow: /adv-*.jpg
+Allow: /tabasmiti-mishra.jpg
+Allow: /assets/
 Allow: /assets/images/
 Allow: /assets/images/members/
+Allow: /*.jpg$
+Allow: /*.png$
+Allow: /members.html
+Allow: /members
+Allow: /api/advocates
+Allow: /api/settings
+Allow: /api/public/bundle
 Disallow: /admin-dashboard.html
 Disallow: /admin-login.html
+Disallow: /security-dashboard.html
+Disallow: /staff-dashboard.html
+Disallow: /staff-login.html
 Disallow: /api/
+
+User-agent: Googlebot
+Allow: /
+Allow: /members.html
+Allow: /chamber-owner.jpg
+Allow: /adv-*.jpg
+Allow: /tabasmiti-mishra.jpg
+Allow: /assets/images/members/
+
+User-agent: Googlebot-Image
+Allow: /
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.png$
+Allow: /chamber-owner.jpg
+Allow: /adv-*.jpg
+Allow: /tabasmiti-mishra.jpg
+Allow: /assets/images/
+Allow: /assets/images/members/
 
 Sitemap: https://jsm-chamber-cuttack-odisha-30.vercel.app/sitemap.xml

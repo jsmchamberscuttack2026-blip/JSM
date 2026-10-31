@@ -372,12 +372,34 @@ document.addEventListener('DOMContentLoaded', () => {
           
           let imageHtml = '';
           let photoSrc = adv.imageUrl;
-          if ((!photoSrc || photoSrc.length < 20) && isOwner) {
-              photoSrc = 'assets/images/advocate_logo.jpg';
+          const advId = String(adv._id || adv.id || '');
+          const advNameLower = String(adv.name || '').toLowerCase();
+          
+          // Semantic & high-res image mapping for chamber members
+          const memberPhotoMap = {
+              "6ae1972a7a60ae7ff4891612": "chamber-owner.jpg",
+              "6ae19bc0bc46657be3375652": "adv-harisankar-mishra.jpg",
+              "6ae19eccbc46657be3375653": "adv-chaitanya-nayak.jpg",
+              "6ae19f9afcb1c10b070e8782": "adv-susil-das.jpg",
+              "6ae1a465fcb1c10b070e8783": "tabasmiti-mishra.jpg"
+          };
+
+          if (memberPhotoMap[advId]) {
+              photoSrc = memberPhotoMap[advId];
+          } else if (advNameLower.includes("jayasankar") || isOwner) {
+              photoSrc = "chamber-owner.jpg";
+          } else if (advNameLower.includes("harisankar")) {
+              photoSrc = "adv-harisankar-mishra.jpg";
+          } else if (advNameLower.includes("chaitanya")) {
+              photoSrc = "adv-chaitanya-nayak.jpg";
+          } else if (advNameLower.includes("susil")) {
+              photoSrc = "adv-susil-das.jpg";
+          } else if (advNameLower.includes("tabasmiti")) {
+              photoSrc = "tabasmiti-mishra.jpg";
           }
 
-          if (photoSrc && photoSrc.length > 20) {
-              imageHtml = `<img src="${photoSrc}" alt="${adv.name} - Chamber Member" class="advocate-image" loading="lazy" decoding="async" width="400" height="300">`;
+          if (photoSrc && photoSrc.length > 5) {
+              imageHtml = `<img itemprop="image" src="${photoSrc}" alt="${adv.name} - Chamber Member | JSM. Chambers" class="advocate-image" loading="eager" fetchpriority="high" decoding="async" width="600" height="800" onerror="this.onerror=null; this.src='assets/images/advocate_logo.jpg';">`;
           } else {
               const initial = (adv.name || '⚖').trim().charAt(0).toUpperCase();
               imageHtml = `
