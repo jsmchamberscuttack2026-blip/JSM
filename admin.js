@@ -459,10 +459,12 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const chamber_case_number = document.getElementById('add-chamber-case-number') ? document.getElementById('add-chamber-case-number').value : '';
                 const court_case_number = document.getElementById('add-court-case-number') ? document.getElementById('add-court-case-number').value : '';
+                const phone = document.getElementById('add-case-phone') ? document.getElementById('add-case-phone').value : '';
+                const assigned_staff_email = document.getElementById('case-assigned-staff') ? document.getElementById('case-assigned-staff').value : '';
                 const response = await fetch('/api/cases', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ client_name, email, case_type, chamber_case_number, court_case_number })
+                    body: JSON.stringify({ client_name, email, case_type, chamber_case_number, court_case_number, phone, assigned_staff_email })
                 });
                 const data = await response.json();
                 if (response.ok) {
@@ -470,6 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     addCaseForm.reset();
                     casesCache = "";
                     loadCases();
+                    if (typeof window.loadTursoClientProfiles === 'function') window.loadTursoClientProfiles();
                 } else {
                     showToast('Error creating case.', 'error');
                 }
@@ -495,7 +498,49 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('modal-chamber-case-number').value = c.chamber_case_number || "";
         document.getElementById('modal-court-case-number').value = c.court_case_number || "";
         if(typeof populateStaffDropdown === 'function') populateStaffDropdown(c.assigned_staff_email || '');
-        
+
+        // Populate Verified Client Profile & Turso Cloud DB 1 Record
+        const avatarImg = document.getElementById('modal-client-avatar-img');
+        const avatarPh = document.getElementById('modal-client-avatar-placeholder');
+        if (c.profile_image) {
+            if (avatarImg) { avatarImg.src = c.profile_image; avatarImg.style.display = 'block'; }
+            if (avatarPh) avatarPh.style.display = 'none';
+        } else {
+            if (avatarImg) avatarImg.style.display = 'none';
+            if (avatarPh) avatarPh.style.display = 'block';
+        }
+
+        const phoneEl = document.getElementById('modal-client-phone');
+        if (phoneEl) phoneEl.innerText = c.phone || 'Awaiting client profile setup';
+
+        const addrEl = document.getElementById('modal-client-address');
+        if (addrEl) addrEl.innerText = c.address || 'Awaiting client profile setup';
+
+        const termsBadge = document.getElementById('modal-client-terms-badge');
+        if (termsBadge) {
+            if (c.terms_accepted) {
+                termsBadge.style.background = '#dcfce7';
+                termsBadge.style.color = '#15803d';
+                termsBadge.innerText = `✅ Terms Accepted (${c.terms_accepted_at || 'Verified'})`;
+            } else {
+                termsBadge.style.background = '#fee2e2';
+                termsBadge.style.color = '#b91c1c';
+                termsBadge.innerText = '⏳ Terms Pending';
+            }
+        }
+
+        const profileBadge = document.getElementById('modal-client-profile-badge');
+        if (profileBadge) {
+            if (c.profile_completed) {
+                profileBadge.style.background = '#dcfce7';
+                profileBadge.style.color = '#15803d';
+                profileBadge.innerText = `✅ Profile Setup Complete (${c.profile_completed_at || 'Verified'})`;
+            } else {
+                profileBadge.style.background = '#fef3c7';
+                profileBadge.style.color = '#92400e';
+                profileBadge.innerText = '⏳ Profile Setup Pending';
+            }
+        }
         
         // Load Message History
         const histBox = document.getElementById('modal-admin-msg-history');
@@ -676,16 +721,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     ? `<span style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; font-size: 0.78rem; padding: 2px 8px; border-radius: 12px; font-weight: 700; cursor: pointer;" onclick="openArchivedFileModal('${c._id}')">🖼️ ${imagesCount} Document${imagesCount > 1 ? 's' : ''}</span>`
                     : `<span style="color: #94a3b8; font-size: 0.8rem;">No images</span>`;
 
+                const avatarHtml = c.profile_image 
+                    ? `<img src="${c.profile_image}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1.5px solid #D4AF37; flex-shrink: 0; cursor: pointer;" onclick="openArchivedFileModal('${c._id}')" alt="Photo">`
+                    : `<div style="width: 36px; height: 36px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; cursor: pointer;" onclick="openArchivedFileModal('${c._id}')">👤</div>`;
+
                 tr.innerHTML = `
                     <td>
                         <div style="font-weight: 700; color: #0A192F;">🏛️ ${c.chamber_case_number || 'Not Assigned'}</div>
                         <div style="font-size: 0.82rem; color: #64748b;">⚖️ ${c.court_case_number || 'N/A'}</div>
                     </td>
                     <td>
-                        <a href="#" onclick="openArchivedFileModal('${c._id}'); return false;" style="color: #0A192F; font-weight: bold; text-decoration: underline; font-size: 1rem; cursor: pointer;">
-                            ${c.client_name}
-                        </a>
-                        ${c.phone ? `<div style="font-size: 0.8rem; color: #64748b;">📞 ${c.phone}</div>` : ''}
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            ${avatarHtml}
+                            <div>
+                                <a href="#" onclick="openArchivedFileModal('${c._id}'); return false;" style="color: #0A192F; font-weight: bold; text-decoration: underline; font-size: 1rem; cursor: pointer;">
+                                    ${c.client_name}
+                                </a>
+                                ${c.phone ? `<div style="font-size: 0.8rem; color: #64748b;">📞 ${c.phone}</div>` : ''}
+                            </div>
+                        </div>
                     </td>
                     <td><span style="font-weight: 600; color: #334155;">${c.case_type || 'General'}</span></td>
                     <td>${imagesBadge}</td>
@@ -723,6 +777,129 @@ document.addEventListener('DOMContentLoaded', () => {
         const input = document.getElementById('archived-cases-search');
         if (input) input.value = '';
         window.renderArchivedCasesTable(window.allArchivedCasesList);
+    };
+
+    // ==========================================
+    // TURSO CLIENT PROFILES (CLOUD DATABASE 1)
+    // ==========================================
+    window.allTursoProfilesList = [];
+
+    window.switchClientsDirectoryTab = function(tab) {
+        const btnArchive = document.getElementById('tab-btn-finished-cases');
+        const btnProfiles = document.getElementById('tab-btn-client-profiles');
+        const viewArchive = document.getElementById('turso-archive-view');
+        const viewProfiles = document.getElementById('turso-profiles-view');
+
+        if (tab === 'profiles') {
+            if (btnArchive) { btnArchive.style.borderBottomColor = 'transparent'; btnArchive.style.color = '#64748b'; btnArchive.style.fontWeight = '600'; }
+            if (btnProfiles) { btnProfiles.style.borderBottomColor = '#D4AF37'; btnProfiles.style.color = '#0A192F'; btnProfiles.style.fontWeight = '700'; }
+            if (viewArchive) viewArchive.style.display = 'none';
+            if (viewProfiles) viewProfiles.style.display = 'block';
+            window.loadTursoClientProfiles();
+        } else {
+            if (btnArchive) { btnArchive.style.borderBottomColor = '#D4AF37'; btnArchive.style.color = '#0A192F'; btnArchive.style.fontWeight = '700'; }
+            if (btnProfiles) { btnProfiles.style.borderBottomColor = 'transparent'; btnProfiles.style.color = '#64748b'; btnProfiles.style.fontWeight = '600'; }
+            if (viewArchive) viewArchive.style.display = 'block';
+            if (viewProfiles) viewProfiles.style.display = 'none';
+            window.loadArchivedCases();
+        }
+    };
+
+    window.loadTursoClientProfiles = async function() {
+        const tbody = document.getElementById('turso-profiles-tbody');
+        if (!tbody) return;
+        try {
+            const res = await fetch('/api/turso/client-profiles', { cache: 'no-store' });
+            if (!res.ok) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem; color: #ef4444;">Unable to retrieve records from Turso Database 1.</td></tr>';
+                return;
+            }
+            const data = await res.json();
+            window.allTursoProfilesList = Array.isArray(data.profiles) ? data.profiles : [];
+            window.renderTursoProfilesTable(window.allTursoProfilesList);
+        } catch(err) {
+            console.error('Error fetching Turso client profiles:', err);
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem; color: #ef4444;">Connection error contacting Turso Database 1.</td></tr>';
+        }
+    };
+
+    window.renderTursoProfilesTable = function(list) {
+        const tbody = document.getElementById('turso-profiles-tbody');
+        if (!tbody) return;
+        if (!list || list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2.5rem; color: #94a3b8;">No client profiles found in Turso Cloud Database 1.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = '';
+        list.forEach(p => {
+            const tr = document.createElement('tr');
+            
+            // Uncompacted HD client photograph
+            const avatarHtml = p.profile_image 
+                ? `<img src="${p.profile_image}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid #D4AF37; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.1); cursor: pointer;" onclick="openImageLightbox('${p.profile_image}')" alt="Client Photo" title="Click to view full photo">`
+                : `<div style="width: 44px; height: 44px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">👤</div>`;
+
+            const termsHtml = (p.terms_accepted == 1 || p.terms_accepted === '1')
+                ? `<span style="background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; font-size: 0.76rem; padding: 3px 10px; border-radius: 12px; font-weight: 700;">✅ Accepted<br><small style="font-weight:400;color:#166534;">${p.terms_accepted_at || 'Verified'}</small></span>`
+                : `<span style="background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; font-size: 0.76rem; padding: 3px 10px; border-radius: 12px; font-weight: 700;">⏳ Pending</span>`;
+
+            const profileHtml = (p.profile_completed == 1 || p.profile_completed === '1')
+                ? `<span style="background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; font-size: 0.76rem; padding: 3px 10px; border-radius: 12px; font-weight: 700;">✅ Complete<br><small style="font-weight:400;color:#166534;">${p.profile_completed_at || 'Verified'}</small></span>`
+                : `<span style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 0.76rem; padding: 3px 10px; border-radius: 12px; font-weight: 700;">⏳ Setup Pending</span>`;
+
+            tr.innerHTML = `
+                <td>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        ${avatarHtml}
+                        <div>
+                            <div style="font-weight: 700; color: #0A192F; font-size: 0.95rem;">${p.client_name || 'Client'}</div>
+                            <div style="font-size: 0.8rem; color: #64748b;">📧 ${p.email || 'N/A'}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div style="font-size: 0.85rem; font-weight: 700; color: #0A192F;">🏛️ ${p.chamber_case_number || 'Pending'}</div>
+                    <div style="font-size: 0.8rem; color: #64748b;">⚖️ ${p.court_case_number || 'N/A'}</div>
+                    <div style="font-size: 0.75rem; color: #2563eb; font-weight: 600; margin-top: 2px;">📁 ${p.case_type || 'General'}</div>
+                </td>
+                <td>
+                    <div style="font-size: 0.85rem; font-weight: 600; color: #0A192F;">📞 ${p.phone || '<span style="color:#94a3b8;font-weight:normal;">Pending setup</span>'}</div>
+                    <div style="font-size: 0.8rem; color: #475569; max-width: 220px; line-height: 1.4; margin-top: 3px;">📍 ${p.address || '<span style="color:#94a3b8;">Pending setup</span>'}</div>
+                </td>
+                <td>${termsHtml}</td>
+                <td>${profileHtml}</td>
+                <td style="text-align: right; white-space: nowrap;">
+                    <span style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; font-weight: 700;">☁️ Turso DB 1 Active</span>
+                    <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 4px;">${p.updated_at || p.created_at || ''}</div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    };
+
+    window.filterTursoProfilesTable = function() {
+        const query = (document.getElementById('turso-profiles-search')?.value || '').trim().toLowerCase();
+        if (!query) {
+            window.renderTursoProfilesTable(window.allTursoProfilesList);
+            return;
+        }
+        const filtered = (window.allTursoProfilesList || []).filter(p => {
+            const name = (p.client_name || '').toLowerCase();
+            const email = (p.email || '').toLowerCase();
+            const phone = (p.phone || '').toLowerCase();
+            const addr = (p.address || '').toLowerCase();
+            const chamber = (p.chamber_case_number || '').toLowerCase();
+            const court = (p.court_case_number || '').toLowerCase();
+            return name.includes(query) || email.includes(query) || phone.includes(query) || addr.includes(query) || chamber.includes(query) || court.includes(query);
+        });
+        window.renderTursoProfilesTable(filtered);
+    };
+
+    window.clearTursoProfilesSearch = function() {
+        const input = document.getElementById('turso-profiles-search');
+        if (input) input.value = '';
+        window.renderTursoProfilesTable(window.allTursoProfilesList);
     };
 
     if (archivedCasesTbody) {
@@ -764,7 +941,12 @@ async function loadAdvocates() {
             const card = document.createElement('div');
             card.className = 'advocate-card';
             const isOwner = !!adv.is_owner;
-            if (isOwner) {
+            const isLocked = adv.locked_until_timestamp && (Date.now() / 1000) < parseFloat(adv.locked_until_timestamp);
+            if (isLocked) {
+                card.style.border = '2px solid #ef4444';
+                card.style.boxShadow = '0 6px 20px rgba(239,68,68,0.2)';
+                card.style.background = '#fffafa';
+            } else if (isOwner) {
                 card.style.border = '2px solid #D4AF37';
                 card.style.boxShadow = '0 6px 20px rgba(212,175,55,0.2)';
                 card.style.background = '#fffdfa';
@@ -782,6 +964,7 @@ async function loadAdvocates() {
                         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                             <h4 style="margin: 0; font-size: 1.15rem; color: #0f172a; font-weight: 700;">${adv.name}</h4>
                             ${isOwner ? '<span style="background: #0A1628; color: #D4AF37; border: 1px solid #D4AF37; font-size: 0.68rem; padding: 2px 7px; border-radius: 4px; font-weight: 800; letter-spacing: 1px;">👑 OWNER</span>' : ''}
+                            ${isLocked ? '<span style="background: #fee2e2; color: #b91c1c; border: 1px solid #ef4444; font-size: 0.68rem; padding: 2px 7px; border-radius: 4px; font-weight: 800; letter-spacing: 0.5px;">🔒 LOCKED (5 MIN)</span>' : ''}
                         </div>
                         <div style="margin: 2px 0; font-size: 0.82rem; color: #b45309; font-weight: 600;">${adv.role || (isOwner ? 'Chamber Owner & Lead Counsel' : 'Legal Professional')}</div>
                         <p style="margin: 0; font-size: 0.85rem; color: #475569; font-weight: 500;">${adv.specialty || ''}</p>
@@ -813,6 +996,7 @@ async function loadAdvocates() {
                 </div>
                 
                 <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: auto; padding-top: 1rem;">
+                    ${isLocked ? `<button class="btn" style="width: 100%; background: #dc2626; color: white; font-weight: bold; border: none; padding: 0.55rem; border-radius: 6px; cursor: pointer;" onclick="adminUnlockStaff('${adv.email || ''}')">🔓 Unlock Staff Account</button>` : ''}
                     <button class="btn" id="send-welcome-btn-${adv._id}" style="width: 100%; background: #0A1628; color: #D4AF37; border: 1.5px solid #D4AF37; font-weight: 700; padding: 0.55rem; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onclick="sendWelcomeMail('${adv._id}', '${adv.name ? adv.name.replace(/'/g, "\\'") : ''}', '${adv.email || ''}')">
                         ${adv.welcome_mail_sent ? '✉️ Resend Welcome Mail' : '✉️ Send Welcome Mail'}
                     </button>
@@ -833,6 +1017,27 @@ async function loadAdvocates() {
         console.error(err);
     }
 }
+
+window.adminUnlockStaff = async function(email) {
+    if (!email) return alert('No email found for this staff member.');
+    if (!confirm(`Unlock staff portal access for ${email}?`)) return;
+    try {
+        const res = await fetch('/api/security/staff/unlock', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Request': 'true' },
+            body: JSON.stringify({ email: email })
+        });
+        const d = await res.json();
+        if (res.ok) {
+            alert(d.message || 'Staff account unlocked successfully.');
+            if (typeof window.loadAdvocates === 'function') window.loadAdvocates();
+        } else {
+            alert(d.error || 'Failed to unlock staff account.');
+        }
+    } catch(e) {
+        alert('Server error unlocking staff account.');
+    }
+};
 
 window.sendWelcomeMail = async function(id, name, email) {
     const btn = document.getElementById(`send-welcome-btn-${id}`);
@@ -1560,6 +1765,46 @@ if (officeInfoForm) {
             document.getElementById('view-file-phone').innerText = c.phone || 'N/A';
             document.getElementById('view-file-completion-date').innerText = c.completion_date || c.created_at || 'Archived';
             document.getElementById('view-file-notes-display').innerText = c.notes && c.notes.trim() ? c.notes : 'No extra notes recorded for this closed file.';
+
+            // Populate Verified Client Profile from Turso Database 1
+            const avatarImg = document.getElementById('view-file-client-avatar');
+            const avatarPh = document.getElementById('view-file-avatar-placeholder');
+            if (c.profile_image) {
+                if (avatarImg) { avatarImg.src = c.profile_image; avatarImg.style.display = 'block'; }
+                if (avatarPh) avatarPh.style.display = 'none';
+            } else {
+                if (avatarImg) avatarImg.style.display = 'none';
+                if (avatarPh) avatarPh.style.display = 'block';
+            }
+
+            const addrEl = document.getElementById('view-file-address');
+            if (addrEl) addrEl.innerText = c.address || 'Address not recorded';
+
+            const termsBadge = document.getElementById('view-file-terms-badge');
+            if (termsBadge) {
+                if (c.terms_accepted) {
+                    termsBadge.style.background = '#dcfce7';
+                    termsBadge.style.color = '#15803d';
+                    termsBadge.innerText = '✅ Terms Accepted';
+                } else {
+                    termsBadge.style.background = '#fee2e2';
+                    termsBadge.style.color = '#b91c1c';
+                    termsBadge.innerText = '⏳ Terms Pending';
+                }
+            }
+
+            const profileBadge = document.getElementById('view-file-profile-badge');
+            if (profileBadge) {
+                if (c.profile_completed) {
+                    profileBadge.style.background = '#dcfce7';
+                    profileBadge.style.color = '#15803d';
+                    profileBadge.innerText = '✅ Profile Setup Complete';
+                } else {
+                    profileBadge.style.background = '#fef3c7';
+                    profileBadge.style.color = '#92400e';
+                    profileBadge.innerText = '⏳ Profile Setup Pending';
+                }
+            }
 
             // Render Document Images
             const imagesGrid = document.getElementById('view-file-images-grid');

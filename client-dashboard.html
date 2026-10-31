@@ -180,6 +180,411 @@
             opacity: 1;
             transform: translateY(0);
         }
+
+        /* =========================================================
+           CLIENT ONBOARDING & PROFILE SETUP STYLES
+        ========================================================= */
+        #client-onboarding-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(7, 19, 34, 0.9);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(8px);
+            padding: 16px;
+            overflow-y: auto;
+        }
+        .onboarding-card {
+            background: #ffffff;
+            width: 100%;
+            max-width: 640px;
+            border-radius: 18px;
+            box-shadow: 0 25px 50px -12px rgba(11, 25, 44, 0.35);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            max-height: 90vh;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.96) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .onboarding-stepper {
+            background: #0B192C;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid var(--gold);
+        }
+        .stepper-step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #94A3B8;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .stepper-step.active {
+            color: #ffffff;
+        }
+        .stepper-step.completed {
+            color: var(--gold);
+        }
+        .step-num {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            display: grid;
+            place-items: center;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .stepper-step.active .step-num {
+            background: var(--gold);
+            color: #0B192C;
+        }
+        .stepper-step.completed .step-num {
+            background: #10B981;
+            color: #ffffff;
+        }
+        .stepper-line {
+            flex: 1;
+            height: 2px;
+            background: rgba(255,255,255,0.15);
+            margin: 0 16px;
+            transition: 0.3s;
+        }
+        .stepper-line.active {
+            background: var(--gold);
+        }
+        .onboarding-body {
+            padding: 24px 28px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .onboarding-header {
+            margin-bottom: 20px;
+        }
+        .badge-gold {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--gold-light);
+            color: #8C6D1F;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid #E5D5A5;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        .onboarding-header h2 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #0B192C;
+            margin-bottom: 6px;
+        }
+        .onboarding-header p {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+        .terms-scroll-box {
+            background: #F8FAFC;
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            padding: 18px;
+            max-height: 240px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #334155;
+            margin-bottom: 18px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);
+        }
+        .terms-scroll-box h4 {
+            color: #0B192C;
+            font-size: 14px;
+            margin-top: 10px;
+            margin-bottom: 4px;
+        }
+        .terms-scroll-box h4:first-child {
+            margin-top: 0;
+        }
+        .terms-agree-box {
+            background: #FFFDF5;
+            border: 1.5px solid #F3E5AB;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 20px;
+        }
+        .terms-checkbox-label {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .terms-checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #0B192C;
+            cursor: pointer;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+        .terms-checkbox-label .terms-text {
+            font-size: 13px;
+            font-weight: 600;
+            color: #0B192C;
+            line-height: 1.45;
+        }
+        .onboarding-footer {
+            padding: 16px 28px;
+            background: #F8FAFC;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+        .btn-onboarding-primary {
+            background: #0B192C;
+            color: #ffffff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(11, 25, 44, 0.15);
+        }
+        .btn-onboarding-primary:hover:not(:disabled) {
+            background: var(--gold);
+            color: #0B192C;
+            box-shadow: 0 6px 16px rgba(212, 175, 55, 0.35);
+            transform: translateY(-1px);
+        }
+        .btn-onboarding-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* Avatar Upload */
+        .profile-upload-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 16px;
+            background: #F8FAFC;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+        .avatar-upload-wrapper {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            flex-shrink: 0;
+        }
+        .avatar-preview-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #E2E8F0;
+            border: 3px solid var(--gold);
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .avatar-upload-btn {
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #0B192C;
+            color: var(--gold);
+            display: grid;
+            place-items: center;
+            border: 2px solid #ffffff;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .avatar-upload-btn:hover {
+            background: var(--gold);
+            color: #0B192C;
+        }
+        .avatar-upload-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .avatar-upload-info strong {
+            font-size: 14px;
+            color: #0B192C;
+        }
+        .avatar-upload-info span {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .btn-choose-photo {
+            margin-top: 6px;
+            padding: 6px 14px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #0B192C;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            width: fit-content;
+            transition: 0.2s;
+        }
+        .btn-choose-photo:hover {
+            border-color: var(--gold);
+            background: var(--gold-light);
+        }
+
+        /* Form Inputs */
+        .form-row-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .form-group-custom {
+            margin-bottom: 16px;
+        }
+        .form-group-custom label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #0B192C;
+            margin-bottom: 6px;
+        }
+        .input-with-icon {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 0 14px;
+            background: #ffffff;
+            transition: 0.2s;
+        }
+        .input-with-icon:focus-within {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12);
+        }
+        .input-with-icon input, .input-with-icon textarea {
+            width: 100%;
+            border: none;
+            outline: none;
+            font-family: inherit;
+            font-size: 14px;
+            color: #0B192C;
+            background: transparent;
+            padding: 12px 0;
+        }
+        .input-with-icon i {
+            color: #94A3B8;
+            flex-shrink: 0;
+        }
+
+        /* Locked Fields Card */
+        .locked-card {
+            background: #F1F5F9;
+            border: 1.5px solid #CBD5E1;
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 18px;
+            margin-bottom: 8px;
+        }
+        .locked-card-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #0B192C;
+            margin-bottom: 6px;
+        }
+        .locked-fields-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        @media(max-width: 600px) {
+            .locked-fields-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .locked-item {
+            background: #ffffff;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+        .locked-item .lbl {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748B;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .locked-item .val-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #0B192C;
+            word-break: break-all;
+        }
+        .lock-tag {
+            background: #E2E8F0;
+            color: #475569;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* Profile View Modal */
+        #client-profile-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(11, 25, 44, 0.7);
+            z-index: 4000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+            padding: 16px;
+        }
     </style>
 
 </head>
@@ -222,11 +627,14 @@
                     <i data-lucide="bell"></i>
                     <span class="badge" id="notif-badge" style="display:none;">!</span>
                 </button>
-                <div class="profile-btn">
-                    <div class="avatar" id="avatar-initial">C</div>
+                <div class="profile-btn" onclick="openClientProfileModal()" title="View and manage your client profile" style="cursor: pointer;">
+                    <div class="avatar" id="avatar-container" style="overflow: hidden; position: relative;">
+                        <span id="avatar-initial">C</span>
+                        <img id="avatar-img" src="" style="display:none; width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" alt="Client Photo" />
+                    </div>
                     <div class="profile-info">
                         <span class="profile-name" id="profile-name">Client Name</span>
-                        <span class="profile-role">Verified Client</span>
+                        <span class="profile-role">Verified Client • View Profile</span>
                     </div>
                 </div>
             </div>
@@ -282,6 +690,18 @@
                     <div class="cg-item">
                         <div class="cg-label"><i data-lucide="mail" style="width:14px; height:14px;"></i> Registered Email</div>
                         <div class="cg-value" id="info-email" style="word-break: break-all;">Loading...</div>
+                    </div>
+                    <div class="cg-item">
+                        <div class="cg-label"><i data-lucide="phone" style="width:14px; height:14px;"></i> Contact Number</div>
+                        <div class="cg-value" id="info-phone">Loading...</div>
+                    </div>
+                    <div class="cg-item">
+                        <div class="cg-label"><i data-lucide="shield-check" style="width:14px; height:14px;"></i> Terms &amp; Conditions</div>
+                        <div class="cg-value" id="info-terms" style="color: var(--green);">Pending Acceptance</div>
+                    </div>
+                    <div class="cg-item" style="grid-column: 1 / -1;">
+                        <div class="cg-label"><i data-lucide="map-pin" style="width:14px; height:14px;"></i> Registered Address</div>
+                        <div class="cg-value" id="info-address">Loading...</div>
                     </div>
                 </div>
 
@@ -629,11 +1049,34 @@
                 if (newCache === cacheStr) return;
                 cacheStr = newCache;
 
+                // Check First-Time Client Onboarding (Terms & Conditions + Profile Setup)
+                if (!data.terms_accepted || !data.profile_completed) {
+                    showOnboardingModal(data);
+                } else {
+                    hideOnboardingModal();
+                }
+
                 // Header
-                const firstName = data.client_name.split(' ')[0];
+                const firstName = data.client_name ? data.client_name.split(' ')[0] : 'Client';
                 document.getElementById('greeting-title').innerText = `${greeting}, ${firstName}`;
-                document.getElementById('profile-name').innerText = data.client_name;
-                document.getElementById('avatar-initial').innerText = data.client_name.charAt(0);
+                document.getElementById('profile-name').innerText = data.client_name || 'Client';
+                
+                // Avatar Picture vs Initial
+                const avatarImg = document.getElementById('avatar-img');
+                const avatarInitial = document.getElementById('avatar-initial');
+                if (data.profile_image) {
+                    if (avatarImg) {
+                        avatarImg.src = data.profile_image;
+                        avatarImg.style.display = 'block';
+                    }
+                    if (avatarInitial) avatarInitial.style.display = 'none';
+                } else {
+                    if (avatarImg) avatarImg.style.display = 'none';
+                    if (avatarInitial) {
+                        avatarInitial.style.display = 'grid';
+                        avatarInitial.innerText = data.client_name ? data.client_name.charAt(0) : 'C';
+                    }
+                }
 
                 // Overview Cards
                 const statusEl = document.getElementById('oc-status');
@@ -649,6 +1092,21 @@
                 document.getElementById('info-type').innerText = data.case_type || '-';
                 document.getElementById('info-email').innerText = data.email || '-';
                 document.getElementById('info-date').innerText = data.created_at || '-';
+                
+                const phoneEl = document.getElementById('info-phone');
+                if (phoneEl) phoneEl.innerText = data.phone || 'Not Set';
+                
+                const addrEl = document.getElementById('info-address');
+                if (addrEl) addrEl.innerText = data.address || 'Not Set';
+                
+                const termsEl = document.getElementById('info-terms');
+                if (termsEl) {
+                    if (data.terms_accepted) {
+                        termsEl.innerHTML = `<span style="color:var(--green);font-weight:700;">✅ Accepted &amp; Verified</span>`;
+                    } else {
+                        termsEl.innerHTML = `<span style="color:var(--red);font-weight:700;">⏳ Awaiting Acceptance</span>`;
+                    }
+                }
 
                 // Notes
                 const notesContainer = document.getElementById('admin-notes-container');
@@ -1037,7 +1495,359 @@
             `);
             printWindow.document.close();
         }
-    </script>
+
+        // =========================================================
+        // CLIENT ONBOARDING & PROFILE SETUP LOGIC
+        // =========================================================
+        let selectedProfileImageBase64 = "";
+        let updateProfileImageBase64 = "";
+
+        function showOnboardingModal(data) {
+            const modal = document.getElementById('client-onboarding-modal');
+            if (!modal) return;
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            
+            // Populate Terms & Conditions Text
+            const termsBox = document.getElementById('onboarding-terms-content');
+            if (termsBox) {
+                const customTerms = (data && data.chamber_terms && data.chamber_terms.trim())
+                    || (window.globalSettings && window.globalSettings.terms_conditions && window.globalSettings.terms_conditions.trim()) 
+                    || '';
+                if (customTerms) {
+                    termsBox.innerText = customTerms;
+                    termsBox.style.whiteSpace = 'pre-wrap';
+                    termsBox.style.lineHeight = '1.7';
+                } else {
+                    termsBox.innerHTML = `
+                        <h4>1. Professional Representation & Chamber Services</h4>
+                        <p>JSM Chambers provides legal advisory, litigation management, and court representation before the High Court of Orissa and subordinate trial courts as instructed by the client. All legal proceedings are conducted in bona fide compliance with statutory procedural codes of India.</p>
+                        
+                        <h4>2. Confidentiality & Attorney-Client Legal Privilege</h4>
+                        <p>All case documents, evidentiary materials, briefs, and client communications shared with the chamber are strictly confidential and privileged under the Advocates Act, 1961.</p>
+                        
+                        <h4>3. Complete & Accurate Information Disclosure</h4>
+                        <p>The client solemnly affirms that all facts, antecedents, evidentiary documents, and identity details provided to the chamber are true, genuine, and complete without suppression of material facts.</p>
+                        
+                        <h4>4. Digital Client Portal & Verification Access</h4>
+                        <p>Access to your digital case files, invoices, and court updates is restricted to verified email verification codes. The client is responsible for maintaining the privacy and security of their communication channels.</p>
+                        
+                        <h4>5. Judicial Listings, Hearing Dockets & Rulings</h4>
+                        <p>Judicial cause-lists, bench allocations, and hearing dates are governed by the respective court registry. Real-time updates and procedural notices will be communicated through this chamber portal.</p>
+                    `;
+                }
+            }
+            
+            // Determine active stage
+            if (!data.terms_accepted) {
+                showOnboardingStage(1);
+            } else {
+                showOnboardingStage(2);
+            }
+        }
+
+        function hideOnboardingModal() {
+            const modal = document.getElementById('client-onboarding-modal');
+            if (modal) modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        function showOnboardingStage(stage) {
+            const s1 = document.getElementById('onboarding-stage-1');
+            const s2 = document.getElementById('onboarding-stage-2');
+            const step1 = document.getElementById('stepper-step-1');
+            const step2 = document.getElementById('stepper-step-2');
+            const divider = document.getElementById('stepper-divider');
+            
+            if (stage === 1) {
+                if (s1) s1.style.display = 'block';
+                if (s2) s2.style.display = 'none';
+                if (step1) step1.className = 'stepper-step active';
+                if (step2) step2.className = 'stepper-step';
+                if (divider) divider.className = 'stepper-line';
+                const cb = document.getElementById('terms-agree-checkbox');
+                if (cb) cb.checked = false;
+                const btn = document.getElementById('btn-agree-terms');
+                if (btn) btn.disabled = true;
+            } else {
+                if (s1) s1.style.display = 'none';
+                if (s2) s2.style.display = 'block';
+                if (step1) step1.className = 'stepper-step completed';
+                if (step2) step2.className = 'stepper-step active';
+                if (divider) divider.className = 'stepper-line active';
+                
+                // Populate locked credentials and pre-filled contact details
+                const c = clientProfileData;
+                if (c) {
+                    const elEmail = document.getElementById('locked-email-display');
+                    if (elEmail) elEmail.innerText = c.email || 'N/A';
+                    
+                    const elChamber = document.getElementById('locked-chamber-no-display');
+                    if (elChamber) elChamber.innerText = c.chamber_case_number || 'Pending Allocation';
+                    
+                    const elCourt = document.getElementById('locked-court-no-display');
+                    if (elCourt) elCourt.innerText = c.court_case_number || 'Pending Allocation';
+                    
+                    const elType = document.getElementById('locked-case-type-display');
+                    if (elType) elType.innerText = c.case_type || 'General Legal Matter';
+                    
+                    const phoneInput = document.getElementById('setup-phone');
+                    if (phoneInput && !phoneInput.value) phoneInput.value = c.phone || '';
+                    
+                    const addrInput = document.getElementById('setup-address');
+                    if (addrInput && !addrInput.value) addrInput.value = c.address || '';
+                    
+                    if (c.profile_image) {
+                        selectedProfileImageBase64 = c.profile_image;
+                        const pImg = document.getElementById('setup-avatar-img');
+                        const ph = document.getElementById('setup-avatar-placeholder');
+                        if (pImg) { pImg.src = c.profile_image; pImg.style.display = 'block'; }
+                        if (ph) ph.style.display = 'none';
+                    }
+                }
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function onTermsCheckboxChanged() {
+            const cb = document.getElementById('terms-agree-checkbox');
+            const btn = document.getElementById('btn-agree-terms');
+            if (btn) btn.disabled = !cb.checked;
+        }
+
+        async function submitTermsAcceptance() {
+            const caseId = localStorage.getItem('clientCaseId');
+            if (!caseId) return;
+            const btn = document.getElementById('btn-agree-terms');
+            btn.disabled = true;
+            btn.innerHTML = '<span>Recording Agreement...</span>';
+            
+            try {
+                const res = await fetch(`/api/my-case/${caseId}/accept-terms`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const d = await res.json();
+                if (res.ok) {
+                    if (clientProfileData) {
+                        clientProfileData.terms_accepted = true;
+                        clientProfileData.terms_accepted_at = new Date().toLocaleString();
+                    }
+                    showOnboardingStage(2);
+                } else {
+                    showToast(d.error || "Failed to record terms acceptance.", "error");
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>Accept Terms &amp; Continue</span> <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>';
+                    if (window.lucide) lucide.createIcons();
+                }
+            } catch(err) {
+                showToast("Network error. Please try again.", "error");
+                btn.disabled = false;
+                btn.innerHTML = '<span>Accept Terms &amp; Continue</span> <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>';
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+
+        function handleImageSelected(e, target) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            if (!file.type.match(/^image\//)) {
+                showToast("Please choose a valid image file (JPG, PNG, WebP).", "error");
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const rawBase64 = event.target.result;
+                const img = new Image();
+                img.onload = function() {
+                    // "no need to compacting": preserve crisp high definition without aggressive compression
+                    let base64 = rawBase64;
+                    if (file.size > 3 * 1024 * 1024 || img.width > 2000 || img.height > 2000) {
+                        const canvas = document.createElement('canvas');
+                        const maxDim = 1600;
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > height) {
+                            if (width > maxDim) {
+                                height = Math.round((height * maxDim) / width);
+                                width = maxDim;
+                            }
+                        } else {
+                            if (height > maxDim) {
+                                width = Math.round((width * maxDim) / height);
+                                height = maxDim;
+                            }
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        base64 = canvas.toDataURL('image/jpeg', 0.95);
+                    }
+                    
+                    if (target === 'setup') {
+                        selectedProfileImageBase64 = base64;
+                        const pImg = document.getElementById('setup-avatar-img');
+                        const ph = document.getElementById('setup-avatar-placeholder');
+                        if (pImg) { pImg.src = base64; pImg.style.display = 'block'; }
+                        if (ph) ph.style.display = 'none';
+                    } else if (target === 'modal') {
+                        updateProfileImageBase64 = base64;
+                        const pImg = document.getElementById('profile-modal-avatar-img');
+                        const ph = document.getElementById('profile-modal-avatar-placeholder');
+                        if (pImg) { pImg.src = base64; pImg.style.display = 'block'; }
+                        if (ph) ph.style.display = 'none';
+                    }
+                };
+                img.src = rawBase64;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function submitProfileSetup() {
+            const caseId = localStorage.getItem('clientCaseId');
+            if (!caseId) return;
+            
+            const phone = (document.getElementById('setup-phone')?.value || '').trim();
+            const address = (document.getElementById('setup-address')?.value || '').trim();
+            
+            if (!phone) {
+                showToast("Please enter your contact phone number.", "error");
+                document.getElementById('setup-phone')?.focus();
+                return;
+            }
+            if (!address) {
+                showToast("Please enter your full residential / correspondence address.", "error");
+                document.getElementById('setup-address')?.focus();
+                return;
+            }
+            
+            const btn = document.getElementById('btn-complete-profile');
+            btn.disabled = true;
+            btn.innerHTML = '<span>Saving to Turso Cloud Database...</span>';
+            
+            try {
+                const payload = {
+                    phone,
+                    address,
+                    profile_image: selectedProfileImageBase64 || (clientProfileData?.profile_image || '')
+                };
+                
+                const res = await fetch(`/api/my-case/${caseId}/complete-profile`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const d = await res.json();
+                if (res.ok) {
+                    clientProfileData = d.case || clientProfileData;
+                    clientProfileData.profile_completed = true;
+                    
+                    showToast("Profile configured successfully! Welcome to your Chamber Portal.");
+                    hideOnboardingModal();
+                    cacheStr = "";
+                    loadCaseData();
+                } else {
+                    showToast(d.error || "Failed to complete profile.", "error");
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>Complete Profile &amp; Enter Portal</span> <i data-lucide="check" style="width:16px;height:16px;"></i>';
+                    if (window.lucide) lucide.createIcons();
+                }
+            } catch(err) {
+                showToast("Network error. Please try again.", "error");
+                btn.disabled = false;
+                btn.innerHTML = '<span>Complete Profile &amp; Enter Portal</span> <i data-lucide="check" style="width:16px;height:16px;"></i>';
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+
+        function openClientProfileModal() {
+            const modal = document.getElementById('client-profile-modal');
+            if (!modal || !clientProfileData) return;
+            
+            const c = clientProfileData;
+            document.getElementById('profile-modal-client-name').innerText = c.client_name || 'Client';
+            document.getElementById('profile-modal-email').innerText = c.email || 'N/A';
+            document.getElementById('profile-modal-chamber').innerText = c.chamber_case_number || 'Pending Allocation';
+            document.getElementById('profile-modal-court').innerText = c.court_case_number || 'Pending Allocation';
+            document.getElementById('profile-modal-type').innerText = c.case_type || 'General Legal Matter';
+            
+            document.getElementById('profile-modal-phone').value = c.phone || '';
+            document.getElementById('profile-modal-address').value = c.address || '';
+            
+            const pImg = document.getElementById('profile-modal-avatar-img');
+            const ph = document.getElementById('profile-modal-avatar-placeholder');
+            if (c.profile_image) {
+                updateProfileImageBase64 = c.profile_image;
+                if (pImg) { pImg.src = c.profile_image; pImg.style.display = 'block'; }
+                if (ph) ph.style.display = 'none';
+            } else {
+                updateProfileImageBase64 = "";
+                if (pImg) pImg.style.display = 'none';
+                if (ph) ph.style.display = 'block';
+            }
+            
+            const termsDateEl = document.getElementById('profile-modal-terms-date');
+            if (termsDateEl) {
+                if (c.terms_accepted) {
+                    termsDateEl.innerText = `Chamber Terms Accepted (${c.terms_accepted_at || 'Verified'})`;
+                } else {
+                    termsDateEl.innerText = 'Terms Acceptance Pending';
+                }
+            }
+            
+            modal.style.display = 'flex';
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function closeClientProfileModal() {
+            const modal = document.getElementById('client-profile-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function submitProfileUpdate() {
+            const caseId = localStorage.getItem('clientCaseId');
+            if (!caseId) return;
+            
+            const phone = (document.getElementById('profile-modal-phone')?.value || '').trim();
+            const address = (document.getElementById('profile-modal-address')?.value || '').trim();
+            
+            const btn = document.getElementById('btn-save-profile-modal');
+            btn.disabled = true;
+            btn.innerHTML = '<span>Saving...</span>';
+            
+            try {
+                const payload = {
+                    phone,
+                    address,
+                    profile_image: updateProfileImageBase64 || (clientProfileData?.profile_image || '')
+                };
+                
+                const res = await fetch(`/api/my-case/${caseId}/profile`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const d = await res.json();
+                if (res.ok) {
+                    clientProfileData = d.case || clientProfileData;
+                    showToast("Profile updated & synced successfully!");
+                    closeClientProfileModal();
+                    cacheStr = "";
+                    loadCaseData();
+                } else {
+                    showToast(d.error || "Failed to update profile.", "error");
+                }
+            } catch(err) {
+                showToast("Network error. Please try again.", "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="save" style="width:16px;height:16px;"></i> Save Changes';
+                if (window.lucide) lucide.createIcons();
+            }
+        }
     </script>
 
     <!-- Appointment Modal -->
@@ -1090,6 +1900,240 @@
                 <h2>Appointment Confirmed</h2>
                 <p>Your appointment has been successfully scheduled. A beautifully formatted confirmation PDF slip has been sent to your email.</p>
                 <button class="btn-submit" onclick="closeAppointmentModal()">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client First-Time Onboarding Modal (Terms & Conditions + Profile Setup) -->
+    <div id="client-onboarding-modal">
+        <div class="onboarding-card">
+            <!-- Progress Bar & Stepper -->
+            <div class="onboarding-stepper">
+                <div class="stepper-step active" id="stepper-step-1">
+                    <div class="step-num">1</div>
+                    <div class="step-label">Terms &amp; Conditions</div>
+                </div>
+                <div class="stepper-line" id="stepper-divider"></div>
+                <div class="stepper-step" id="stepper-step-2">
+                    <div class="step-num">2</div>
+                    <div class="step-label">Profile &amp; Account Setup</div>
+                </div>
+            </div>
+
+            <!-- STAGE 1: Terms & Conditions -->
+            <div id="onboarding-stage-1" class="onboarding-body" style="display: block;">
+                <div class="onboarding-header">
+                    <div class="badge-gold">⚖️ CHAMBER LEGAL AGREEMENT</div>
+                    <h2>Chamber Terms &amp; Conditions</h2>
+                    <p>Welcome to JSM Chambers Client Portal. Please carefully review and acknowledge our official representation terms before accessing your case dashboard.</p>
+                </div>
+
+                <div class="terms-scroll-box" id="onboarding-terms-content">
+                    <!-- Dynamic terms content -->
+                </div>
+
+                <div class="terms-agree-box">
+                    <label class="terms-checkbox-label">
+                        <input type="checkbox" id="terms-agree-checkbox" onchange="onTermsCheckboxChanged()">
+                        <span class="terms-text">I have read, understood, and solemnly accept the Chamber Terms &amp; Conditions, Representation Rules, and Case Guidelines.</span>
+                    </label>
+                </div>
+
+                <div class="onboarding-footer" style="padding: 16px 0 0 0; background: transparent; border-top: none;">
+                    <button type="button" class="btn-onboarding-primary" id="btn-agree-terms" onclick="submitTermsAcceptance()" disabled style="width: 100%; justify-content: center;">
+                        <span>Accept Terms &amp; Continue</span>
+                        <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- STAGE 2: Profile Setup -->
+            <div id="onboarding-stage-2" class="onboarding-body" style="display: none;">
+                <div class="onboarding-header">
+                    <div class="badge-gold">👤 CLIENT PROFILE SETUP</div>
+                    <h2>Account &amp; Profile Setup</h2>
+                    <p>Upload your photograph and confirm your verified contact details. All data will be securely synced with the Chamber Cloud Database.</p>
+                </div>
+
+                <!-- Profile Image Upload Area -->
+                <div class="profile-upload-section">
+                    <div class="avatar-upload-wrapper">
+                        <div class="avatar-preview-circle" id="setup-avatar-preview">
+                            <i data-lucide="user" id="setup-avatar-placeholder" style="width:40px;height:40px;color:#94a3b8;"></i>
+                            <img id="setup-avatar-img" src="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="Client Avatar">
+                        </div>
+                        <label class="avatar-upload-btn" for="setup-image-input" title="Upload Photo">
+                            <i data-lucide="camera" style="width:15px;height:15px;"></i>
+                        </label>
+                        <input type="file" id="setup-image-input" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleImageSelected(event, 'setup')">
+                    </div>
+                    <div class="avatar-upload-info">
+                        <strong>Client Photograph</strong>
+                        <span>Upload a clear face photo (JPG, PNG, WebP)</span>
+                        <button type="button" class="btn-choose-photo" onclick="document.getElementById('setup-image-input').click()">
+                            📷 Choose Photo
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Editable Fields: Phone & Full Address -->
+                <div class="form-group-custom">
+                    <label>Contact Number <span style="color:#ef4444;">*</span></label>
+                    <div class="input-with-icon">
+                        <i data-lucide="phone" style="width:16px;height:16px;"></i>
+                        <input type="tel" id="setup-phone" placeholder="Enter your mobile number (e.g. +91 98765 43210)" required>
+                    </div>
+                </div>
+
+                <div class="form-group-custom">
+                    <label>Full Residential / Correspondence Address <span style="color:#ef4444;">*</span></label>
+                    <div class="input-with-icon" style="align-items: flex-start;">
+                        <i data-lucide="map-pin" style="width:16px;height:16px;margin-top:12px;"></i>
+                        <textarea id="setup-address" rows="3" placeholder="Enter complete address (House/Plot #, Street/Village, Post, District, State, PIN Code)..." required></textarea>
+                    </div>
+                </div>
+
+                <!-- Locked Fields (CRITICAL REQUIREMENT: Email, Case #, Case Type CANNOT be changed) -->
+                <div class="locked-card">
+                    <div class="locked-card-title">
+                        <i data-lucide="shield-check" style="width:16px;height:16px;color:#d4af37;"></i>
+                        <span>Verified Case Credentials (Locked &amp; Read-Only)</span>
+                    </div>
+                    <p style="font-size:12px;color:#64748b;margin-bottom:12px;">The following parameters were entered and verified by Chamber Administration and cannot be modified by the client:</p>
+                    <div class="locked-fields-grid">
+                        <div class="locked-item">
+                            <span class="lbl">Registered Email ID</span>
+                            <div class="val-box">
+                                <span id="locked-email-display">-</span>
+                                <span class="lock-tag">🔒 Locked</span>
+                            </div>
+                        </div>
+                        <div class="locked-item">
+                            <span class="lbl">Chamber Case Number</span>
+                            <div class="val-box">
+                                <span id="locked-chamber-no-display">-</span>
+                                <span class="lock-tag">🔒 Locked</span>
+                            </div>
+                        </div>
+                        <div class="locked-item">
+                            <span class="lbl">Court Case Number</span>
+                            <div class="val-box">
+                                <span id="locked-court-no-display">-</span>
+                                <span class="lock-tag">🔒 Locked</span>
+                            </div>
+                        </div>
+                        <div class="locked-item">
+                            <span class="lbl">Assigned Case Type</span>
+                            <div class="val-box">
+                                <span id="locked-case-type-display">-</span>
+                                <span class="lock-tag">🔒 Locked</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="onboarding-footer" style="padding: 18px 0 0 0; background: transparent; border-top: none;">
+                    <button type="button" class="btn-onboarding-primary" id="btn-complete-profile" onclick="submitProfileSetup()" style="width: 100%; justify-content: center;">
+                        <span>Complete Profile &amp; Enter Portal</span>
+                        <i data-lucide="check" style="width:16px;height:16px;"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client Profile View & Edit Modal -->
+    <div id="client-profile-modal">
+        <div class="app-box" style="max-width: 540px;">
+            <div class="app-header">
+                <h3><i data-lucide="user-check"></i> My Client Profile</h3>
+                <button class="app-close" onclick="closeClientProfileModal()"><i data-lucide="x"></i></button>
+            </div>
+            <div class="app-body">
+                <!-- Avatar Preview & Change -->
+                <div class="profile-upload-section" style="margin-top: 4px;">
+                    <div class="avatar-upload-wrapper">
+                        <div class="avatar-preview-circle">
+                            <i data-lucide="user" id="profile-modal-avatar-placeholder" style="width:36px;height:36px;color:#94a3b8;"></i>
+                            <img id="profile-modal-avatar-img" src="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="Client Avatar">
+                        </div>
+                        <label class="avatar-upload-btn" for="profile-modal-image-input" title="Change Photo">
+                            <i data-lucide="camera" style="width:14px;height:14px;"></i>
+                        </label>
+                        <input type="file" id="profile-modal-image-input" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleImageSelected(event, 'modal')">
+                    </div>
+                    <div class="avatar-upload-info">
+                        <strong id="profile-modal-client-name">Client Name</strong>
+                        <span id="profile-modal-status-badge" style="color:var(--green);font-weight:600;">✅ Profile Verified &amp; Synced</span>
+                        <button type="button" class="btn-choose-photo" onclick="document.getElementById('profile-modal-image-input').click()">
+                            📷 Update Photo
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group-custom">
+                    <label>Contact Phone Number</label>
+                    <div class="input-with-icon">
+                        <i data-lucide="phone" style="width:16px;height:16px;"></i>
+                        <input type="tel" id="profile-modal-phone" placeholder="Enter contact number">
+                    </div>
+                </div>
+
+                <div class="form-group-custom">
+                    <label>Full Residential Address</label>
+                    <div class="input-with-icon" style="align-items: flex-start;">
+                        <i data-lucide="map-pin" style="width:16px;height:16px;margin-top:12px;"></i>
+                        <textarea id="profile-modal-address" rows="3" placeholder="Enter full address"></textarea>
+                    </div>
+                </div>
+
+                <!-- Locked Credentials in Profile Modal -->
+                <div class="locked-card" style="margin-top: 14px;">
+                    <div class="locked-card-title">
+                        <i data-lucide="lock" style="width:14px;height:14px;color:#d4af37;"></i>
+                        <span>Locked Chamber Credentials (Cannot Be Changed)</span>
+                    </div>
+                    <div class="locked-fields-grid">
+                        <div class="locked-item">
+                            <span class="lbl">Registered Email</span>
+                            <div class="val-box">
+                                <span id="profile-modal-email">-</span>
+                                <span class="lock-tag">🔒 Locked</span>
+                            </div>
+                        </div>
+                        <div class="locked-item">
+                            <span class="lbl">Chamber Case #</span>
+                            <div class="val-box">
+                                <span id="profile-modal-chamber">-</span>
+                                <span class="lock-tag">🔒 Locked</span>
+                            </div>
+                        </div>
+                        <div class="locked-item">
+                            <span class="lbl">Court Case #</span>
+                            <div class="val-box">
+                                <span id="profile-modal-court">-</span>
+                                <span class="lock-tag">🔒 Locked</span>
+                            </div>
+                        </div>
+                        <div class="locked-item">
+                            <span class="lbl">Case Type</span>
+                            <div class="val-box">
+                                <span id="profile-modal-type">-</span>
+                                <span class="lock-tag">🔒 Locked</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="profile-modal-terms-info" style="margin-top: 12px; font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="check-circle" style="width:14px;height:14px;color:var(--green);"></i>
+                    <span id="profile-modal-terms-date">Chamber Terms &amp; Conditions Acknowledged</span>
+                </div>
+            </div>
+            <div class="app-footer">
+                <button type="button" class="btn-submit" id="btn-save-profile-modal" onclick="submitProfileUpdate()">
+                    <i data-lucide="save" style="width:16px;height:16px;"></i> Save Changes
+                </button>
             </div>
         </div>
     </div>

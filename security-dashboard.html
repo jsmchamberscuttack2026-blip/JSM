@@ -1108,16 +1108,17 @@
                     <table class="soc-table">
                         <thead>
                             <tr>
-                                <th>Device ID</th>
+                                <th>Device / Account</th>
                                 <th>Target User</th>
                                 <th>IP Address</th>
                                 <th>Failed Attempts</th>
                                 <th>Lockout Remaining</th>
                                 <th>User Agent</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="table-locked-devices">
-                            <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Zero devices currently locked. System is clean.</td></tr>
+                            <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">Zero devices or accounts currently locked. System is clean.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -2360,7 +2361,7 @@
                 const lBody = document.getElementById('table-locked-devices');
                 if (lBody) {
                     if (!data.locked_devices || data.locked_devices.length === 0) {
-                        lBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Zero devices currently locked. System is clean.</td></tr>';
+                        lBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">Zero devices or accounts currently locked. System is clean.</td></tr>';
                     } else {
                         lBody.innerHTML = data.locked_devices.map(d => `
                             <tr>
@@ -2370,6 +2371,9 @@
                                 <td><span class="badge-soc badge-critical">${d.failed_attempts} fails</span></td>
                                 <td style="font-family: monospace; font-weight: 700; color: #f87171;">${d.remaining_seconds}s</td>
                                 <td style="font-size: 0.75rem; color: #94a3b8; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${d.user_agent}</td>
+                                <td>
+                                    <button class="btn-soc btn-outline-soc" style="padding: 3px 8px; font-size: 0.75rem; border-color: #ef4444; color: #fca5a5;" onclick="unlockAccount('${d.type || 'admin_device'}', '${d.target_key || d.device_id}')">🔓 Unlock</button>
+                                </td>
                             </tr>
                         `).join('');
                     }
@@ -2398,6 +2402,35 @@
                 }
             } catch(e) {
                 console.error('Error loading logins:', e);
+            }
+        }
+
+        async function unlockAccount(type, key) {
+            if (!confirm(`Are you sure you want to manually unlock this ${type === 'staff_account' ? 'staff account' : 'device'} (${key})?`)) return;
+            try {
+                let res;
+                if (type === 'staff_account') {
+                    res = await fetch('/api/security/staff/unlock', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-Admin-Request': 'true' },
+                        body: JSON.stringify({ email: key })
+                    });
+                } else {
+                    res = await fetch('/api/security/admin-device/unlock', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-Admin-Request': 'true' },
+                        body: JSON.stringify({ device_id: key })
+                    });
+                }
+                const d = await res.json();
+                if (res.ok) {
+                    showToast(d.message || 'Unlocked successfully.', 'success');
+                    loadLogins();
+                } else {
+                    showToast(d.error || 'Failed to unlock.', 'error');
+                }
+            } catch(err) {
+                showToast('Network error unlocking account.', 'error');
             }
         }
 

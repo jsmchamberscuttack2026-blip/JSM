@@ -195,20 +195,102 @@ def init_turso_db():
             case_files TEXT,
             hearing_history TEXT,
             created_at TEXT,
-            images TEXT
+            images TEXT,
+            address TEXT,
+            profile_image TEXT,
+            terms_accepted TEXT,
+            profile_completed TEXT
         );
         '''
         execute_turso_query(create_sql)
         try:
             cols = execute_turso_query("PRAGMA table_info(clients_history)")
-            col_names = [c.get('name') for c in cols]
-            if 'images' not in col_names:
-                execute_turso_query("ALTER TABLE clients_history ADD COLUMN images TEXT")
+            col_names = [c.get('name') for c in cols] if cols else []
+            for col_to_add in ['images', 'address', 'profile_image', 'terms_accepted', 'profile_completed']:
+                if col_to_add not in col_names:
+                    try:
+                        execute_turso_query(f"ALTER TABLE clients_history ADD COLUMN {col_to_add} TEXT")
+                    except Exception:
+                        pass
         except Exception:
             pass
-        logging.info("Turso clients_history table verified/initialized successfully.")
+
+        # Dedicated client_profiles table in Turso Database 1
+        create_profiles_sql = '''
+        CREATE TABLE IF NOT EXISTS client_profiles (
+            id TEXT PRIMARY KEY,
+            client_name TEXT NOT NULL,
+            email TEXT,
+            phone TEXT,
+            address TEXT,
+            profile_image TEXT,
+            case_type TEXT,
+            chamber_case_number TEXT,
+            court_case_number TEXT,
+            terms_accepted INTEGER DEFAULT 0,
+            terms_accepted_at TEXT,
+            profile_completed INTEGER DEFAULT 0,
+            profile_completed_at TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        );
+        '''
+        execute_turso_query(create_profiles_sql)
+        logging.info("Turso clients_history & client_profiles tables verified/initialized successfully.")
     except Exception as e:
         logging.error(f"Failed to initialize Turso database: {e}")
+
+def save_client_to_turso_profile(case_data):
+    """Automatically inserts or updates client profile including image, address, phone into Turso Database 1."""
+    try:
+        case_id = str(case_data.get('_id', case_data.get('id', ''))).strip()
+        if not case_id:
+            return False
+            
+        client_name = case_data.get('client_name') or 'Unknown'
+        email = (case_data.get('email') or '').strip().lower()
+        phone = case_data.get('phone') or ''
+        address = case_data.get('address') or ''
+        profile_image = case_data.get('profile_image') or ''
+        case_type = case_data.get('case_type') or 'General'
+        chamber_case_number = case_data.get('chamber_case_number') or ''
+        court_case_number = case_data.get('court_case_number') or ''
+        terms_accepted = 1 if case_data.get('terms_accepted') else 0
+        terms_accepted_at = str(case_data.get('terms_accepted_at') or '')
+        profile_completed = 1 if case_data.get('profile_completed') else 0
+        profile_completed_at = str(case_data.get('profile_completed_at') or '')
+        created_at = str(case_data.get('created_at') or datetime.now().strftime("%d %b %Y"))
+        updated_at = datetime.now().strftime("%Y-%m-%d %I:%M %p")
+
+        upsert_profile_sql = '''
+        INSERT OR REPLACE INTO client_profiles (
+            id, client_name, email, phone, address, profile_image,
+            case_type, chamber_case_number, court_case_number,
+            terms_accepted, terms_accepted_at, profile_completed, profile_completed_at,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        '''
+        execute_turso_query(upsert_profile_sql, [
+            case_id, client_name, email, phone, address, profile_image,
+            case_type, chamber_case_number, court_case_number,
+            terms_accepted, terms_accepted_at, profile_completed, profile_completed_at,
+            created_at, updated_at
+        ])
+        # Also ensure clients_history in Turso Database 1 reflects updated image and profile details if row exists
+        try:
+            execute_turso_query('''
+            UPDATE clients_history SET 
+                phone = ?, address = ?, profile_image = ?, 
+                terms_accepted = ?, profile_completed = ?
+            WHERE id = ?
+            ''', [phone, address, profile_image, str(terms_accepted), str(profile_completed), case_id])
+        except Exception:
+            pass
+        logging.info(f"Client {client_name} ({case_id}) profile saved to Turso 1 client_profiles.")
+        return True
+    except Exception as e:
+        logging.error(f"Error saving client profile to Turso 1: {e}")
+        return False
 
 def save_case_to_turso_history(case_data):
     """Automatically inserts or replaces a finished case into Turso database."""
@@ -242,17 +324,24 @@ def save_case_to_turso_history(case_data):
         hearing_history = json.dumps(case_data.get('hearing_history', [])) if isinstance(case_data.get('hearing_history'), (list, dict)) else str(case_data.get('hearing_history') or '')
         created_at = case_data.get('created_at') or ''
         images = json.dumps(case_data.get('images', [])) if isinstance(case_data.get('images'), (list, dict)) else str(case_data.get('images') or '[]')
+        address = case_data.get('address') or ''
+        profile_image = case_data.get('profile_image') or ''
+        terms_accepted = '1' if case_data.get('terms_accepted') else '0'
+        profile_completed = '1' if case_data.get('profile_completed') else '0'
 
         upsert_sql = '''
         INSERT OR REPLACE INTO clients_history (
             id, client_name, email, phone, case_type, chamber_case_number, court_case_number,
-            total_fee, fee_paid, status, completion_date, notes, status_history, bills, case_files, hearing_history, created_at, images
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            total_fee, fee_paid, status, completion_date, notes, status_history, bills, case_files, hearing_history, created_at, images,
+            address, profile_image, terms_accepted, profile_completed
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         '''
         execute_turso_query(upsert_sql, [
             case_id, client_name, email, phone, case_type, chamber_case_number, court_case_number,
-            total_fee, fee_paid, status, completion_date, notes, status_history, bills, case_files, hearing_history, created_at, images
+            total_fee, fee_paid, status, completion_date, notes, status_history, bills, case_files, hearing_history, created_at, images,
+            address, profile_image, terms_accepted, profile_completed
         ])
+        save_client_to_turso_profile(case_data)
         logging.info(f"Case {case_id} ({client_name}) successfully transferred to Turso clients_history.")
         return True
     except Exception as e:
@@ -262,7 +351,11 @@ def save_case_to_turso_history(case_data):
 def delete_case_from_turso_history(case_id):
     try:
         execute_turso_query("DELETE FROM clients_history WHERE id = ?", [str(case_id)])
-        logging.info(f"Case {case_id} deleted from Turso history.")
+        try:
+            execute_turso_query("DELETE FROM client_profiles WHERE id = ?", [str(case_id)])
+        except Exception:
+            pass
+        logging.info(f"Case {case_id} deleted from Turso history & profiles.")
         return True
     except Exception as e:
         logging.error(f"Error deleting case from Turso history: {e}")
@@ -882,8 +975,8 @@ def check_maintenance_mode():
     if path.startswith(('/assets/', '/css/', '/js/', '/chamber-owner.jpg', '/chamber-logo.jpg', '/chamber-hero-banner.jpg', '/chamber-staff-banner.jpg', '/chamber-expertise-banner.jpg', '/api/advocates/', '/api/news/', '/favicon')):
         return None
         
-    # Fast Path 3: Always allow critical admin & security authentication and status endpoints
-    if path.startswith(('/api/admin-login', '/api/admin-verify-otp', '/api/admin-resend-otp', '/api/admin-lock-status', '/api/website-status', '/api/admin', '/api/security')):
+    # Fast Path 3: Always allow critical admin, security & staff authentication and status endpoints
+    if path.startswith(('/api/admin-login', '/api/admin-verify-otp', '/api/admin-resend-otp', '/api/admin-lock-status', '/api/website-status', '/api/admin', '/api/security', '/api/staff-', '/api/client-lock-status')):
         return None
 
     # Global IP Blacklist Protection enforced by Cyber Defense (fast in-memory check)
@@ -3414,7 +3507,7 @@ def get_security_overview():
         
         yesterday_epoch = (get_now_ist() - timedelta(hours=24)).timestamp()
         failed_logins = security_logs_col.count_documents({
-            "event_type": "login_failed",
+            "event_type": {"$in": ["login_failed", "staff_verify_failed", "staff_account_locked"]},
             "timestamp_epoch": {"$gte": yesterday_epoch}
         }) if security_logs_col is not None else 0
         
@@ -3544,23 +3637,46 @@ def get_security_logins():
         logins = []
         if security_logs_col is not None:
             for l in security_logs_col.find({
-                "event_type": {"$in": ["login_2fa_requested", "login_success", "login_failed", "login_blocked_locked", "otp_invalid", "otp_expired", "force_logout"]}
+                "event_type": {"$in": [
+                    "login_2fa_requested", "login_success", "login_failed", 
+                    "login_blocked_locked", "otp_invalid", "otp_expired", 
+                    "force_logout", "staff_verify_failed", "staff_account_locked", 
+                    "staff_account_unlocked", "staff_otp_requested"
+                ]}
             }).sort([("_id", -1)]).limit(30):
                 l["_id"] = str(l["_id"])
                 logins.append(l)
                 
         locked_devices = []
+        now_ts = get_now_ist().timestamp()
         if config_col is not None:
             for doc in config_col.find({"_id": {"$regex": "^admin_lockout_dev_"}}):
-                remaining = max(0, int(doc.get("locked_until_timestamp", 0) - get_now_ist().timestamp()))
+                remaining = max(0, int(doc.get("locked_until_timestamp", 0) - now_ts))
                 if remaining > 0:
                     locked_devices.append({
+                        "type": "admin_device",
+                        "target_key": doc.get("device_id", "Unknown"),
                         "device_id": doc.get("device_id", "Unknown"),
                         "remaining_seconds": remaining,
                         "ip": doc.get("last_failed_ip", "Unknown"),
                         "user_agent": doc.get("last_failed_user_agent", "Unknown"),
                         "attempted_user": doc.get("last_attempted_user", "Unknown"),
                         "failed_attempts": doc.get("failed_attempts", 0)
+                    })
+                    
+        if advocates_col is not None:
+            for adv in advocates_col.find({"locked_until_timestamp": {"$gt": now_ts}}):
+                remaining = max(0, int(float(adv.get("locked_until_timestamp", 0)) - now_ts))
+                if remaining > 0:
+                    locked_devices.append({
+                        "type": "staff_account",
+                        "target_key": adv.get("email", ""),
+                        "device_id": f"Staff: {adv.get('name') or 'Advocate'}",
+                        "remaining_seconds": remaining,
+                        "ip": adv.get("last_failed_ip", "Unknown"),
+                        "user_agent": adv.get("last_failed_user_agent", "Staff Web Portal"),
+                        "attempted_user": adv.get("email", "Staff"),
+                        "failed_attempts": adv.get("failed_code_attempts", 4)
                     })
                     
         return jsonify({
@@ -4097,21 +4213,32 @@ def serve_security_dashboard():
 def create_case():
     data = request.get_json(force=True, silent=True) or {}
     password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+    email = (data.get('email') or '').strip().lower()
     case = {
-        "client_name": data.get('client_name'),
-        "email": data.get('email'),
-        "case_type": data.get('case_type'),
+        "client_name": data.get('client_name') or 'Unknown Client',
+        "email": email,
+        "phone": data.get('phone', ''),
+        "address": data.get('address', ''),
+        "case_type": data.get('case_type') or 'General',
         "password": password,
         "status": "Under Review",
         "next_hearing": "To Be Decided",
         "notes": "",
         "chamber_case_number": data.get("chamber_case_number", ""),
         "court_case_number": data.get("court_case_number", ""),
-        "assigned_staff_email": "",
+        "assigned_staff_email": data.get("assigned_staff_email", ""),
         "created_at": datetime.now().strftime("%d %b %Y"),
+        "terms_accepted": False,
+        "terms_accepted_at": "",
+        "profile_completed": False,
+        "profile_completed_at": "",
+        "profile_image": "",
         "status_history": [{"status": "Under Review", "date": datetime.now().strftime("%Y-%m-%d %I:%M %p")}]
     }
     result = cases_col.insert_one(case)
+    case['_id'] = str(result.inserted_id)
+    # Automatically sync new client record into Turso Database 1
+    save_client_to_turso_profile(case)
     email_sent = send_credentials_email(case['email'], case['client_name'], "Verification Code Only")
     return jsonify({"message": "Case created", "id": str(result.inserted_id), "password": "Verification Code Only", "email_sent": email_sent}), 201
 
@@ -4166,7 +4293,11 @@ def get_archived_cases():
                 "status": r.get('status') or 'Finished & Archived',
                 "completion_date": r.get('completion_date') or '',
                 "notes": r.get('notes') or '',
-                "created_at": r.get('created_at') or ''
+                "created_at": r.get('created_at') or '',
+                "address": r.get('address') or '',
+                "profile_image": r.get('profile_image') or '',
+                "terms_accepted": bool(r.get('terms_accepted') == '1' or r.get('terms_accepted') == 1),
+                "profile_completed": bool(r.get('profile_completed') == '1' or r.get('profile_completed') == 1)
             }
             for jfield in ['status_history', 'bills', 'case_files', 'hearing_history', 'images']:
                 raw = r.get(jfield)
@@ -4347,7 +4478,11 @@ def get_single_case(id):
                     "status": r.get('status') or 'Finished & Archived',
                     "completion_date": r.get('completion_date') or '',
                     "notes": r.get('notes') or '',
-                    "created_at": r.get('created_at') or ''
+                    "created_at": r.get('created_at') or '',
+                    "address": r.get('address') or '',
+                    "profile_image": r.get('profile_image') or '',
+                    "terms_accepted": bool(r.get('terms_accepted') == '1' or r.get('terms_accepted') == 1),
+                    "profile_completed": bool(r.get('profile_completed') == '1' or r.get('profile_completed') == 1)
                 }
                 for jfield in ['status_history', 'bills', 'case_files', 'hearing_history', 'images']:
                     raw = r.get(jfield)
@@ -4872,10 +5007,290 @@ def get_my_case(id):
     if case.get("status") == "Finished & Archived":
         return jsonify({"error": "Portal Closed"}), 403
     case['_id'] = str(case['_id'])
+    
+    # Return chamber terms configured by admin
+    try:
+        office_info = settings_col.find_one({"_id": "office_info"}) or {}
+        case['chamber_terms'] = office_info.get('terms_conditions', '')
+    except Exception:
+        case['chamber_terms'] = ''
+        
     return jsonify(case), 200
+
+@app.route('/api/my-case/<id>/accept-terms', methods=['POST'])
+def accept_case_terms(id):
+    try:
+        now_str = datetime.now().strftime("%Y-%m-%d %I:%M %p")
+        cases_col.update_one(
+            {"_id": ObjectId(id)},
+            {"$set": {
+                "terms_accepted": True,
+                "terms_accepted_at": now_str
+            }}
+        )
+        case = cases_col.find_one({"_id": ObjectId(id)})
+        if case:
+            case['_id'] = str(case['_id'])
+            save_client_to_turso_profile(case)
+        return jsonify({"success": True, "message": "Terms and conditions accepted successfully."}), 200
+    except Exception as e:
+        logging.error(f"Error accepting terms: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/my-case/<id>/complete-profile', methods=['POST'])
+def complete_client_profile(id):
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        phone = str(data.get('phone', '')).strip()
+        address = str(data.get('address', '')).strip()
+        profile_image = data.get('profile_image', '') or ''
+        
+        if not phone or not address:
+            return jsonify({"error": "Contact number and full address are required to complete your profile."}), 400
+            
+        now_str = datetime.now().strftime("%Y-%m-%d %I:%M %p")
+        
+        # Strict Security Lock: Client is forbidden from modifying email, case numbers, or case type
+        update_set = {
+            "phone": phone,
+            "address": address,
+            "profile_completed": True,
+            "profile_completed_at": now_str,
+            "terms_accepted": True # Ensure terms marked accepted
+        }
+        if profile_image:
+            update_set["profile_image"] = profile_image
+            
+        cases_col.update_one(
+            {"_id": ObjectId(id)},
+            {"$set": update_set}
+        )
+        
+        updated_case = cases_col.find_one({"_id": ObjectId(id)})
+        if updated_case:
+            updated_case['_id'] = str(updated_case['_id'])
+            # Save into Turso Database 1
+            save_client_to_turso_profile(updated_case)
+            
+        return jsonify({
+            "success": True,
+            "message": "Client profile set up successfully.",
+            "case": updated_case
+        }), 200
+    except Exception as e:
+        logging.error(f"Error completing client profile: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/my-case/<id>/profile', methods=['PUT'])
+def update_client_profile(id):
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        phone = str(data.get('phone', '')).strip()
+        address = str(data.get('address', '')).strip()
+        profile_image = data.get('profile_image', '') or ''
+        
+        # Strict Security Lock: Email, case type, chamber case #, court case # are locked and cannot be changed
+        update_set = {}
+        if phone: update_set["phone"] = phone
+        if address: update_set["address"] = address
+        if profile_image: update_set["profile_image"] = profile_image
+        
+        if update_set:
+            cases_col.update_one(
+                {"_id": ObjectId(id)},
+                {"$set": update_set}
+            )
+        
+        updated_case = cases_col.find_one({"_id": ObjectId(id)})
+        if updated_case:
+            updated_case['_id'] = str(updated_case['_id'])
+            save_client_to_turso_profile(updated_case)
+            
+        return jsonify({"success": True, "message": "Profile updated successfully.", "case": updated_case}), 200
+    except Exception as e:
+        logging.error(f"Error updating client profile: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/turso/client-profiles', methods=['GET'])
+def get_turso_client_profiles():
+    try:
+        rows = execute_turso_query("SELECT * FROM client_profiles ORDER BY updated_at DESC, created_at DESC")
+        return jsonify({"success": True, "profiles": rows or [], "count": len(rows or [])}), 200
+    except Exception as e:
+        logging.error(f"Error fetching Turso client profiles: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# =========================================================
+#  CLIENT PORTAL IP LOCKOUT (5 WRONG VERIFICATIONS = 5 MIN LOCKOUT)
+#  Strictly IP-based, no alert sent to anyone, no display on SOC dashboard
+# =========================================================
+
+_client_ip_lockouts = {}  # In-memory fast cache: {ip: {"failed_attempts": int, "locked_until_ts": float}}
+
+def is_client_ip_locked(ip=None):
+    """
+    Checks if a client IP address is locked out from the client portal.
+    Lock duration: 5 minutes (300 seconds) after 5 wrong verification codes.
+    Returns: (is_locked: bool, remaining_seconds: int, lock_info: dict)
+    """
+    client_ip = (ip or get_client_ip()).strip()
+    now_ts = get_now_ist().timestamp()
+    
+    # 1. Fast in-memory check
+    if client_ip in _client_ip_lockouts:
+        info = _client_ip_lockouts[client_ip]
+        locked_until_ts = float(info.get("locked_until_ts") or 0)
+        if locked_until_ts > now_ts:
+            rem_secs = max(1, int(locked_until_ts - now_ts))
+            return True, rem_secs, info
+        elif locked_until_ts > 0:
+            # 5-minute lockout period has expired
+            _client_ip_lockouts.pop(client_ip, None)
+            if config_col is not None:
+                try:
+                    config_col.delete_one({"_id": f"client_portal_lock_{client_ip}"})
+                except Exception:
+                    pass
+            return False, 0, {}
+            
+    # 2. Database check for multi-worker / process persistence
+    if config_col is not None:
+        try:
+            doc = config_col.find_one({"_id": f"client_portal_lock_{client_ip}"})
+            if doc:
+                locked_until_ts = float(doc.get("locked_until_timestamp") or 0)
+                if locked_until_ts > now_ts:
+                    rem_secs = max(1, int(locked_until_ts - now_ts))
+                    _client_ip_lockouts[client_ip] = {
+                        "failed_attempts": doc.get("failed_attempts", 5),
+                        "locked_until_ts": locked_until_ts
+                    }
+                    return True, rem_secs, doc
+                else:
+                    # Expired in DB
+                    config_col.delete_one({"_id": f"client_portal_lock_{client_ip}"})
+                    _client_ip_lockouts.pop(client_ip, None)
+        except Exception as e:
+            logging.error(f"Error checking client IP lockout doc: {e}")
+            
+    return False, 0, {}
+
+def record_client_wrong_verification(ip=None):
+    """
+    Increments failed verification attempts for this client IP.
+    When failed_attempts reaches 5: locks this IP for 5 minutes.
+    IMPORTANT: No email alert is sent to anyone, and no event is logged
+    to the security officer dashboard as per instructions.
+    Returns: (is_locked: bool, attempts_left: int, failed_attempts: int, remaining_seconds: int)
+    """
+    client_ip = (ip or get_client_ip()).strip()
+    now_ist = get_now_ist()
+    now_ts = now_ist.timestamp()
+    
+    # Check if already locked
+    is_locked, rem_secs, info = is_client_ip_locked(client_ip)
+    if is_locked:
+        return True, 0, info.get("failed_attempts", 5), rem_secs
+        
+    current_fails = _client_ip_lockouts.get(client_ip, {}).get("failed_attempts", 0)
+    if current_fails == 0 and config_col is not None:
+        try:
+            doc = config_col.find_one({"_id": f"client_portal_lock_{client_ip}"})
+            if doc:
+                current_fails = int(doc.get("failed_attempts") or 0)
+        except Exception:
+            pass
+            
+    current_fails += 1
+    
+    if current_fails >= 5:
+        # 5 wrong verification codes -> Lock this IP address for 5 minutes (300 seconds)
+        locked_until = now_ist + timedelta(minutes=5)
+        locked_until_ts = locked_until.timestamp()
+        locked_until_iso = locked_until.isoformat()
+        
+        _client_ip_lockouts[client_ip] = {
+            "failed_attempts": current_fails,
+            "locked_until_ts": locked_until_ts
+        }
+        
+        if config_col is not None:
+            try:
+                config_col.update_one(
+                    {"_id": f"client_portal_lock_{client_ip}"},
+                    {"$set": {
+                        "ip": client_ip,
+                        "failed_attempts": current_fails,
+                        "locked_until_timestamp": locked_until_ts,
+                        "locked_until_iso": locked_until_iso,
+                        "locked_at": now_ist.isoformat()
+                    }},
+                    upsert=True
+                )
+            except Exception as e:
+                logging.error(f"Error persisting client IP lockout: {e}")
+                
+        # NOTE: NO ALERT EMAIL SENT TO ANYONE (no client, no admin, no security officer).
+        # NOTE: NO SECURITY INCIDENT LOGGED (does not show on security officer dashboard).
+        return True, 0, current_fails, 300
+    else:
+        attempts_left = 5 - current_fails
+        _client_ip_lockouts[client_ip] = {
+            "failed_attempts": current_fails,
+            "locked_until_ts": 0
+        }
+        if config_col is not None:
+            try:
+                config_col.update_one(
+                    {"_id": f"client_portal_lock_{client_ip}"},
+                    {"$set": {
+                        "ip": client_ip,
+                        "failed_attempts": current_fails,
+                        "locked_until_timestamp": 0,
+                        "last_attempt": now_ist.isoformat()
+                    }},
+                    upsert=True
+                )
+            except Exception:
+                pass
+                
+        return False, attempts_left, current_fails, 0
+
+def reset_client_ip_lockout(ip=None):
+    """Resets failed verification attempts and clears lockout for this client IP."""
+    client_ip = (ip or get_client_ip()).strip()
+    _client_ip_lockouts.pop(client_ip, None)
+    if config_col is not None:
+        try:
+            config_col.delete_one({"_id": f"client_portal_lock_{client_ip}"})
+        except Exception as e:
+            logging.error(f"Error resetting client IP lockout: {e}")
+
+@app.route('/api/client-lock-status', methods=['GET'])
+def client_lock_status():
+    client_ip = get_client_ip()
+    is_locked, rem_secs, info = is_client_ip_locked(client_ip)
+    return jsonify({
+        "locked": is_locked,
+        "remaining_seconds": rem_secs,
+        "ip": client_ip
+    }), 200
 
 @app.route('/api/client-login', methods=['POST'])
 def client_login():
+    client_ip = get_client_ip()
+    is_locked, rem_secs, lock_info = is_client_ip_locked(client_ip)
+    if is_locked:
+        mins = rem_secs // 60
+        secs = rem_secs % 60
+        time_str = f"{mins}m {secs}s" if mins > 0 else f"{secs}s"
+        return jsonify({
+            "error": f"Client Portal is temporarily locked for your IP address due to 5 incorrect verification code attempts. Please wait {time_str} before trying again.",
+            "locked": True,
+            "lockout_remaining_seconds": rem_secs,
+            "attempts_left": 0
+        }), 423
+
     data = request.get_json(force=True, silent=True) or {}
     email = data.get('email', '').strip().lower()
     code = data.get('password', '').strip()
@@ -4885,8 +5300,24 @@ def client_login():
         "status": {"$ne": "Finished & Archived"}
     })
     if not case:
-        return jsonify({"error": "Invalid verification code or case closed"}), 401
+        is_now_locked, attempts_left, failed_count, lock_rem = record_client_wrong_verification(client_ip)
+        if is_now_locked:
+            return jsonify({
+                "error": "Client Portal is locked for 5 minutes due to 5 incorrect verification code attempts.",
+                "locked": True,
+                "lockout_remaining_seconds": 300,
+                "attempts_left": 0,
+                "failed_attempts": failed_count
+            }), 423
+        else:
+            return jsonify({
+                "error": f"Invalid verification code or case closed. You have {attempts_left} attempt{'s' if attempts_left > 1 else ''} left before Client Portal is locked for 5 minutes.",
+                "attempts_left": attempts_left,
+                "failed_attempts": failed_count,
+                "locked": False
+            }), 401
         
+    reset_client_ip_lockout(client_ip)
     today_str = get_now_ist().strftime("%Y-%m-%d")
     daily = case.get("daily_logins") or {}
     count = int(daily.get("count", 0)) if daily.get("date") == today_str else 0
@@ -4914,6 +5345,19 @@ def client_login():
 @app.route('/api/forgot-password', methods=['POST'])
 def forgot_password():
     try:
+        client_ip = get_client_ip()
+        is_locked, rem_secs, lock_info = is_client_ip_locked(client_ip)
+        if is_locked:
+            mins = rem_secs // 60
+            secs = rem_secs % 60
+            time_str = f"{mins}m {secs}s" if mins > 0 else f"{secs}s"
+            return jsonify({
+                "error": f"Client Portal is temporarily locked for your IP address due to 5 incorrect verification code attempts. Please wait {time_str} before requesting a new code.",
+                "locked": True,
+                "lockout_remaining_seconds": rem_secs,
+                "attempts_left": 0
+            }), 423
+
         data = request.get_json(force=True, silent=True) or {}
         email = data.get('email', '').strip().lower()
         if not email:
@@ -4980,6 +5424,19 @@ def forgot_password():
 
 @app.route('/api/verify-code', methods=['POST'])
 def verify_code():
+    client_ip = get_client_ip()
+    is_locked, rem_secs, lock_info = is_client_ip_locked(client_ip)
+    if is_locked:
+        mins = rem_secs // 60
+        secs = rem_secs % 60
+        time_str = f"{mins}m {secs}s" if mins > 0 else f"{secs}s"
+        return jsonify({
+            "error": f"Client Portal is temporarily locked for your IP address due to 5 incorrect verification code attempts. Please wait {time_str} before trying again.",
+            "locked": True,
+            "lockout_remaining_seconds": rem_secs,
+            "attempts_left": 0
+        }), 423
+
     data = request.get_json(force=True, silent=True) or {}
     email = data.get('email', '').strip().lower()
     code = data.get('code', '').strip()
@@ -4993,8 +5450,26 @@ def verify_code():
         "status": {"$ne": "Finished & Archived"}
     })
     if not case:
-        return jsonify({"error": "Invalid verification code. Please check your email."}), 400
+        is_now_locked, attempts_left, failed_count, lock_rem = record_client_wrong_verification(client_ip)
+        if is_now_locked:
+            return jsonify({
+                "error": "Client Portal is locked for 5 minutes due to 5 incorrect verification code attempts.",
+                "locked": True,
+                "lockout_remaining_seconds": 300,
+                "attempts_left": 0,
+                "failed_attempts": failed_count
+            }), 423
+        else:
+            return jsonify({
+                "error": f"Invalid verification code. You have {attempts_left} attempt{'s' if attempts_left > 1 else ''} left before Client Portal is locked for 5 minutes.",
+                "attempts_left": attempts_left,
+                "failed_attempts": failed_count,
+                "locked": False
+            }), 400
         
+    # Valid code: reset client IP lockout
+    reset_client_ip_lockout(client_ip)
+    
     today_str = get_now_ist().strftime("%Y-%m-%d")
     daily = case.get("daily_logins") or {}
     count = int(daily.get("count", 0)) if daily.get("date") == today_str else 0
@@ -5629,17 +6104,90 @@ def save_settings():
 
 
 
+def check_staff_lockout(advocate):
+    """
+    Checks if a staff account is locked.
+    Returns (is_locked: bool, remaining_seconds: int, lock_info: dict)
+    """
+    if not advocate:
+        return False, 0, {}
+    now_ts = get_now_ist().timestamp()
+    locked_until_ts = float(advocate.get("locked_until_timestamp") or 0)
+    
+    if locked_until_ts > now_ts:
+        rem_secs = max(1, int(locked_until_ts - now_ts))
+        return True, rem_secs, {
+            "locked_until_timestamp": locked_until_ts,
+            "locked_until_iso": advocate.get("locked_until_iso", ""),
+            "failed_attempts": advocate.get("failed_code_attempts", 4)
+        }
+        
+    # If 5 minutes have elapsed since lockout, automatically reset lock
+    if locked_until_ts > 0:
+        try:
+            if advocates_col is not None:
+                advocates_col.update_one(
+                    {"_id": advocate["_id"]},
+                    {"$unset": {
+                        "locked_until_timestamp": "",
+                        "locked_until_iso": ""
+                    },
+                    "$set": {
+                        "failed_code_attempts": 0
+                    }}
+                )
+        except Exception as e:
+            logging.error(f"Error resetting expired staff lockout: {e}")
+            
+    return False, 0, {}
+
+@app.route('/api/staff-lock-status', methods=['GET'])
+def staff_lock_status():
+    email = (request.args.get('email') or '').strip().lower()
+    if not email or advocates_col is None:
+        return jsonify({"locked": False, "remaining_seconds": 0}), 200
+    advocate = advocates_col.find_one({"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}})
+    if not advocate:
+        return jsonify({"locked": False, "remaining_seconds": 0}), 200
+    is_locked, remaining_seconds, lock_info = check_staff_lockout(advocate)
+    return jsonify({
+        "locked": is_locked,
+        "remaining_seconds": remaining_seconds,
+        "failed_attempts": advocate.get("failed_code_attempts", 0)
+    }), 200
+
 @app.route('/api/staff-forgot-password', methods=['POST'])
 def staff_forgot_password():
-    data = request.json
-    email = data.get('email')
+    data = request.get_json(force=True, silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+    client_ip = get_client_ip()
+    user_agent = request.headers.get('User-Agent', 'Unknown Device')
     
-    advocate = advocates_col.find_one({"email": email})
+    if not email:
+        return jsonify({"error": "Staff email is required."}), 400
+        
+    if advocates_col is None:
+        return jsonify({"error": "Staff database unavailable."}), 500
+        
+    advocate = advocates_col.find_one({"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}})
     if not advocate:
-        return jsonify({"error": "No staff member found with this email"}), 404
+        return jsonify({"error": "No staff member found with this email."}), 404
+        
+    # 1. Check if staff account is currently locked (5-minute lockout)
+    is_locked, rem_secs, lock_info = check_staff_lockout(advocate)
+    if is_locked:
+        mins = rem_secs // 60
+        secs = rem_secs % 60
+        time_str = f"{mins}m {secs}s" if mins > 0 else f"{secs}s"
+        return jsonify({
+            "error": f"Staff account is locked due to 4 incorrect verification code attempts. Please wait {time_str} before requesting a new code.",
+            "locked": True,
+            "lockout_remaining_seconds": rem_secs,
+            "attempts_left": 0
+        }), 423
         
     code = ''.join(random.choices(string.digits, k=6))
-    expiration = datetime.now() + timedelta(seconds=30)
+    expiration = datetime.now() + timedelta(seconds=60)
     
     advocates_col.update_one(
         {"_id": advocate["_id"]}, 
@@ -5651,33 +6199,167 @@ def staff_forgot_password():
         msg['Date'] = formatdate(localtime=True)
         msg['Message-ID'] = make_msgid()
         msg['From'] = f"JSM Chambers <{SMTP_USER}>"
-        msg['To'] = email
+        msg['To'] = advocate.get('email', email)
         msg['Subject'] = "Staff Portal - Verification Code"
         
-        text = f"Your verification code is: {code}\n\nThis code is valid for 30 seconds."
+        text = f"Your verification code is: {code}\n\nThis code is valid for 60 seconds."
         msg.attach(MIMEText(text, 'plain', 'utf-8'))
         
-        send_email_core(email, msg, msg['Subject'])
+        send_email_core(advocate.get('email', email), msg, msg['Subject'])
     except Exception as e:
         logging.error(f"Failed to send staff verification email: {e}")
         
+    log_security_event(
+        event_type="staff_otp_requested",
+        severity="info",
+        details=f"Verification code requested for staff account '{advocate.get('name')}' ({email}).",
+        ip=client_ip,
+        user=email
+    )
     return jsonify({"message": "Verification code sent"}), 200
 
 @app.route('/api/staff-verify-code', methods=['POST'])
 def staff_verify_code():
-    data = request.json
-    email = data.get('email')
-    code = data.get('code')
+    data = request.get_json(force=True, silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+    code = str(data.get('code') or '').strip()
+    client_ip = get_client_ip()
+    user_agent = request.headers.get('User-Agent', 'Unknown Device')
+    now_ist = get_now_ist()
     
-    advocate = advocates_col.find_one({"email": email, "reset_code": code})
-    if not advocate:
-        return jsonify({"error": "Invalid verification code"}), 400
+    if not email:
+        return jsonify({"error": "Email is required."}), 400
+    if not code:
+        return jsonify({"error": "Verification code is required."}), 400
         
-    if datetime.now() > advocate.get("code_expires", datetime.now()):
+    if advocates_col is None:
+        return jsonify({"error": "Staff database unavailable."}), 500
+        
+    advocate = advocates_col.find_one({"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}})
+    if not advocate:
+        return jsonify({"error": "No staff member found with this email."}), 404
+        
+    # 1. Check if staff account is already locked
+    is_locked, rem_secs, lock_info = check_staff_lockout(advocate)
+    if is_locked:
+        mins = rem_secs // 60
+        secs = rem_secs % 60
+        time_str = f"{mins}m {secs}s" if mins > 0 else f"{secs}s"
+        return jsonify({
+            "error": f"Staff account is locked due to repeated incorrect code attempts. Please try again in {time_str}.",
+            "locked": True,
+            "lockout_remaining_seconds": rem_secs,
+            "attempts_left": 0
+        }), 423
+        
+    stored_code = str(advocate.get("reset_code") or "").strip()
+    code_expires = advocate.get("code_expires")
+    
+    # 2. Check if verification code matches
+    if not stored_code or code != stored_code:
+        # INCORRECT CODE TYPED!
+        current_fails = int(advocate.get("failed_code_attempts", 0)) + 1
+        
+        if current_fails >= 4:
+            # 4 incorrect attempts -> LOCK STAFF ACCOUNT FOR 5 MINUTES!
+            locked_until = now_ist + timedelta(minutes=5)
+            locked_until_ts = locked_until.timestamp()
+            locked_until_iso = locked_until.isoformat()
+            
+            advocates_col.update_one(
+                {"_id": advocate["_id"]},
+                {"$set": {
+                    "failed_code_attempts": current_fails,
+                    "locked_until_timestamp": locked_until_ts,
+                    "locked_until_iso": locked_until_iso,
+                    "last_failed_ip": client_ip,
+                    "last_failed_user_agent": user_agent,
+                    "last_failed_time": now_ist.isoformat(),
+                    "reset_code": ""
+                }}
+            )
+            
+            # Record security incident and log event (SHOW ON DASHBOARD ONLY)
+            # CRITICAL: NO ALERT EMAIL SENT TO SECURITY OFFICER MAIL as requested!
+            create_security_incident(
+                title=f"Staff Account Lockout: {advocate.get('email', email)}",
+                severity="high",
+                category="Authentication / Lockout",
+                details=f"Staff account '{advocate.get('name', 'Staff')}' ({email}) locked for 5 minutes after 4 consecutive incorrect verification code attempts from IP {client_ip}.",
+                ip=client_ip,
+                user_agent=user_agent,
+                assigned_to="Security Officer"
+            )
+            
+            log_security_event(
+                event_type="staff_account_locked",
+                severity="warning",
+                details=f"Staff account '{email}' locked for 5 minutes (4 failed verification code attempts) from IP {client_ip}.",
+                ip=client_ip,
+                user=email
+            )
+            
+            return jsonify({
+                "error": "Staff account has been locked for 5 minutes due to 4 incorrect verification code attempts.",
+                "locked": True,
+                "lockout_remaining_seconds": 300,
+                "attempts_left": 0,
+                "failed_attempts": current_fails
+            }), 423
+        else:
+            attempts_left = 4 - current_fails
+            advocates_col.update_one(
+                {"_id": advocate["_id"]},
+                {"$set": {
+                    "failed_code_attempts": current_fails,
+                    "last_failed_ip": client_ip,
+                    "last_failed_user_agent": user_agent,
+                    "last_failed_time": now_ist.isoformat()
+                }}
+            )
+            
+            log_security_event(
+                event_type="staff_verify_failed",
+                severity="info",
+                details=f"Incorrect verification code attempt #{current_fails}/4 for staff '{email}' from IP {client_ip}.",
+                ip=client_ip,
+                user=email
+            )
+            
+            return jsonify({
+                "error": f"Invalid verification code. You have {attempts_left} attempt{'s' if attempts_left > 1 else ''} left before your account is locked for 5 minutes.",
+                "attempts_left": attempts_left,
+                "failed_attempts": current_fails,
+                "locked": False
+            }), 400
+            
+    # If code matches, verify expiration
+    if code_expires and datetime.now() > code_expires:
         return jsonify({"error": "Verification code has expired. Please request a new one."}), 400
         
-    # Clear the code and log them in
-    advocates_col.update_one({"_id": advocate["_id"]}, {"$unset": {"reset_code": "", "code_expires": ""}})
+    # SUCCESS: Code matches and is valid!
+    # Reset failed attempts and clear code
+    advocates_col.update_one(
+        {"_id": advocate["_id"]},
+        {"$unset": {
+            "reset_code": "",
+            "code_expires": "",
+            "locked_until_timestamp": "",
+            "locked_until_iso": ""
+        },
+        "$set": {
+            "failed_code_attempts": 0,
+            "last_successful_login": now_ist.isoformat()
+        }}
+    )
+    
+    log_security_event(
+        event_type="login_success",
+        severity="info",
+        details=f"Staff member '{advocate.get('name')}' ({email}) logged in successfully.",
+        ip=client_ip,
+        user=email
+    )
     
     return jsonify({
         "success": True, 
@@ -5691,6 +6373,61 @@ def staff_verify_code():
             "access_voice": advocate.get('access_voice', False)
         }
     }), 200
+
+@app.route('/api/security/staff/unlock', methods=['POST'])
+def unlock_staff_account():
+    data = request.get_json(force=True, silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+    adv_id = str(data.get('id') or '').strip()
+    
+    if not email and not adv_id:
+        return jsonify({"error": "Staff email or ID required"}), 400
+        
+    if advocates_col is None:
+        return jsonify({"error": "Database unavailable"}), 500
+        
+    query = {}
+    if adv_id:
+        try:
+            query = {"_id": ObjectId(adv_id)}
+        except Exception:
+            query = {"_id": adv_id}
+    else:
+        query = {"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}
+        
+    adv = advocates_col.find_one(query)
+    if not adv:
+        return jsonify({"error": "Staff account not found"}), 404
+        
+    advocates_col.update_one(
+        {"_id": adv["_id"]},
+        {"$unset": {
+            "locked_until_timestamp": "",
+            "locked_until_iso": ""
+        },
+        "$set": {
+            "failed_code_attempts": 0
+        }}
+    )
+    log_security_event(
+        event_type="staff_account_unlocked",
+        severity="info",
+        details=f"Staff account '{adv.get('email')}' was unlocked by Security Officer/Admin.",
+        user="Security Officer"
+    )
+    return jsonify({"success": True, "message": f"Staff account {adv.get('email')} unlocked successfully."}), 200
+
+@app.route('/api/security/admin-device/unlock', methods=['POST'])
+def unlock_admin_device():
+    data = request.get_json(force=True, silent=True) or {}
+    device_id = str(data.get('device_id') or '').strip()
+    if not device_id:
+        return jsonify({"error": "Device ID required"}), 400
+    if config_col is not None:
+        config_col.delete_one({"_id": f"admin_lockout_dev_{device_id}"})
+    _locked_devices_cache.pop(device_id, None)
+    log_security_event("device_unlocked", "info", f"Device '{device_id}' was unlocked by Security Officer.", user="Security Officer")
+    return jsonify({"success": True, "message": f"Device {device_id} unlocked successfully."}), 200
 
 
 

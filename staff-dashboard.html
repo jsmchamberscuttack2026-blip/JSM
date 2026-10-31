@@ -502,11 +502,18 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="case-chamber-number">Chamber Case Number</label>
-                            <input type="text" id="case-chamber-number" class="form-control">
+                            <input type="text" id="case-chamber-number" class="form-control" placeholder="e.g. JSM/2026/042">
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="case-court-number">Court Case Number</label>
-                            <input type="text" id="case-court-number" class="form-control">
+                            <input type="text" id="case-court-number" class="form-control" placeholder="e.g. WP(C)/1042/2026">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="case-phone">Client Contact Number (Optional)</label>
+                            <input type="tel" id="case-phone" class="form-control" placeholder="e.g. +91 98765 43210">
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; font-size: 0.85rem; color: #166534;">
+                            ⚖️ Client will review Chamber Terms &amp; Conditions and complete account setup (photograph, full address, phone) on first login into the portal. Synced to Turso Database 1.
                         </div>
                         <div class="form-group" style="grid-column: 1 / -1; display: flex; align-items: flex-end;">
                             <button type="submit" class="btn btn-primary" style="padding: 0.6rem 2rem;">Create Case & Send Email</button>
@@ -520,8 +527,31 @@
 
     <!-- EDIT CASE MODAL -->
     <div id="edit-case-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100000; justify-content: center; align-items: center;">
-        <div style="background: #ffffff; padding: 2rem; border-radius: 8px; width: 100%; max-width: 900px; max-height: 90vh; overflow-y: auto;">
-            <h3>Update Case Details</h3>
+        <div style="background: #ffffff; padding: 2rem; border-radius: 12px; width: 100%; max-width: 900px; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+                <h3 style="margin: 0;">Update Case Details</h3>
+                <button type="button" onclick="closeCaseModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            
+            <!-- CLIENT VERIFIED PROFILE & TURSO CLOUD DB 1 RECORD -->
+            <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.2rem; margin: 1rem 0 1.5rem 0; display: flex; gap: 1.2rem; align-items: flex-start; flex-wrap: wrap;">
+                <div style="position: relative; width: 72px; height: 72px; border-radius: 50%; overflow: hidden; background: #e2e8f0; border: 2.5px solid #D4AF37; flex-shrink: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                    <img id="staff-modal-avatar-img" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;" alt="Client Photo">
+                    <span id="staff-modal-avatar-placeholder" style="font-size: 2rem;">👤</span>
+                </div>
+                <div style="flex: 1; min-width: 240px;">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; align-items: center;">
+                        <span id="staff-modal-terms-badge" style="font-size: 0.76rem; padding: 3px 10px; border-radius: 12px; font-weight: 700; background: #fee2e2; color: #b91c1c;">⏳ Terms Pending</span>
+                        <span id="staff-modal-profile-badge" style="font-size: 0.76rem; padding: 3px 10px; border-radius: 12px; font-weight: 700; background: #fef3c7; color: #92400e;">⏳ Profile Setup Pending</span>
+                        <span style="font-size: 0.76rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; padding: 3px 10px; border-radius: 12px; font-weight: 700;">☁️ Turso DB 1 Active</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 0.88rem; color: #334155;">
+                        <div><strong>📞 Contact Phone:</strong> <span id="staff-modal-phone" style="color: #0A192F; font-weight: 600;">Not provided</span></div>
+                        <div style="grid-column: 1 / -1;"><strong>📍 Full Address:</strong> <span id="staff-modal-address" style="color: #0A192F; font-weight: 600;">Not provided</span></div>
+                    </div>
+                </div>
+            </div>
+
             <input type="hidden" id="modal-case-id">
             
             <div class="form-group">
@@ -853,6 +883,49 @@
             document.getElementById('modal-hearing').value = c.next_hearing;
             document.getElementById('modal-notes').value = c.notes || "";
             
+            // Populate Verified Client Profile & Turso Cloud DB 1 Record
+            const avatarImg = document.getElementById('staff-modal-avatar-img');
+            const avatarPh = document.getElementById('staff-modal-avatar-placeholder');
+            if (c.profile_image) {
+                if (avatarImg) { avatarImg.src = c.profile_image; avatarImg.style.display = 'block'; }
+                if (avatarPh) avatarPh.style.display = 'none';
+            } else {
+                if (avatarImg) avatarImg.style.display = 'none';
+                if (avatarPh) avatarPh.style.display = 'block';
+            }
+
+            const phoneEl = document.getElementById('staff-modal-phone');
+            if (phoneEl) phoneEl.innerText = c.phone || 'Awaiting client profile setup';
+
+            const addrEl = document.getElementById('staff-modal-address');
+            if (addrEl) addrEl.innerText = c.address || 'Awaiting client profile setup';
+
+            const termsBadge = document.getElementById('staff-modal-terms-badge');
+            if (termsBadge) {
+                if (c.terms_accepted) {
+                    termsBadge.style.background = '#dcfce7';
+                    termsBadge.style.color = '#15803d';
+                    termsBadge.innerText = `✅ Terms Accepted (${c.terms_accepted_at || 'Verified'})`;
+                } else {
+                    termsBadge.style.background = '#fee2e2';
+                    termsBadge.style.color = '#b91c1c';
+                    termsBadge.innerText = '⏳ Terms Pending';
+                }
+            }
+
+            const profileBadge = document.getElementById('staff-modal-profile-badge');
+            if (profileBadge) {
+                if (c.profile_completed) {
+                    profileBadge.style.background = '#dcfce7';
+                    profileBadge.style.color = '#15803d';
+                    profileBadge.innerText = `✅ Profile Setup Complete (${c.profile_completed_at || 'Verified'})`;
+                } else {
+                    profileBadge.style.background = '#fef3c7';
+                    profileBadge.style.color = '#92400e';
+                    profileBadge.innerText = '⏳ Profile Setup Pending';
+                }
+            }
+
             // Load Message History
             const histBox = document.getElementById('modal-msg-history');
             if (c.notifications && c.notifications.length > 0) {
@@ -889,6 +962,7 @@
                 case_type: document.getElementById('case-type').value,
                 chamber_case_number: document.getElementById('case-chamber-number').value,
                 court_case_number: document.getElementById('case-court-number').value,
+                phone: document.getElementById('case-phone') ? document.getElementById('case-phone').value : '',
                 // Assign to the staff member who creates it!
                 assigned_staff_email: staffData.email || ""
             };

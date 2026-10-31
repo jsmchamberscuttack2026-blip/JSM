@@ -718,41 +718,81 @@
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 1.2rem;">
                             <div>
                                 <h3 style="margin: 0; color: #0A192F; font-size: 1.4rem;">Clients Directory / History</h3>
-                                <p style="color: var(--color-text-light); margin: 4px 0 0 0; font-size: 0.9rem;">Permanent archive of finished case files backed by Turso Cloud Database.</p>
+                                <p style="color: var(--color-text-light); margin: 4px 0 0 0; font-size: 0.9rem;">Permanent archive of finished case files &amp; verified client profiles backed by Turso Cloud Database 1.</p>
                             </div>
                             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                                 <button class="btn btn-primary" onclick="openAddArchivedCaseModal()" style="display: flex; align-items: center; gap: 8px; background: #D4AF37; color: #0A192F; font-weight: 700; border: none; padding: 0.65rem 1.2rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(212,175,55,0.3);">
                                     <span>➕</span> Add Finished Case File
                                 </button>
-                                <button class="btn btn-outline" onclick="loadArchivedCases()" style="padding: 0.65rem 1rem; border-radius: 8px;">
-                                    🔄 Refresh
+                                <button class="btn btn-outline" onclick="loadArchivedCases(); loadTursoClientProfiles();" style="padding: 0.65rem 1rem; border-radius: 8px;">
+                                    🔄 Refresh All
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Realtime Search Bar for Chamber/Court Case Number or Client Name -->
-                        <div style="margin-top: 1.5rem; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: #f8fafc; padding: 1rem 1.2rem; border-radius: 10px; border: 1px solid #e2e8f0;">
-                            <span style="font-size: 1.2rem;">🔍</span>
-                            <input type="text" id="archived-cases-search" oninput="filterArchivedCasesTable()" placeholder="Search by Chamber Case #, Court Case #, or Client Name..." style="flex: 1; min-width: 260px; padding: 0.65rem 1rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; outline: none;">
-                            <button class="btn btn-outline" onclick="clearArchivedSearch()" style="padding: 0.65rem 1rem; border-radius: 8px;">Clear</button>
+                        <!-- Sub Tabs: Finished Cases Archive vs Turso Client Profiles -->
+                        <div style="display: flex; gap: 12px; margin-top: 1.2rem; border-bottom: 2px solid #e2e8f0;">
+                            <button type="button" id="tab-btn-finished-cases" onclick="switchClientsDirectoryTab('archive')" style="padding: 10px 18px; font-weight: 700; font-size: 0.95rem; border: none; background: transparent; border-bottom: 3px solid #D4AF37; color: #0A192F; cursor: pointer; transition: all 0.2s;">
+                                📁 Finished Cases Archive
+                            </button>
+                            <button type="button" id="tab-btn-client-profiles" onclick="switchClientsDirectoryTab('profiles')" style="padding: 10px 18px; font-weight: 600; font-size: 0.95rem; border: none; background: transparent; border-bottom: 3px solid transparent; color: #64748b; cursor: pointer; transition: all 0.2s;">
+                                👤 Turso Client Profiles &amp; Pictures (Cloud DB 1)
+                            </button>
                         </div>
-                        
-                        <div style="overflow-x: auto;">
-                            <table class="data-table" style="margin-top: 1.5rem; width: 100%;">
-                                <thead>
-                                    <tr>
-                                        <th>Case Numbers</th>
-                                        <th>Client Name</th>
-                                        <th>Case Type</th>
-                                        <th>Documents / Images</th>
-                                        <th>Status</th>
-                                        <th style="text-align: right;">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="archived-cases-tbody">
-                                    <!-- Archived cases will be loaded here -->
-                                </tbody>
-                            </table>
+
+                        <!-- TAB 1: Finished Cases Archive -->
+                        <div id="turso-archive-view" style="display: block;">
+                            <!-- Realtime Search Bar for Chamber/Court Case Number or Client Name -->
+                            <div style="margin-top: 1.5rem; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: #f8fafc; padding: 1rem 1.2rem; border-radius: 10px; border: 1px solid #e2e8f0;">
+                                <span style="font-size: 1.2rem;">🔍</span>
+                                <input type="text" id="archived-cases-search" oninput="filterArchivedCasesTable()" placeholder="Search by Chamber Case #, Court Case #, or Client Name..." style="flex: 1; min-width: 260px; padding: 0.65rem 1rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; outline: none;">
+                                <button class="btn btn-outline" onclick="clearArchivedSearch()" style="padding: 0.65rem 1rem; border-radius: 8px;">Clear</button>
+                            </div>
+                            
+                            <div style="overflow-x: auto;">
+                                <table class="data-table" style="margin-top: 1.5rem; width: 100%;">
+                                    <thead>
+                                        <tr>
+                                            <th>Case Numbers</th>
+                                            <th>Client Name</th>
+                                            <th>Case Type</th>
+                                            <th>Documents / Images</th>
+                                            <th>Status</th>
+                                            <th style="text-align: right;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="archived-cases-tbody">
+                                        <!-- Archived cases will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: Turso Cloud Client Profiles -->
+                        <div id="turso-profiles-view" style="display: none;">
+                            <div style="margin-top: 1.5rem; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: #f8fafc; padding: 1rem 1.2rem; border-radius: 10px; border: 1px solid #e2e8f0;">
+                                <span style="font-size: 1.2rem;">🔍</span>
+                                <input type="text" id="turso-profiles-search" oninput="filterTursoProfilesTable()" placeholder="Search Turso profiles by name, email, phone, or case #..." style="flex: 1; min-width: 260px; padding: 0.65rem 1rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; outline: none;">
+                                <button class="btn btn-outline" onclick="clearTursoProfilesSearch()" style="padding: 0.65rem 1rem; border-radius: 8px;">Clear</button>
+                            </div>
+
+                            <div style="overflow-x: auto;">
+                                <table class="data-table" style="margin-top: 1.5rem; width: 100%;">
+                                    <thead>
+                                        <tr>
+                                            <th>Client &amp; Photograph</th>
+                                            <th>Locked Case Identifiers</th>
+                                            <th>Contact &amp; Address</th>
+                                            <th>Terms Acceptance</th>
+                                            <th>Profile Setup</th>
+                                            <th style="text-align: right;">Turso DB 1 Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="turso-profiles-tbody">
+                                        <tr><td colspan="6" style="text-align:center; padding: 2rem; color: #94a3b8;">Loading client profiles from Turso Database 1...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1073,16 +1113,28 @@
                         <p style="color: var(--color-text-light); margin-top: 1rem; margin-bottom: 1rem;">Create a case file for a client. They will receive an email letting them know they can login with a Verification Code.</p>
                         <form id="add-case-form" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                             <div class="form-group">
-                                <label class="form-label" for="case-client-name">Client Name</label>
-                                <input type="text" id="case-client-name" class="form-control" required>
+                                <label class="form-label" for="case-client-name">Client Name <span style="color:#ef4444;">*</span></label>
+                                <input type="text" id="case-client-name" class="form-control" required placeholder="Full Name">
                             </div>
                             <div class="form-group">
-                                <label class="form-label" for="case-client-email">Client Email</label>
-                                <input type="email" id="case-client-email" class="form-control" required>
+                                <label class="form-label" for="case-client-email">Client Email <span style="color:#ef4444;">*</span></label>
+                                <input type="email" id="case-client-email" class="form-control" required placeholder="client@example.com">
                             </div>
-                            <div class="form-group" style="grid-column: 1 / -1;">
-                                <label class="form-label" for="case-type">Case Type / Subject</label>
-                                <input type="text" id="case-type" class="form-control" required>
+                            <div class="form-group">
+                                <label class="form-label" for="add-chamber-case-number">Chamber Case Number</label>
+                                <input type="text" id="add-chamber-case-number" class="form-control" placeholder="e.g. JSM/2026/042">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="add-court-case-number">Court Case Number</label>
+                                <input type="text" id="add-court-case-number" class="form-control" placeholder="e.g. WP(C)/1042/2026">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="case-type">Case Type / Subject <span style="color:#ef4444;">*</span></label>
+                                <input type="text" id="case-type" class="form-control" required placeholder="e.g. Civil Writ Petition, Criminal Appeal, Revenue...">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="add-case-phone">Client Contact Number (Optional)</label>
+                                <input type="tel" id="add-case-phone" class="form-control" placeholder="e.g. +91 98765 43210">
                             </div>
                             <div class="form-group" style="grid-column: 1 / -1;">
                                 <label class="form-label" for="case-assigned-staff">Assign to Staff / Advocate</label>
@@ -1090,7 +1142,11 @@
                                     <option value="">Unassigned</option>
                                 </select>
                             </div>
-                            <button type="submit" class="btn btn-secondary" style="grid-column: 1 / -1; width: 100%;">Create Case & Send Credentials</button>
+                            <div style="grid-column: 1 / -1; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; font-size: 0.85rem; color: #166534; display: flex; align-items: center; gap: 8px;">
+                                <span>⚖️</span>
+                                <span>Client will review official Chamber Terms &amp; Conditions and complete their account setup (photograph, address, phone) on first login. Synced to Turso Cloud DB 1.</span>
+                            </div>
+                            <button type="submit" class="btn btn-secondary" style="grid-column: 1 / -1; width: 100%;">Create Case &amp; Send Credentials</button>
                         </form>
                     </div>
 
@@ -1126,7 +1182,26 @@
                                 <button onclick="closeCaseModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
                             </div>
                             
-                            <p style="color: #666; margin-bottom: 1.5rem;"><strong>Case Type:</strong> <span id="modal-case-type"></span><br><strong>Email:</strong> <span id="modal-email"></span><br></p>
+                            <p style="color: #666; margin-bottom: 1rem;"><strong>Case Type:</strong> <span id="modal-case-type"></span> &nbsp;|&nbsp; <strong>Email:</strong> <span id="modal-email"></span></p>
+
+                            <!-- CLIENT VERIFIED PROFILE & TURSO CLOUD DB 1 RECORD -->
+                            <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.2rem; margin-bottom: 1.5rem; display: flex; gap: 1.2rem; align-items: flex-start; flex-wrap: wrap;">
+                                <div style="position: relative; width: 78px; height: 78px; border-radius: 50%; overflow: hidden; background: #e2e8f0; border: 2.5px solid #D4AF37; flex-shrink: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                                    <img id="modal-client-avatar-img" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;" alt="Client Photo">
+                                    <span id="modal-client-avatar-placeholder" style="font-size: 2.2rem;">👤</span>
+                                </div>
+                                <div style="flex: 1; min-width: 240px;">
+                                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; align-items: center;">
+                                        <span id="modal-client-terms-badge" style="font-size: 0.76rem; padding: 3px 10px; border-radius: 12px; font-weight: 700; background: #fee2e2; color: #b91c1c;">⏳ Terms Pending</span>
+                                        <span id="modal-client-profile-badge" style="font-size: 0.76rem; padding: 3px 10px; border-radius: 12px; font-weight: 700; background: #fef3c7; color: #92400e;">⏳ Profile Setup Pending</span>
+                                        <span style="font-size: 0.76rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; padding: 3px 10px; border-radius: 12px; font-weight: 700;">☁️ Turso DB 1 Synced</span>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 0.88rem; color: #334155;">
+                                        <div><strong>📞 Contact Phone:</strong> <span id="modal-client-phone" style="color: #0A192F; font-weight: 600;">Not provided</span></div>
+                                        <div style="grid-column: 1 / -1;"><strong>📍 Full Address:</strong> <span id="modal-client-address" style="color: #0A192F; font-weight: 600;">Not provided</span></div>
+                                    </div>
+                                </div>
+                            </div>
 
                             <input type="hidden" id="modal-case-id">
 
@@ -2294,6 +2369,24 @@
             </div>
 
             <div style="padding: 1.8rem;">
+                <!-- Verified Client Profile Banner from Turso Database 1 -->
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.2rem; margin-bottom: 1.5rem; display: flex; gap: 1.2rem; align-items: center; flex-wrap: wrap;">
+                    <div style="width: 76px; height: 76px; border-radius: 50%; overflow: hidden; background: #e2e8f0; border: 2.5px solid #D4AF37; flex-shrink: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                        <img id="view-file-client-avatar" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;" alt="Client Photo">
+                        <span id="view-file-avatar-placeholder" style="font-size: 2.2rem;">👤</span>
+                    </div>
+                    <div style="flex: 1; min-width: 240px;">
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; align-items: center;">
+                            <span id="view-file-terms-badge" style="font-size: 0.76rem; padding: 3px 10px; border-radius: 12px; font-weight: 700; background: #dcfce7; color: #15803d;">✅ Terms Accepted</span>
+                            <span id="view-file-profile-badge" style="font-size: 0.76rem; padding: 3px 10px; border-radius: 12px; font-weight: 700; background: #dcfce7; color: #15803d;">✅ Profile Setup Complete</span>
+                            <span style="font-size: 0.76rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; padding: 3px 10px; border-radius: 12px; font-weight: 700;">☁️ Turso DB 1 Verified</span>
+                        </div>
+                        <div style="font-size: 0.88rem; color: #334155;">
+                            <strong>📍 Registered Address:</strong> <span id="view-file-address" style="color: #0A192F; font-weight: 600;">Not provided</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Key Details Cards -->
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
                     <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #D4AF37; padding: 12px 16px; border-radius: 8px;">

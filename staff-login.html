@@ -78,10 +78,72 @@
         const errorMsg = document.getElementById('error-msg');
         let tempEmail = "";
         let timerInterval = null;
+        let lockoutInterval = null;
+
+        function showLockoutAlert(remSeconds, customMsg) {
+            clearInterval(timerInterval);
+            clearInterval(lockoutInterval);
+            
+            let remaining = remSeconds || 300;
+            const verifyBtn = document.getElementById('verify-code-btn');
+            const requestBtn = document.getElementById('request-code-btn');
+            const verifyCodeInput = document.getElementById('verify-code');
+            
+            if (verifyBtn) verifyBtn.disabled = true;
+            if (requestBtn) requestBtn.disabled = true;
+            if (verifyCodeInput) verifyCodeInput.disabled = true;
+
+            const updateDisplay = () => {
+                const mins = Math.floor(remaining / 60);
+                const secs = remaining % 60;
+                const timeStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                
+                errorMsg.style.display = 'block';
+                errorMsg.style.background = '#fef2f2';
+                errorMsg.style.border = '1.5px solid #ef4444';
+                errorMsg.style.color = '#991b1b';
+                errorMsg.style.padding = '14px';
+                errorMsg.style.borderRadius = '8px';
+                errorMsg.style.textAlign = 'center';
+                errorMsg.innerHTML = `
+                    <div style="font-weight: 800; font-size: 15px; margin-bottom: 5px;">🔒 Staff Account Locked</div>
+                    <div style="font-size: 13px; line-height: 1.45; color: #7f1d1d; margin-bottom: 8px;">
+                        ${customMsg || 'Entered incorrect verification code 4 times. This staff account is temporarily locked for 5 minutes.'}
+                    </div>
+                    <div style="background: rgba(239, 68, 68, 0.12); border-radius: 6px; padding: 6px 12px; display: inline-block;">
+                        <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; color: #b91c1c;">Lockout expires in:</span>
+                        <span style="font-family: monospace; font-size: 17px; font-weight: 800; color: #dc2626; margin-left: 6px;">${timeStr}</span>
+                    </div>
+                `;
+            };
+
+            updateDisplay();
+
+            lockoutInterval = setInterval(() => {
+                remaining--;
+                if (remaining <= 0) {
+                    clearInterval(lockoutInterval);
+                    if (verifyBtn) { verifyBtn.disabled = false; verifyBtn.innerText = 'Verify & Login'; }
+                    if (requestBtn) { requestBtn.disabled = false; requestBtn.innerText = 'Request Verification Code'; }
+                    if (verifyCodeInput) { verifyCodeInput.disabled = false; verifyCodeInput.value = ''; }
+
+                    errorMsg.style.background = '#f0fdf4';
+                    errorMsg.style.border = '1.5px solid #22c55e';
+                    errorMsg.style.color = '#15803d';
+                    errorMsg.innerHTML = `<strong>✓ 5-Minute Lockout Expired</strong><br><span style="font-size: 13px;">You can now request a fresh verification code to log in.</span>`;
+                    
+                    // Switch back to request code form
+                    verifyForm.style.display = 'none';
+                    forgotForm.style.display = 'block';
+                } else {
+                    updateDisplay();
+                }
+            }, 1000);
+        }
 
         forgotForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            tempEmail = document.getElementById('forgot-email').value;
+            tempEmail = document.getElementById('forgot-email').value.trim();
             const btn = document.getElementById('request-code-btn');
             btn.innerText = 'Sending Code...';
             btn.disabled = true;
@@ -99,9 +161,13 @@
                     forgotForm.style.display = 'none';
                     verifyForm.style.display = 'block';
                     
-                    let timeLeft = 30;
+                    let timeLeft = 60;
                     const timerDisplay = document.getElementById('timer-display');
                     const verifyBtn = document.getElementById('verify-code-btn');
+                    const verifyCodeInput = document.getElementById('verify-code');
+                    verifyCodeInput.disabled = false;
+                    verifyCodeInput.value = '';
+                    verifyCodeInput.focus();
                     verifyBtn.disabled = false;
                     verifyBtn.innerText = 'Verify & Login';
                     timerDisplay.innerText = timeLeft;
@@ -115,24 +181,37 @@
                             verifyBtn.disabled = true;
                             verifyBtn.innerText = 'Code Expired';
                             errorMsg.style.display = 'block';
+                            errorMsg.style.background = '#fee2e2';
+                            errorMsg.style.border = '1px solid #f87171';
+                            errorMsg.style.color = '#b91c1c';
                             errorMsg.innerText = 'Verification code has expired. Please go back and request a new one.';
                         }
                     }, 1000);
+                } else if (response.status === 423 || data.locked) {
+                    showLockoutAlert(data.lockout_remaining_seconds || 300, data.error);
                 } else {
                     errorMsg.style.display = 'block';
+                    errorMsg.style.background = '#fee2e2';
+                    errorMsg.style.border = '1px solid #f87171';
+                    errorMsg.style.color = '#b91c1c';
                     errorMsg.innerText = data.error || 'Failed to send code';
                 }
             } catch (err) {
                 errorMsg.style.display = 'block';
+                errorMsg.style.background = '#fee2e2';
+                errorMsg.style.border = '1px solid #f87171';
+                errorMsg.style.color = '#b91c1c';
                 errorMsg.innerText = 'Server error. Please try again.';
             }
-            btn.innerText = 'Request Verification Code';
-            btn.disabled = false;
+            if (!lockoutInterval) {
+                btn.innerText = 'Request Verification Code';
+                btn.disabled = false;
+            }
         });
 
         verifyForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const code = document.getElementById('verify-code').value;
+            const code = document.getElementById('verify-code').value.trim();
             const btn = document.getElementById('verify-code-btn');
             btn.innerText = 'Verifying...';
             btn.disabled = true;
@@ -148,18 +227,40 @@
 
                 if (response.ok) {
                     clearInterval(timerInterval);
+                    clearInterval(lockoutInterval);
                     sessionStorage.setItem('staffLoggedIn', 'true');
                     sessionStorage.setItem('staffData', JSON.stringify(data.advocate));
                     window.location.href = 'staff-dashboard.html';
+                } else if (response.status === 423 || data.locked) {
+                    showLockoutAlert(data.lockout_remaining_seconds || 300, data.error);
                 } else {
                     errorMsg.style.display = 'block';
-                    errorMsg.innerText = data.error || 'Invalid or expired code';
+                    errorMsg.style.background = '#fef2f2';
+                    errorMsg.style.border = '1px solid #f87171';
+                    errorMsg.style.color = '#991b1b';
+                    errorMsg.style.padding = '12px';
+                    errorMsg.style.borderRadius = '6px';
+                    
+                    let attemptsWarning = '';
+                    if (data.attempts_left !== undefined) {
+                        attemptsWarning = `<div style="margin-top: 5px; font-size: 12px; color: #dc2626; font-weight: 600;">⚠️ 4 incorrect attempts will lock this account for 5 minutes.</div>`;
+                    }
+                    errorMsg.innerHTML = `<div style="font-weight: 600;">${data.error || 'Invalid verification code.'}</div>${attemptsWarning}`;
+                    
                     btn.innerText = 'Verify & Login';
                     btn.disabled = false;
+                    const verifyCodeInput = document.getElementById('verify-code');
+                    if (verifyCodeInput) {
+                        verifyCodeInput.select();
+                        verifyCodeInput.focus();
+                    }
                 }
             } catch (err) {
                 errorMsg.style.display = 'block';
-                errorMsg.innerText = 'Server error.';
+                errorMsg.style.background = '#fee2e2';
+                errorMsg.style.border = '1px solid #f87171';
+                errorMsg.style.color = '#b91c1c';
+                errorMsg.innerText = 'Server error. Please try again.';
                 btn.innerText = 'Verify & Login';
                 btn.disabled = false;
             }
@@ -170,7 +271,9 @@
             clearInterval(timerInterval);
             verifyForm.style.display = 'none';
             forgotForm.style.display = 'block';
-            errorMsg.style.display = 'none';
+            if (!lockoutInterval) {
+                errorMsg.style.display = 'none';
+            }
         });
     </script>
 <script>
