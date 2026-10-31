@@ -44,8 +44,9 @@
             "status": 404
         },
         {
-            "src": "/members",
-            "dest": "/members.html"
+            "src": "/(members|members\\.html)",
+            "status": 301,
+            "headers": { "Location": "/" }
         },
         {
             "src": "/api/(.*)",

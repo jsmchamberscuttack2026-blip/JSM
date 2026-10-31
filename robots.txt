@@ -9,8 +9,6 @@ Allow: /assets/images/
 Allow: /assets/images/members/
 Allow: /*.jpg$
 Allow: /*.png$
-Allow: /members.html
-Allow: /members
 Allow: /api/advocates
 Allow: /api/settings
 Allow: /api/public/bundle
@@ -23,7 +21,6 @@ Disallow: /api/
 
 User-agent: Googlebot
 Allow: /
-Allow: /members.html
 Allow: /chamber-owner.jpg
 Allow: /adv-*.jpg
 Allow: /tabasmiti-mishra.jpg

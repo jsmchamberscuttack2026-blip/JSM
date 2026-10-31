@@ -2,7 +2,7 @@ import concurrent.futures
 import os
 import time
 import urllib.request
-from flask import Flask, request, jsonify, send_from_directory, send_file, Response
+from flask import Flask, request, jsonify, send_from_directory, send_file, Response, redirect
 import re
 import base64
 import hashlib
@@ -1929,8 +1929,8 @@ def serve_index():
                     "width": img_w,
                     "height": img_h
                 },
-                "url": f"{base_url}/members.html#{adv_id}",
-                "mainEntityOfPage": f"{base_url}/members.html",
+                "url": f"{base_url}/#{adv_id}",
+                "mainEntityOfPage": f"{base_url}/",
                 "worksFor": {
                     "@id": f"{base_url}/#organization"
                 },
@@ -2214,8 +2214,6 @@ Allow: /assets/images/
 Allow: /assets/images/members/
 Allow: /*.jpg$
 Allow: /*.png$
-Allow: /members.html
-Allow: /members
 Allow: /api/advocates
 Allow: /api/settings
 Allow: /api/public/bundle
@@ -2228,7 +2226,6 @@ Disallow: /api/
 
 User-agent: Googlebot
 Allow: /
-Allow: /members.html
 Allow: /chamber-owner.jpg
 Allow: /adv-*.jpg
 Allow: /tabasmiti-mishra.jpg
@@ -2285,13 +2282,6 @@ def serve_sitemap_xml():
 {images_xml}
   </url>
   <url>
-    <loc>{base}/members.html</loc>
-    <lastmod>{now}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.95</priority>
-{images_xml}
-  </url>
-  <url>
     <loc>{base}/client-login.html</loc>
     <lastmod>{now}</lastmod>
     <changefreq>monthly</changefreq>
@@ -2303,7 +2293,7 @@ def serve_sitemap_xml():
 @app.route('/members.html')
 @app.route('/members')
 def serve_members_html():
-    return send_from_directory('.', 'members.html')
+    return redirect('/', code=301)
 
 @app.route('/adv-harisankar-mishra.jpg')
 def serve_adv_harisankar():
