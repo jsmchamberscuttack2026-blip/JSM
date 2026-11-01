@@ -531,26 +531,36 @@ def is_ip_blocked(ip):
     return ip in _blocked_ips_cache["ips"]
 
 def is_public_website_enabled():
-    """Checks whether the public website is live or under emergency maintenance, with 5s TTL cache."""
+    """Checks whether the public website is live or under emergency maintenance, with fast TTL cache."""
     now_ts = datetime.now().timestamp()
-    if now_ts - _public_website_cache["ts"] < 5.0:
+    if now_ts - _public_website_cache["ts"] < 2.0:
         return _public_website_cache["enabled"]
 
-    if settings_col is None:
-        return True
-    try:
-        setting_doc = settings_col.find_one({"_id": "office_info"}, {"public_page_status": 1, "public_website_enabled": 1}) or {}
-        enabled = True
-        if "public_page_status" in setting_doc:
-            enabled = (str(setting_doc["public_page_status"]).strip().lower() != "off")
-        elif "public_website_enabled" in setting_doc:
-            enabled = bool(setting_doc["public_website_enabled"])
-        _public_website_cache["enabled"] = enabled
-        _public_website_cache["ts"] = now_ts
-        return enabled
-    except Exception as e:
-        logging.error(f"Error checking public website status: {e}")
-        return True
+    enabled = True
+    if settings_col is not None:
+        try:
+            setting_doc = settings_col.find_one({"_id": "office_info"}, {"public_page_status": 1, "public_website_enabled": 1}) or {}
+            if "public_page_status" in setting_doc:
+                enabled = (str(setting_doc["public_page_status"]).strip().lower() != "off")
+            elif "public_website_enabled" in setting_doc:
+                enabled = bool(setting_doc["public_website_enabled"])
+        except Exception as e:
+            logging.error(f"Error checking settings_col status: {e}")
+
+    # Also check config_col in case Cyber Sentinel SOC wrote to config
+    if enabled and config_col is not None:
+        try:
+            cfg = config_col.find_one({"_id": "public_website_status"})
+            if cfg:
+                c_status = str(cfg.get("status", "on")).strip().lower()
+                if c_status == "off" or cfg.get("status") is False:
+                    enabled = False
+        except Exception:
+            pass
+
+    _public_website_cache["enabled"] = enabled
+    _public_website_cache["ts"] = now_ts
+    return enabled
 
 def render_under_repair_page():
     now_year = get_now_ist().year
@@ -1584,7 +1594,8 @@ _news_images_cache = {}
 _opinions_cache = {"data": None, "ts": 0}
 
 def invalidate_all_public_caches():
-    global _public_cache, _chamber_images_cache, _advocates_cache, _advocates_cache_time, _opinions_cache, _advocate_photos_cache, _news_images_cache
+    global _public_cache, _chamber_images_cache, _advocates_cache, _advocates_cache_time, _opinions_cache, _advocate_photos_cache, _news_images_cache, _public_website_cache
+    _public_website_cache = {"enabled": True, "ts": 0}
     _opinions_cache = {"data": None, "ts": 0}
     _advocate_photos_cache = {}
     _news_images_cache = {}
@@ -1936,6 +1947,10 @@ def get_public_bundle():
 @app.route('/')
 @app.route('/index.html')
 def serve_index():
+    host = (request.host or '').lower()
+    if 'soc' in host:
+        return send_from_directory(BASE_DIR, 'security-dashboard.html')
+
     if not is_public_website_enabled():
         return render_under_repair_page()
 
@@ -6256,8 +6271,16 @@ def get_settings_alert():
 
 @app.route('/api/settings', methods=['POST'])
 def save_settings():
-    data = request.json
-    settings_col.update_one({"_id": "office_info"}, {"$set": data}, upsert=True)
+    data = request.get_json(force=True, silent=True) or {}
+    if settings_col is not None:
+        settings_col.update_one({"_id": "office_info"}, {"$set": data}, upsert=True)
+    if config_col is not None and ("public_page_status" in data or "public_website_enabled" in data):
+        c_status = data.get("public_page_status") or ("on" if data.get("public_website_enabled") else "off")
+        config_col.update_one(
+            {"_id": "public_website_status"},
+            {"$set": {"status": c_status, "updated_at": get_now_ist().isoformat()}},
+            upsert=True
+        )
     invalidate_all_public_caches()
     return jsonify({"success": True}), 200
 

@@ -175,6 +175,20 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>`;
   }
 
+  // Live Cyber Defense & Maintenance Watcher: Continuously verify public status
+  function checkWebsiteMaintenanceStatus() {
+      fetch('/api/website-status', { cache: 'no-store' })
+          .then(res => res.json())
+          .then(data => {
+              if (data && (data.public_page_status === 'off' || data.public_website_enabled === false)) {
+                  if (typeof showRepairScreenNow === 'function') showRepairScreenNow();
+              }
+          })
+          .catch(() => {});
+  }
+  checkWebsiteMaintenanceStatus();
+  setInterval(checkWebsiteMaintenanceStatus, 10000);
+
   // Modular Dynamic Office Information & Settings Applicator
   window.applyChamberSettings = function(info) {
       if (!info) return;

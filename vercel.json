@@ -54,6 +54,16 @@
             "dest": "app.py"
         },
         {
+            "src": "/(index\\.html)?",
+            "has": [
+                {
+                    "type": "host",
+                    "value": ".*soc.*"
+                }
+            ],
+            "dest": "/security-dashboard.html"
+        },
+        {
             "src": "/admin-login",
             "dest": "/admin-login.html"
         },
