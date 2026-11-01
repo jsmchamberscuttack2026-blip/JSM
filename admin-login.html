@@ -221,6 +221,26 @@
     <div class="login-wrapper">
         <div class="login-card">
             
+            <!-- EMERGENCY SECURITY TIMEOUT & REVIEW SCREEN (When SOC Officer turns Admin Panel OFF) -->
+            <div id="admin-security-timeout-screen" style="display: none; text-align: center;">
+                <div class="card-header" style="margin-bottom: 1.25rem;">
+                    <div class="chamber-badge" style="background: linear-gradient(135deg, #450a0a, #7f1d1d); border-color: #ef4444; box-shadow: 0 0 25px rgba(239, 68, 68, 0.45); font-size: 30px;">
+                        🛡️
+                    </div>
+                    <h2 style="color: #991b1b; font-size: 1.55rem; margin-bottom: 6px;">SECURITY TIMEOUT</h2>
+                    <div style="display: inline-block; background: rgba(239, 68, 68, 0.12); border: 1.5px solid #ef4444; color: #b91c1c; font-size: 0.76rem; font-weight: 800; padding: 5px 14px; border-radius: 999px; text-transform: uppercase; letter-spacing: 1px;">
+                        🔴 Access Suspended · Emergency SOC Review
+                    </div>
+                </div>
+
+                <div style="background: #fef2f2; border: 1.5px solid #f87171; border-radius: 12px; padding: 18px; font-size: 0.94rem; line-height: 1.6; color: #7f1d1d; text-align: center;">
+                    <p style="margin: 0 0 8px 0; font-weight: 700; font-size: 1rem; color: #991b1b;">
+                        Chamber Security Protocol
+                    </p>
+                    The Chamber Admin Portal has been placed under Emergency Security Review &amp; Lockdown by the Cyber Sentinel SOC Security Officer
+                </div>
+            </div>
+
             <!-- STEP 1: CREDENTIALS (Admin ID & Password) -->
             <div id="step-credentials">
                 <div class="card-header">
@@ -370,6 +390,24 @@
             return devId;
         }
 
+        function triggerSecurityTimeout() {
+            const timeoutScreen = document.getElementById('admin-security-timeout-screen');
+            const stepCreds = document.getElementById('step-credentials');
+            const step2fa = document.getElementById('step-2fa');
+            if (timeoutScreen) timeoutScreen.style.display = 'block';
+            if (stepCreds) stepCreds.style.display = 'none';
+            if (step2fa) step2fa.style.display = 'none';
+        }
+
+        function dismissSecurityTimeout() {
+            const timeoutScreen = document.getElementById('admin-security-timeout-screen');
+            const stepCreds = document.getElementById('step-credentials');
+            if (timeoutScreen && timeoutScreen.style.display !== 'none') {
+                timeoutScreen.style.display = 'none';
+                if (stepCreds) stepCreds.style.display = 'block';
+            }
+        }
+
         async function checkLockStatus() {
             const devId = getDeviceId();
             try {
@@ -377,13 +415,23 @@
                     headers: { 'X-Device-ID': devId }
                 });
                 const data = await res.json();
+                if (data.security_timeout || data.admin_panel_status === 'off') {
+                    triggerSecurityTimeout();
+                    return true;
+                } else {
+                    dismissSecurityTimeout();
+                }
                 if (data.locked && data.remaining_seconds > 0) {
                     triggerLockdown(data.remaining_seconds);
                 }
             } catch(e) {
                 console.warn('Could not check admin lock status:', e);
             }
+            return false;
         }
+
+        // Continuous 4-second poller for live SOC lockdown & timeout detection
+        setInterval(checkLockStatus, 4000);
 
         function startCountdown(seconds = 300) {
             if (countdownInterval) clearInterval(countdownInterval);
