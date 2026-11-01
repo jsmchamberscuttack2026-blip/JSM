@@ -3585,6 +3585,31 @@ def admin_resend_otp():
         "email_sent": email_sent
     }), 200
 
+@app.route('/api/internal/send-soc-otp', methods=['POST'])
+def internal_send_soc_otp():
+    """Secure internal relay for Cyber Sentinel SOC 2FA emails."""
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        secret = data.get("secret", "")
+        if secret != "JSM_SOC_INTERNAL_RELAY_2026":
+            return jsonify({"error": "Unauthorized internal request."}), 403
+
+        target_email = data.get("target_email")
+        otp = data.get("otp")
+        expiry_str = data.get("expiry_str", "5 minutes")
+
+        if not target_email or not otp:
+            return jsonify({"error": "Missing target_email or otp."}), 400
+
+        res = send_admin_2fa_email(otp, expiry_str, recipient_email=target_email, role="security_officer")
+        return jsonify({
+            "success": True,
+            "sent": True,
+            "message": f"2FA OTP successfully delivered to {target_email} via Chamber internal relay."
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # =========================================================
 #  SECURITY SUITE API ENDPOINTS (DASHBOARD & SOC)
 # =========================================================
