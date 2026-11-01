@@ -3202,13 +3202,21 @@ def delete_staff_email_logs(email):
 @app.route('/api/admin-lock-status', methods=['GET'])
 def admin_lock_status():
     device_id = get_client_device_id()
+    client_ip = get_client_ip()
     is_locked, remaining_seconds, lock_doc = is_admin_locked(device_id)
     admin_enabled = is_admin_panel_enabled()
+    ip_blocked = is_ip_blocked(client_ip)
+    cyber_attack = is_locked or ip_blocked
+
     return jsonify({
-        "locked": is_locked or (not admin_enabled),
+        "locked": is_locked or (not admin_enabled) or ip_blocked,
         "security_timeout": (not admin_enabled),
         "admin_panel_status": "on" if admin_enabled else "off",
         "admin_panel_enabled": admin_enabled,
+        "ip_blocked": ip_blocked,
+        "ip_locked": is_locked or ip_blocked,
+        "cyber_attack": cyber_attack,
+        "client_ip": client_ip,
         "reason": _admin_panel_cache.get("reason", ""),
         "locked_at": _admin_panel_cache.get("locked_at", ""),
         "remaining_seconds": remaining_seconds
@@ -3263,6 +3271,7 @@ def create_security_incident(title, severity, category, details, ip=None, user_a
             "status": "open",
             "detected_at": now_ist.strftime("%d %b %Y, %I:%M %p"),
             "detected_at_iso": now_ist.isoformat(),
+            "timestamp_epoch": now_ist.timestamp(),
             "resolved_at": None,
             "assigned_to": assigned_to,
             "details": details,
@@ -3362,10 +3371,22 @@ def init_security_baseline():
 @app.route('/api/admin-login', methods=['POST'])
 def admin_login():
     if not is_admin_panel_enabled():
+        log_security_event("unauthorized_login_during_lockdown", "critical", f"CRITICAL: Unauthorized attempt to unlock/login to Admin Panel while under Emergency Lockdown from IP {client_ip}.", ip=client_ip, user=user_id)
+        create_security_incident(
+            title=f"Cyber Attack: Unauthorized Attempt to Login to Locked Admin Panel from IP {client_ip}",
+            severity="critical",
+            category="Lockdown Breach Attempt",
+            details=f"IP {client_ip} attempted to access/unlock Admin Panel while under Security Review.",
+            ip=client_ip,
+            user_agent=user_agent
+        )
         return jsonify({
             "error": "Chamber Admin Panel is under Emergency Security Review by Cyber Sentinel SOC. Access suspended.",
             "security_timeout": True,
-            "admin_panel_status": "off"
+            "admin_panel_status": "off",
+            "cyber_attack": True,
+            "ip_locked": True,
+            "message": "Cyber attack! Cyber attack! Anyone try to login! Emergency!"
         }), 423
 
     data = request.get_json(force=True, silent=True) or {}
@@ -3379,12 +3400,23 @@ def admin_login():
     # 1. Enforce active lockout for THIS specific attacking device only
     is_locked, rem_secs, lock_doc = is_admin_locked(device_id)
     if is_locked:
-        log_security_event("login_blocked_locked", "warning", f"Blocked login attempt during active lockout from IP {client_ip}.", ip=client_ip, user=user_id)
+        log_security_event("login_blocked_locked", "critical", f"CRITICAL: Blocked unauthorized login attempt during active lockout from IP {client_ip}.", ip=client_ip, user=user_id)
+        create_security_incident(
+            title=f"Cyber Attack: Repeated Login Attempt During Active Lockout from IP {client_ip}",
+            severity="critical",
+            category="Brute Force",
+            details=f"IP {client_ip} attempted to login while device/IP is locked out.",
+            ip=client_ip,
+            user_agent=user_agent
+        )
         return jsonify({
             "error": "Access temporarily restricted due to repeated failed login attempts. Please try again in 5 minutes.",
             "locked": True,
+            "ip_locked": True,
+            "cyber_attack": True,
             "lockout_remaining_seconds": rem_secs,
-            "locked_until": lock_doc.get("locked_until_iso")
+            "locked_until": lock_doc.get("locked_until_iso"),
+            "message": "Cyber attack! Cyber attack! Anyone try to login! Emergency!"
         }), 423
     
     # 2. Check credentials (Senior Chamber Admin OR Security Officer)
@@ -3505,10 +3537,10 @@ def admin_login():
             }
         }
         create_security_incident(
-            title=f"Brute-Force Authentication Attack from IP {client_ip}",
+            title=f"Cyber Attack: Brute-Force Authentication Attack from IP {client_ip}",
             severity="critical",
             category="Brute Force",
-            details=f"3 repeated failed login attempts for account '{user_id}'. Automated device lockout engaged.",
+            details=f"3 repeated failed login attempts for account '{user_id}'. Automated device and IP lockout engaged.",
             ip=client_ip,
             user_agent=user_agent
         )
@@ -3518,9 +3550,12 @@ def admin_login():
         return jsonify({
             "error": "Access restricted due to repeated failed attempts. Please try again in 5 minutes.",
             "locked": True,
+            "ip_locked": True,
+            "cyber_attack": True,
             "lockout_remaining_seconds": 300,
             "locked_until": expiry_str,
-            "alert_sent": alert_sent
+            "alert_sent": alert_sent,
+            "message": "Cyber attack! Cyber attack! Anyone try to login! Emergency!"
         }), 423
     else:
         # Under 3 attempts: record failure for this device only
