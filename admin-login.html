@@ -225,8 +225,8 @@
             <div id="step-credentials">
                 <div class="card-header">
                     <div class="chamber-badge">⚖️</div>
-                    <h2>Admin & Security Portal</h2>
-                    <p>Enter Authorized Credentials to Request 2FA Code</p>
+                    <h2>Chamber Administration Portal</h2>
+                    <p>Enter Master Credentials to Request 2FA Code</p>
                 </div>
 
                 <div id="alert-lockout-box" class="alert-lockout" style="display: none;">
@@ -246,10 +246,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="password">Password</label>
-                        <input type="password" id="password" class="form-control" required placeholder="Enter Master Password or Registered Security Email" autocomplete="current-password">
-                        <small style="color: #64748b; font-size: 0.78rem; display: block; margin-top: 6px;">
-                            🛡️ <strong>Security Officers:</strong> Enter User ID <strong>JSM</strong> and your registered email address as password.
-                        </small>
+                        <input type="password" id="password" class="form-control" required placeholder="Enter Master Password" autocomplete="current-password">
                     </div>
                     
                     <button type="submit" id="btn-submit-step1" class="btn-submit" style="margin-top: 1.4rem;">
@@ -259,6 +256,11 @@
 
                 <div style="margin-top: 1.8rem; text-align: center; font-size: 0.78rem; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 1rem;">
                     🛡️ Multi-Factor Authentication Required · Restricted Chamber Access
+                </div>
+                <div style="margin-top: 0.8rem; text-align: center;">
+                    <a href="https://socjsm.vercel.app" target="_blank" rel="noopener noreferrer" style="color: #0284c7; text-decoration: none; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
+                        🛡️ Access Cyber Sentinel SOC (Server B) →
+                    </a>
                 </div>
             </div>
 
@@ -524,24 +526,12 @@
                 if (response.ok && data.success) {
                     if (countdownInterval) clearInterval(countdownInterval);
                     
-                    const isSecOfficer = (data.role === 'security_officer' || data.redirect === 'security-dashboard.html');
-                    const targetPage = isSecOfficer ? 'security-dashboard.html' : 'admin-dashboard.html';
-                    const targetName = isSecOfficer ? 'Cyber Security Operations Dashboard' : 'Admin Dashboard';
-
-                    showAlert('step2', `✅ 2FA Verified Successfully! Opening ${targetName}...`, 'success');
-
-                    if (isSecOfficer) {
-                        sessionStorage.setItem('securityOfficerLoggedIn', 'true');
-                        sessionStorage.setItem('adminLoggedIn', 'true'); // allow admin API calls
-                        sessionStorage.setItem('userRole', 'security_officer');
-                        sessionStorage.setItem('officerEmail', data.target_email || '');
-                    } else {
-                        sessionStorage.setItem('adminLoggedIn', 'true');
-                        sessionStorage.setItem('userRole', 'admin');
-                    }
+                    showAlert('step2', '✅ 2FA Verified Successfully! Opening Chamber Admin Dashboard...', 'success');
+                    sessionStorage.setItem('adminLoggedIn', 'true');
+                    sessionStorage.setItem('userRole', 'admin');
 
                     setTimeout(() => {
-                        window.location.href = targetPage;
+                        window.location.href = 'admin-dashboard.html';
                     }, 800);
                 } else {
                     showAlert('step2', data.error || 'Invalid verification code. Please check your email.');

@@ -2488,23 +2488,22 @@ def serve_staff_dashboard():
 @app.route('/security-dashboard.html')
 @app.route('/security-dashboard')
 def serve_security_dashboard():
-    return send_from_directory(BASE_DIR, 'security-dashboard.html')
+    return redirect("https://socjsm.vercel.app", code=302)
 
 @app.route('/Court-SOC')
 @app.route('/Court-SOC/')
-@app.route('/Court-SOC/index.html')
-def serve_court_soc():
-    soc_dir = os.path.join(BASE_DIR, 'Court-SOC')
-    for f in ['security-dashboard.html', 'index.html']:
-        if os.path.isfile(os.path.join(soc_dir, f)):
-            return send_from_directory(soc_dir, f)
-    return redirect('/security-dashboard.html')
+@app.route('/Court-SOC/<path:subpath>')
+def serve_court_soc(subpath=None):
+    return redirect("https://socjsm.vercel.app", code=302)
 
 @app.route('/<path:path>')
 def serve_static(path):
+    if path in ('security-dashboard', 'security-dashboard.html') or path.startswith('Court-SOC'):
+        return redirect("https://socjsm.vercel.app", code=302)
+
     if not is_public_website_enabled():
         whitelisted = (
-            'admin-login.html', 'admin-dashboard.html', 'security-dashboard.html',
+            'admin-login.html', 'admin-dashboard.html',
             'client-login.html', 'client-dashboard.html', 'staff-login.html', 'staff-dashboard.html'
         )
         if path.endswith('.html') and path not in whitelisted:
@@ -2516,7 +2515,7 @@ def serve_static(path):
     if os.path.isfile(full_path + '.html'):
         return send_from_directory(BASE_DIR, path + '.html')
     if os.path.isdir(full_path):
-        for candidate in ['index.html', 'security-dashboard.html']:
+        for candidate in ['index.html']:
             if os.path.isfile(os.path.join(full_path, candidate)):
                 return send_from_directory(full_path, candidate)
     if os.path.isfile(os.path.join(BASE_DIR, 'assets', path)):
@@ -3510,7 +3509,7 @@ def admin_verify_otp():
         
     role = doc.get("role", "admin")
     target_email = doc.get("target_email", "jsmchamberscuttack2026@gmail.com")
-    redirect_target = "security-dashboard.html" if role == "security_officer" else "admin-dashboard.html"
+    redirect_target = "https://socjsm.vercel.app" if role == "security_officer" else "admin-dashboard.html"
 
     # Mark verified & invalidate OTP
     config_col.update_one(

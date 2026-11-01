@@ -53,16 +53,7 @@
             "src": "/api/(.*)",
             "dest": "app.py"
         },
-        {
-            "src": "/(index\\.html)?",
-            "has": [
-                {
-                    "type": "host",
-                    "value": ".*soc.*"
-                }
-            ],
-            "dest": "/security-dashboard.html"
-        },
+
         {
             "src": "/admin-login",
             "dest": "/admin-login.html"
@@ -88,12 +79,9 @@
             "dest": "/staff-dashboard.html"
         },
         {
-            "src": "/security-dashboard",
-            "dest": "/security-dashboard.html"
-        },
-        {
-            "src": "/Court-SOC/?",
-            "dest": "/Court-SOC/index.html"
+            "src": "/(security-dashboard|security-dashboard\\.html|Court-SOC.*)",
+            "status": 302,
+            "headers": { "Location": "https://socjsm.vercel.app" }
         },
         {
             "src": "/(.*)",
