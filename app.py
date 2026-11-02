@@ -3034,16 +3034,30 @@ def shift_appointments():
 
     return jsonify({"message": f"Successfully shifted {len(appts)} appointments to {new_date}. Emails sent to all clients."}), 200
 
+_appointments_cache = {"data": None, "ts": 0}
+
+def invalidate_appointments_cache():
+    global _appointments_cache
+    _appointments_cache = {"data": None, "ts": 0}
+
 @app.route('/api/appointments', methods=['GET'])
 def get_appointments():
+    global _appointments_cache
+    now = time.time()
+    if _appointments_cache["data"] is not None and (now - _appointments_cache["ts"] < 4.0):
+        return jsonify(_appointments_cache["data"]), 200
     try:
         appointments = []
         for appt in appointments_col.find():
             appt['_id'] = str(appt['_id'])
             appointments.append(appt)
+        _appointments_cache["data"] = appointments
+        _appointments_cache["ts"] = now
         return jsonify(appointments), 200
     except Exception as e:
         logging.error(f"Error in get_appointments: {e}")
+        if _appointments_cache["data"] is not None:
+            return jsonify(_appointments_cache["data"]), 200
         return jsonify([]), 200
 
 @app.route('/api/appointments/approve', methods=['POST'])
@@ -3144,6 +3158,7 @@ JSM. Chambers Team"""
             msg.attach(MIMEText(html, 'html', 'utf-8'))
             
             send_email_core(appt['email'], msg, subject)
+        invalidate_appointments_cache()
         return jsonify({"message": "Approved"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -3151,11 +3166,13 @@ JSM. Chambers Team"""
 @app.route('/api/appointments/<id>', methods=['DELETE'])
 def delete_appointment(id):
     appointments_col.delete_one({"_id": ObjectId(id)})
+    invalidate_appointments_cache()
     return jsonify({"message": "Deleted"}), 200
 
 @app.route('/api/appointments/all', methods=['DELETE'])
 def delete_all_appointments():
     appointments_col.delete_many({})
+    invalidate_appointments_cache()
     return jsonify({"message": "All deleted"}), 200
 
 @app.route('/api/email-logs', methods=['GET'])
@@ -4814,6 +4831,7 @@ def create_case():
     # Automatically sync new client record into Turso Database 1
     save_client_to_turso_profile(case)
     email_sent = send_credentials_email(case['email'], case['client_name'], "Verification Code Only")
+    invalidate_cases_cache()
     return jsonify({"message": "Case created", "id": str(result.inserted_id), "password": "Verification Code Only", "email_sent": email_sent}), 201
 
 
@@ -4841,18 +4859,42 @@ def ensure_daily_passwords():
     
     return config
 
+_cases_cache = {"data": None, "ts": 0}
+
+def invalidate_cases_cache():
+    global _cases_cache
+    _cases_cache = {"data": None, "ts": 0}
+
 @app.route('/api/cases', methods=['GET'])
 def get_cases():
+    global _cases_cache
+    now = time.time()
+    if _cases_cache["data"] is not None and (now - _cases_cache["ts"] < 4.0):
+        return jsonify(_cases_cache["data"]), 200
     try:
         cases = list(cases_col.find({"status": {"$ne": "Finished & Archived"}}).sort('_id', -1))
         for c in cases: c['_id'] = str(c['_id'])
+        _cases_cache["data"] = cases
+        _cases_cache["ts"] = now
         return jsonify(cases), 200
     except Exception as e:
         logging.error(f"Error in get_cases: {e}")
+        if _cases_cache["data"] is not None:
+            return jsonify(_cases_cache["data"]), 200
         return jsonify([]), 200
+
+_archived_cases_cache = {"data": None, "ts": 0}
+
+def invalidate_archived_cases_cache():
+    global _archived_cases_cache
+    _archived_cases_cache = {"data": None, "ts": 0}
 
 @app.route('/api/archived-cases', methods=['GET'])
 def get_archived_cases():
+    global _archived_cases_cache
+    now = time.time()
+    if _archived_cases_cache["data"] is not None and (now - _archived_cases_cache["ts"] < 15.0):
+        return jsonify(_archived_cases_cache["data"]), 200
     turso_cases = []
     try:
         rows = execute_turso_query("SELECT * FROM clients_history ORDER BY completion_date DESC, created_at DESC")
@@ -4887,8 +4929,12 @@ def get_archived_cases():
                 else:
                     case_obj[jfield] = raw or []
             turso_cases.append(case_obj)
+        _archived_cases_cache["data"] = turso_cases
+        _archived_cases_cache["ts"] = now
     except Exception as e:
         logging.error(f"Error reading from Turso clients_history: {e}")
+        if _archived_cases_cache["data"] is not None:
+            return jsonify(_archived_cases_cache["data"]), 200
 
     # Clients Directory reads exclusively from Turso Database
     return jsonify(turso_cases), 200
@@ -4961,6 +5007,7 @@ def create_archived_case():
         logging.error(f"Error inserting archived case to Turso: {te}")
         return jsonify({"error": f"Turso Error: {str(te)}"}), 500
 
+    invalidate_archived_cases_cache()
     return jsonify({"success": True, "message": "Finished case file saved solely to Turso Database", "id": case_id}), 201
 
 @app.route('/api/archived-cases/<id>', methods=['PUT'])
@@ -5027,6 +5074,7 @@ def update_archived_case(id):
         logging.error(f"Error updating Turso case {id}: {te}")
         return jsonify({"error": f"Turso update error: {str(te)}"}), 500
 
+    invalidate_archived_cases_cache()
     return jsonify({"success": True, "message": "Archived case file updated in Turso Database", "id": str(id)}), 200
 
 @app.route('/api/cases/<id>', methods=['GET'])
@@ -5157,6 +5205,7 @@ def update_case(id):
         except Exception as e:
             logging.error(f"Failed to send staff assignment email: {e}")
             
+    invalidate_cases_cache()
     return jsonify({"message": "Case updated"}), 200
 
 @app.route('/api/staff-cases/<email>', methods=['GET'])
@@ -5435,6 +5484,7 @@ def delete_case(id):
         delete_case_from_turso_history(id)
     except Exception as te:
         logging.error(f"Error deleting case from Turso: {te}")
+    invalidate_cases_cache()
     return jsonify({"message": "Case deleted"}), 200
 
 @app.route('/api/archived-cases/<id>', methods=['DELETE'])
@@ -5443,6 +5493,7 @@ def delete_archived_case(id):
         delete_case_from_turso_history(id)
     except Exception as te:
         logging.error(f"Error deleting case from Turso: {te}")
+    invalidate_archived_cases_cache()
     return jsonify({"message": "Archived case deleted from Turso history"}), 200
 
 @app.route('/api/cases/<id>/finish', methods=['POST'])
@@ -5515,6 +5566,8 @@ JSM Chambers"""
         msg.attach(MIMEText(text, 'plain', 'utf-8'))
         msg.attach(MIMEText(html, 'html', 'utf-8'))
         send_email_core(email, msg, subject)
+    invalidate_cases_cache()
+    invalidate_archived_cases_cache()
     return jsonify({"message": "Case Finished & Archived Successfully!"}), 200
 
 @app.route('/api/cases/<id>/email', methods=['POST'])
@@ -6490,14 +6543,12 @@ def get_special_otp_logs():
         return jsonify({"error": str(e)}), 500
 
 
-_advocates_cache = None
-_advocates_cache_time = 0
+_advocates_cache = {"data": None, "ts": 0}
 _advocates_db_cleaned = False
 
 def invalidate_advocates_cache():
-    global _advocates_cache, _advocates_cache_time
-    _advocates_cache = None
-    _advocates_cache_time = 0
+    global _advocates_cache
+    _advocates_cache = {"data": None, "ts": 0}
     try:
         invalidate_all_public_caches()
     except Exception:
@@ -6559,6 +6610,10 @@ def ensure_chamber_owner_advocate():
 
 @app.route('/api/advocates', methods=['GET'])
 def get_advocates():
+    global _advocates_cache
+    now = time.time()
+    if _advocates_cache["data"] is not None and (now - _advocates_cache["ts"] < 15.0):
+        return jsonify(_advocates_cache["data"]), 200
     try:
         try:
             ensure_chamber_owner_advocate()
@@ -6588,9 +6643,13 @@ def get_advocates():
                 adv_copy["imageUrl"] = "/assets/images/advocate_logo.jpg"
             adv_copy.pop("image", None)
             advs.append(adv_copy)
+        _advocates_cache["data"] = advs
+        _advocates_cache["ts"] = now
         return jsonify(advs), 200
     except Exception as e:
         logging.error(f"Error in direct get_advocates: {e}")
+        if _advocates_cache["data"] is not None:
+            return jsonify(_advocates_cache["data"]), 200
         try:
             bundle = get_public_bundle()
             return jsonify(bundle.get("advocates", [])), 200

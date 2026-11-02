@@ -2597,7 +2597,7 @@
         })();
     </script>
 
-    <script src="js/admin.js?v=49"></script>
+    <script src="js/admin.js?v=50"></script>
     <script>
     // Direct in-page handler for Staff ID Card - strictly shows Designation / Role, never Practice Areas / Specializations
     (function() {
@@ -2766,6 +2766,132 @@
             setTimeout(() => {
                 if (typeof drawBarcode === 'function') drawBarcode(adv.name || 'STAFF');
             }, 60);
+        };
+
+        window.sendIdCardEmail = async function() {
+            const adv = window.currentIdCardAdvocate || (typeof currentIdCardAdvocate !== 'undefined' ? currentIdCardAdvocate : null);
+            let email = adv ? (adv.email || '').trim() : '';
+            let name = adv ? (adv.name || 'Staff Member').trim() : 'Staff Member';
+
+            if (!email) {
+                const emailEl = document.getElementById('id-card-email');
+                if (emailEl && emailEl.innerText && emailEl.innerText.includes('@')) {
+                    email = emailEl.innerText.trim();
+                }
+            }
+            if (!email) {
+                const nameEl = document.getElementById('id-card-name');
+                const renderedName = nameEl ? nameEl.innerText.trim() : '';
+                if (renderedName) {
+                    name = renderedName;
+                    const match = (window.globalAdvocatesData || []).find(a => a.name && a.name.trim().toLowerCase() === renderedName.toLowerCase());
+                    if (match && match.email) {
+                        email = match.email.trim();
+                    }
+                }
+            }
+
+            if (!email || !email.includes('@')) {
+                if (typeof showToast === 'function') {
+                    showToast("This staff member does not have a registered email address.", "error");
+                } else {
+                    alert("This staff member does not have a registered email address.");
+                }
+                return;
+            }
+
+            const btn = document.getElementById('btn-email-id-card');
+            const originalText = btn ? btn.innerHTML : '✉️ Email ID Card to Staff';
+            if (btn) {
+                btn.innerHTML = '<span>⏳</span> Generating & Sending...';
+                btn.disabled = true;
+            }
+
+            try {
+                const canvas = await html2canvas(document.getElementById('id-card-canvas'), {
+                    scale: 2.5,
+                    useCORS: true,
+                    backgroundColor: null
+                });
+
+                const base64Image = canvas.toDataURL('image/png');
+
+                const res = await fetch('/api/staff/email-id-card', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: email,
+                        name: name,
+                        image_data: base64Image
+                    })
+                });
+
+                const result = await res.json();
+                if (res.ok) {
+                    if (typeof showToast === 'function') {
+                        showToast(`Official ID Card emailed successfully to ${email}!`);
+                    } else {
+                        alert(`Official ID Card emailed successfully to ${email}!`);
+                    }
+                    const modal = document.getElementById('id-card-modal');
+                    if (modal) modal.style.display = 'none';
+                } else {
+                    const msg = result.error || "Failed to send email";
+                    if (typeof showToast === 'function') showToast(msg, 'error');
+                    else alert(msg);
+                }
+            } catch (e) {
+                console.error(e);
+                const msg = "Error generating or sending ID card: " + e.message;
+                if (typeof showToast === 'function') showToast(msg, 'error');
+                else alert(msg);
+            } finally {
+                if (btn) {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            }
+        };
+
+        window.downloadIdCard = async function() {
+            const cardEl = document.getElementById('id-card-canvas');
+            if (!cardEl) return;
+
+            const adv = window.currentIdCardAdvocate || (typeof currentIdCardAdvocate !== 'undefined' ? currentIdCardAdvocate : null);
+            let name = adv ? (adv.name || 'Staff') : 'Staff';
+            if (name === 'Staff') {
+                const nameEl = document.getElementById('id-card-name');
+                if (nameEl && nameEl.innerText) name = nameEl.innerText.trim();
+            }
+            name = name.replace(/\s+/g, '_');
+
+            const btn = document.getElementById('btn-download-id-card');
+            const origHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.innerHTML = '<span>⏳</span> Generating High-Res PNG...';
+                btn.disabled = true;
+            }
+
+            try {
+                const canvas = await html2canvas(cardEl, {
+                    scale: 3,
+                    useCORS: true,
+                    backgroundColor: null
+                });
+                const link = document.createElement('a');
+                link.download = `ID_Card_${name}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                if (typeof showToast === 'function') showToast("ID Card downloaded successfully!");
+            } catch (e) {
+                console.error(e);
+                if (typeof showToast === 'function') showToast("Error generating download: " + e.message, 'error');
+            } finally {
+                if (btn) {
+                    btn.innerHTML = origHtml;
+                    btn.disabled = false;
+                }
+            }
         };
     })();
     </script>

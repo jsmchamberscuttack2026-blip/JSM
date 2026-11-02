@@ -1154,8 +1154,8 @@ if (addAdvocateForm) {
     });
 }
 
-// Load advocates on start
-setTimeout(loadAdvocates, 500);
+// Load advocates immediately on start
+loadAdvocates();
 
 // ==========================================
 // SETTINGS MANAGEMENT
@@ -2659,7 +2659,13 @@ window.downloadIdCard = async function() {
             useCORS: true,
             backgroundColor: null
         });
-        const name = (currentIdCardAdvocate && currentIdCardAdvocate.name) ? currentIdCardAdvocate.name.replace(/\s+/g, '_') : 'Staff';
+        const adv = window.currentIdCardAdvocate || (typeof currentIdCardAdvocate !== 'undefined' ? currentIdCardAdvocate : null);
+        let name = adv ? (adv.name || 'Staff') : 'Staff';
+        if (name === 'Staff') {
+            const nameEl = document.getElementById('id-card-name');
+            if (nameEl && nameEl.innerText) name = nameEl.innerText.trim();
+        }
+        name = name.replace(/\s+/g, '_');
         const link = document.createElement('a');
         link.download = `ID_Card_${name}.png`;
         link.href = canvas.toDataURL('image/png');
@@ -2677,15 +2683,41 @@ window.downloadIdCard = async function() {
 };
 
 window.sendIdCardEmail = async function() {
-    if (!currentIdCardAdvocate || !currentIdCardAdvocate.email) {
+    const adv = window.currentIdCardAdvocate || (typeof currentIdCardAdvocate !== 'undefined' ? currentIdCardAdvocate : null);
+    
+    // Robust extraction: object -> card elements -> globalAdvocatesData fallback
+    let email = adv ? (adv.email || '').trim() : '';
+    let name = adv ? (adv.name || 'Staff Member').trim() : 'Staff Member';
+    
+    if (!email) {
+        const emailEl = document.getElementById('id-card-email');
+        if (emailEl && emailEl.innerText && emailEl.innerText.includes('@')) {
+            email = emailEl.innerText.trim();
+        }
+    }
+    if (!email) {
+        const nameEl = document.getElementById('id-card-name');
+        const renderedName = nameEl ? nameEl.innerText.trim() : '';
+        if (renderedName) {
+            name = renderedName;
+            const match = (window.globalAdvocatesData || []).find(a => a.name && a.name.trim().toLowerCase() === renderedName.toLowerCase());
+            if (match && match.email) {
+                email = match.email.trim();
+            }
+        }
+    }
+
+    if (!email || !email.includes('@')) {
         showToast("This staff member does not have a registered email address.", "error");
         return;
     }
     
     const btn = document.getElementById('btn-email-id-card');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<span>⏳</span> Generating & Sending...';
-    btn.disabled = true;
+    const originalText = btn ? btn.innerHTML : '✉️ Email ID Card to Staff';
+    if (btn) {
+        btn.innerHTML = '<span>⏳</span> Generating & Sending...';
+        btn.disabled = true;
+    }
     
     try {
         const canvas = await html2canvas(document.getElementById('id-card-canvas'), {
@@ -2700,16 +2732,17 @@ window.sendIdCardEmail = async function() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                email: currentIdCardAdvocate.email,
-                name: currentIdCardAdvocate.name,
+                email: email,
+                name: name,
                 image_data: base64Image
             })
         });
         
         const result = await res.json();
         if (res.ok) {
-            showToast("Official ID Card emailed successfully!");
-            document.getElementById('id-card-modal').style.display = 'none';
+            showToast(`Official ID Card emailed successfully to ${email}!`);
+            const modal = document.getElementById('id-card-modal');
+            if (modal) modal.style.display = 'none';
         } else {
             showToast(result.error || "Failed to send email", 'error');
         }
@@ -2717,8 +2750,10 @@ window.sendIdCardEmail = async function() {
         console.error(e);
         showToast("An error occurred while generating or sending the ID card: " + e.message, 'error');
     } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+        if (btn) {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
     }
 };
 
