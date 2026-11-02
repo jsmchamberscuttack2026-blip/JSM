@@ -2068,17 +2068,16 @@
                         </div>
 
                         <!-- Chamber & Office Name (Right) -->
-                        <div style="position: absolute; left: 90px; top: 22px; right: 14px; z-index: 10;">
-                            <div id="id-card-office-name" style="font-family: 'Playfair Display', Georgia, serif; font-size: 16.5px; font-weight: 800; color: #e5c365; letter-spacing: 0.8px; text-transform: uppercase; line-height: 1.15; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">JUSTICE &amp; ASSOCIATES</div>
-                            <div id="id-card-office-subtitle" style="font-family: 'Poppins', Arial, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">LAWYERS CHAMBER</div>
+                        <div style="position: absolute; left: 86px; top: 22px; right: 12px; z-index: 10;">
+                            <div id="id-card-office-name" style="font-family: 'Playfair Display', Georgia, serif; font-size: 13.5px; font-weight: 800; color: #e5c365; letter-spacing: 0.5px; text-transform: uppercase; line-height: 1.2; text-shadow: 0 1px 3px rgba(0,0,0,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 270px;">ADV. JAYASANKAR MISHRA OFFICE</div>
+                            <div id="id-card-office-subtitle" style="font-family: 'Poppins', Arial, sans-serif; font-size: 9.5px; font-weight: 700; color: #ffffff; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 3px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 270px;">LAWYERS CHAMBER</div>
                         </div>
                     </div>
 
-                    <!-- Subtle Legal Watermark -->
-                    <div style="position: absolute; inset: 145px 0 76px 0; display: flex; align-items: center; justify-content: center; pointer-events: none; opacity: 0.035; z-index: 1;">
-                        <svg viewBox="0 0 200 200" width="220" height="220" fill="#0a1628">
-                            <path d="M100 15 L20 60 L40 60 L40 120 C40 145 65 170 100 185 C135 170 160 145 160 120 L160 60 L180 60 Z M100 35 L145 68 L55 68 Z M100 80 A12 12 0 1 1 100 104 A12 12 0 1 1 100 80 Z"/>
-                        </svg>
+                    <!-- Chamber Logo Watermark (Middle Body) -->
+                    <div style="position: absolute; inset: 135px 0 76px 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 1; overflow: hidden;">
+                        <img id="id-card-watermark-logo" src="/chamber-logo.jpg" alt="Logo Watermark" style="width: 210px; height: 210px; object-fit: contain; opacity: 0.08; filter: grayscale(100%); pointer-events: none;" crossorigin="anonymous">
+                        <div id="id-card-watermark-fallback" style="display: none; font-size: 130px; opacity: 0.06; color: #0a1628;">⚖️</div>
                     </div>
 
                     <!-- Centered Photo with White Frame -->
@@ -2099,16 +2098,16 @@
                     <div style="padding: 6px 32px 14px 32px; position: relative; z-index: 5;">
                         <table style="width: 100%; border-collapse: separate; border-spacing: 0 8px; font-family: 'Poppins', Arial, sans-serif;">
                             <tr>
-                                <td style="font-weight: 700; color: #0a1628; font-size: 14px; width: 75px; white-space: nowrap; vertical-align: middle;">ID:</td>
-                                <td id="id-card-id" style="font-weight: 700; color: #0a1628; font-size: 14px; text-align: right; letter-spacing: 0.5px; vertical-align: middle;">LA-98765</td>
+                                <td style="font-weight: 700; color: #0a1628; font-size: 13px; width: 65px; white-space: nowrap; vertical-align: middle;">ID:</td>
+                                <td id="id-card-id" style="font-weight: 700; color: #0a1628; font-size: 13px; text-align: right; letter-spacing: 0.5px; vertical-align: middle;">LA-98765</td>
                             </tr>
                             <tr>
-                                <td style="font-weight: 700; color: #0a1628; font-size: 14px; white-space: nowrap; vertical-align: middle;">Mobile:</td>
-                                <td id="id-card-phone" style="font-weight: 600; color: #0a1628; font-size: 14px; text-align: right; vertical-align: middle;">9876543210</td>
+                                <td style="font-weight: 700; color: #0a1628; font-size: 13px; white-space: nowrap; vertical-align: middle;">Mobile:</td>
+                                <td id="id-card-phone" style="font-weight: 600; color: #0a1628; font-size: 13px; text-align: right; vertical-align: middle;">9876543210</td>
                             </tr>
                             <tr>
-                                <td style="font-weight: 700; color: #0a1628; font-size: 14px; white-space: nowrap; vertical-align: top;">Email:</td>
-                                <td id="id-card-email" style="font-weight: 600; color: #0a1628; font-size: 13px; text-align: right; word-break: break-all; vertical-align: top;">staff@example.com</td>
+                                <td style="font-weight: 700; color: #0a1628; font-size: 13px; white-space: nowrap; vertical-align: middle;">Email:</td>
+                                <td id="id-card-email" style="font-weight: 600; color: #0a1628; font-size: 11px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 235px; vertical-align: middle;">staff@example.com</td>
                             </tr>
                         </table>
                     </div>
@@ -2116,8 +2115,8 @@
                     <!-- Bottom Maroon Footer Bar with Barcode & Authorised Signatory -->
                     <div style="height: 76px; background: linear-gradient(180deg, #420816 0%, #28030b 100%); border-top: 2.5px solid #d4af37; display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; box-sizing: border-box; position: relative; z-index: 5;">
                         <!-- Barcode for Name (Left) -->
-                        <div id="id-card-barcode-box" style="background: #ffffff; border-radius: 4px; padding: 4px 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; width: 145px; height: 50px; box-sizing: border-box; overflow: hidden;">
-                            <!-- Dynamic Barcode SVG will be inserted here -->
+                        <div id="id-card-barcode-box" style="background: #ffffff; border-radius: 4px; padding: 3px 5px; box-shadow: 0 2px 6px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; width: 145px; height: 50px; box-sizing: border-box; overflow: hidden;">
+                            <canvas id="id-card-barcode-canvas" width="280" height="72" style="width: 135px; height: 38px; display: block; border-radius: 2px;"></canvas>
                         </div>
 
                         <!-- Authorised Signatory (Right) -->
