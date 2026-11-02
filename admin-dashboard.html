@@ -1064,6 +1064,33 @@
                         <h3>Manage Legal Professionals</h3>
                         <p style="color: var(--color-text-light); margin-top: 1rem; margin-bottom: 2rem;">Add new advocates to display on the public website.</p>
                         
+                        <!-- Authority Signature Upload for Staff ID Cards -->
+                        <div style="background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border-left: 5px solid #d4af37;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.2rem;">
+                                <div>
+                                    <h4 style="margin: 0; color: #0a1628; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                                        <span>✍️</span> Authority Signature (for Staff ID Cards)
+                                    </h4>
+                                    <p style="margin: 6px 0 0 0; color: #64748b; font-size: 0.85rem; max-width: 520px; line-height: 1.45;">
+                                        Upload the Chamber Authorised Signatory's signature image (PNG recommended with transparent background) to automatically print on all official Staff ID Cards.
+                                    </p>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                                    <div id="authority-signature-preview-box" style="width: 140px; height: 50px; border: 1.5px dashed #cbd5e1; border-radius: 8px; background: #ffffff; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 4px; box-sizing: border-box;">
+                                        <img id="authority-signature-preview-img" src="" alt="Authority Signature" style="max-width: 100%; max-height: 100%; object-fit: contain; display: none;">
+                                        <span id="authority-signature-placeholder" style="font-size: 0.75rem; color: #94a3b8; font-style: italic; text-align: center;">No signature</span>
+                                    </div>
+                                    <label class="btn btn-primary" style="margin: 0; padding: 0.65rem 1.25rem; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px; background: #D4AF37; color: #0A1628; font-weight: 700; border: none; border-radius: 8px; box-shadow: 0 2px 8px rgba(212,175,55,0.3);">
+                                        <span>📤</span> Upload Signature
+                                        <input type="file" id="authority-signature-input" accept="image/*" style="display: none;" onchange="handleAuthoritySignatureUpload(event)">
+                                    </label>
+                                    <button type="button" id="btn-remove-authority-signature" class="btn" style="display: none; padding: 0.65rem 1rem; background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer;" onclick="removeAuthoritySignature()">
+                                        <span>🗑️</span> Remove
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <form id="add-advocate-form" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; background: rgba(255,255,255,0.5); padding: 2rem; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
                             <div class="form-group">
                                 <label class="form-label" for="adv-name">Advocate Name</label>
@@ -2004,44 +2031,115 @@
 
             <div style="padding: 2rem; display: flex; flex-direction: column; align-items: center; background: #1a1a2e;">
 
-                <!-- THE PREMIUM ID CARD (snapshotted) -->
-                                <div id="id-card-canvas" style="width:400px;margin:auto;background:linear-gradient(145deg,#fff,#f2f2f2);border-radius:16px;padding:22px;box-shadow:0 8px 25px rgba(0,0,0,0.3);font-family:Arial,sans-serif;box-sizing:border-box;">
-    <div style="position:relative;background-color:#e6f2ff;color:#222;padding:15px;border-radius:8px;margin-bottom:15px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.05);">
-        <img src="assets/images/75_constitution.jpg" alt="75 Years" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);height:55px;object-fit:contain;border-radius:4px;border:1px solid rgba(212,175,55,0.4);padding:2px;background:white;">
-        <div style="text-align:center;">
-            <h2 style="letter-spacing:2px;margin:0;font-size:22px;">OFFICIAL ID</h2>
-            <p id="id-card-office-name" style="margin:5px 0 0 0;font-weight:bold;text-transform:uppercase;color:#444;font-size:15px;">JSM. Chambers</p>
-            <p id="id-card-address" style="margin:3px 0 0 0;font-size:10px;color:#666;">Chamber Address, City</p>
-        </div>
-        <img src="assets/images/advocate_logo.jpg" alt="Advocate Logo" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);height:55px;object-fit:contain;border-radius:4px;border:1px solid rgba(212,175,55,0.4);background:white;padding:2px;">
-    </div>
+                <!-- THE OFFICIAL VERTICAL STAFF ID CARD (snapshotted) -->
+                <div id="id-card-canvas" style="width: 370px; margin: auto; background: #ffffff; border-radius: 18px; box-shadow: 0 12px 40px rgba(0,0,0,0.35); font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; box-sizing: border-box; position: relative; overflow: hidden; border: 2px solid #c59b27; display: flex; flex-direction: column; justify-content: space-between;">
+                    
+                    <!-- Top Burgundy & Gold Geometric Header -->
+                    <div style="position: relative; height: 145px; background: #3b0713; overflow: hidden; display: flex; align-items: flex-start; box-sizing: border-box;">
+                        <!-- Geometric Gold Ribbon Background SVG -->
+                        <svg viewBox="0 0 370 145" style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="idBurgundyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#4a0818"/>
+                                    <stop offset="100%" stop-color="#28030b"/>
+                                </linearGradient>
+                                <linearGradient id="idGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#dfb74c"/>
+                                    <stop offset="35%" stop-color="#9d711c"/>
+                                    <stop offset="70%" stop-color="#f8e596"/>
+                                    <stop offset="100%" stop-color="#ab7b19"/>
+                                </linearGradient>
+                            </defs>
+                            <!-- Base burgundy -->
+                            <rect width="370" height="145" fill="url(#idBurgundyGrad)" />
+                            <!-- Golden angular ribbons -->
+                            <polygon points="370,15 370,82 0,145 0,105" fill="url(#idGoldGrad)" />
+                            <polygon points="0,0 220,0 0,145" fill="#2d030c" />
+                            <polygon points="200,0 370,0 370,15 65,130" fill="#450817" />
+                            <!-- Bottom white cut for card body -->
+                            <polygon points="0,145 370,145 370,82 0,145" fill="#ffffff" />
+                            <polygon points="0,138 230,100 370,82 370,90 0,145" fill="url(#idGoldGrad)" />
+                        </svg>
 
-    <div style="display:flex;align-items:center;gap:22px;padding:20px 0">
-        <div style="flex-shrink:0;">
-            <img id="id-card-photo" src="" style="width:105px;height:125px;object-fit:cover;border-radius:5px;display:inline-block;" crossorigin="anonymous">
-            <div id="id-card-photo-placeholder" style="width:105px;height:125px;border-radius:5px;background:#e0e0e0;display:none;align-items:center;justify-content:center;font-size:3rem;color:#666;">👤</div>
-        </div>
+                        <!-- Chamber Logo Emblem (Left) -->
+                        <div style="position: absolute; left: 16px; top: 16px; width: 62px; height: 62px; border-radius: 50%; border: 2.5px solid #d4af37; box-shadow: 0 0 12px rgba(212,175,55,0.45); background: #28030b; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 2px; box-sizing: border-box; z-index: 10;">
+                            <img id="id-card-logo" src="/chamber-logo.jpg" alt="Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%;" crossorigin="anonymous">
+                            <div id="id-card-logo-fallback" style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; font-size: 26px; color: #d4af37;">⚖️</div>
+                        </div>
 
-        <div style="flex:1;">
-            <h2 id="id-card-name" style="margin:0 0 10px;font-size:20px;color:#222;">Adv. NAME</h2>
-            <p id="id-card-role" style="margin:7px 0;font-size:14px;color:#555">Senior Advocate</p>
-            <p style="margin:7px 0;font-size:14px;color:#555">ID: <span id="id-card-id">LAW-2026-015</span></p>
-            <p style="margin:7px 0;font-size:14px;color:#555">Mobile: <span id="id-card-phone">9876543210</span></p>
-            <p style="margin:7px 0;font-size:14px;color:#555;word-break:break-all;">Email: <span id="id-card-email">staff@example.com</span></p>
-        </div>
-    </div>
+                        <!-- Chamber & Office Name (Right) -->
+                        <div style="position: absolute; left: 90px; top: 22px; right: 14px; z-index: 10;">
+                            <div id="id-card-office-name" style="font-family: 'Playfair Display', Georgia, serif; font-size: 16.5px; font-weight: 800; color: #e5c365; letter-spacing: 0.8px; text-transform: uppercase; line-height: 1.15; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">JUSTICE &amp; ASSOCIATES</div>
+                            <div id="id-card-office-subtitle" style="font-family: 'Poppins', Arial, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">LAWYERS CHAMBER</div>
+                        </div>
+                    </div>
 
-    <div style="text-align:center;border-top:1px solid #aaa;padding-top:12px;font-size:11px;color:#555;">
-        Professional Identity • Authorized Personnel
-    </div>
-</div>
+                    <!-- Subtle Legal Watermark -->
+                    <div style="position: absolute; inset: 145px 0 76px 0; display: flex; align-items: center; justify-content: center; pointer-events: none; opacity: 0.035; z-index: 1;">
+                        <svg viewBox="0 0 200 200" width="220" height="220" fill="#0a1628">
+                            <path d="M100 15 L20 60 L40 60 L40 120 C40 145 65 170 100 185 C135 170 160 145 160 120 L160 60 L180 60 Z M100 35 L145 68 L55 68 Z M100 80 A12 12 0 1 1 100 104 A12 12 0 1 1 100 80 Z"/>
+                        </svg>
+                    </div>
 
+                    <!-- Centered Photo with White Frame -->
+                    <div style="position: relative; z-index: 10; margin-top: -50px; display: flex; justify-content: center;">
+                        <div style="width: 122px; height: 144px; border: 4.5px solid #ffffff; border-radius: 4px; box-shadow: 0 6px 18px rgba(0,0,0,0.18); overflow: hidden; background: #e2e8f0; display: flex; align-items: center; justify-content: center;">
+                            <img id="id-card-photo" src="" alt="Staff Portrait" style="width: 100%; height: 100%; object-fit: cover; display: block;" crossorigin="anonymous">
+                            <div id="id-card-photo-placeholder" style="display: none; width: 100%; height: 100%; background: #e2e8f0; align-items: center; justify-content: center; font-size: 3.5rem; color: #94a3b8;">👤</div>
+                        </div>
+                    </div>
+
+                    <!-- Staff Name & Role -->
+                    <div style="text-align: center; margin-top: 10px; margin-bottom: 6px; padding: 0 16px; position: relative; z-index: 5;">
+                        <div id="id-card-name" style="font-family: 'Poppins', Arial, sans-serif; font-size: 21px; font-weight: 800; color: #0a1628; letter-spacing: 0.8px; text-transform: uppercase; line-height: 1.2;">Adv. NAME</div>
+                        <div id="id-card-role" style="font-family: 'Poppins', Arial, sans-serif; font-size: 14.5px; font-weight: 600; color: #a4761e; margin-top: 3px; letter-spacing: 0.3px;">Senior Advocate</div>
+                    </div>
+
+                    <!-- Details Section (ONLY ID, Mobile, Email) -->
+                    <div style="padding: 6px 32px 14px 32px; position: relative; z-index: 5;">
+                        <table style="width: 100%; border-collapse: separate; border-spacing: 0 8px; font-family: 'Poppins', Arial, sans-serif;">
+                            <tr>
+                                <td style="font-weight: 700; color: #0a1628; font-size: 14px; width: 75px; white-space: nowrap; vertical-align: middle;">ID:</td>
+                                <td id="id-card-id" style="font-weight: 700; color: #0a1628; font-size: 14px; text-align: right; letter-spacing: 0.5px; vertical-align: middle;">LA-98765</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 700; color: #0a1628; font-size: 14px; white-space: nowrap; vertical-align: middle;">Mobile:</td>
+                                <td id="id-card-phone" style="font-weight: 600; color: #0a1628; font-size: 14px; text-align: right; vertical-align: middle;">9876543210</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 700; color: #0a1628; font-size: 14px; white-space: nowrap; vertical-align: top;">Email:</td>
+                                <td id="id-card-email" style="font-weight: 600; color: #0a1628; font-size: 13px; text-align: right; word-break: break-all; vertical-align: top;">staff@example.com</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Bottom Maroon Footer Bar with Barcode & Authorised Signatory -->
+                    <div style="height: 76px; background: linear-gradient(180deg, #420816 0%, #28030b 100%); border-top: 2.5px solid #d4af37; display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; box-sizing: border-box; position: relative; z-index: 5;">
+                        <!-- Barcode for Name (Left) -->
+                        <div id="id-card-barcode-box" style="background: #ffffff; border-radius: 4px; padding: 4px 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; width: 145px; height: 50px; box-sizing: border-box; overflow: hidden;">
+                            <!-- Dynamic Barcode SVG will be inserted here -->
+                        </div>
+
+                        <!-- Authorised Signatory (Right) -->
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 140px;">
+                            <div style="font-family: 'Poppins', Arial, sans-serif; font-size: 8.5px; font-weight: 800; letter-spacing: 1.2px; color: #ffffff; text-transform: uppercase; margin-bottom: 2px;">AUTHORISED SIGNATORY</div>
+                            <div style="height: 38px; display: flex; align-items: center; justify-content: center;">
+                                <img id="id-card-signature-img" src="" alt="Authorised Signature" style="max-height: 38px; max-width: 135px; object-fit: contain; display: none;" crossorigin="anonymous">
+                                <div id="id-card-signature-fallback" style="font-family: 'Brush Script MT', 'Dancing Script', cursive; font-size: 24px; color: #ffffff; font-style: italic; line-height: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.4);">Signature</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
                 <!-- END ID CARD -->
 
                 <!-- Action Buttons -->
                 <div style="width:100%; margin-top:1.5rem; display:flex; flex-direction:column; gap:10px;">
                     <button id="btn-email-id-card" onclick="sendIdCardEmail()" class="btn btn-primary" style="width:100%; padding:12px; display:flex; justify-content:center; align-items:center; gap:8px; background:#D4AF37; border:none; color:#0A1628; font-weight:700; border-radius:8px; cursor:pointer; font-size:0.9rem;">
                         <span>✉️</span> Email ID Card to Staff
+                    </button>
+                    <button id="btn-download-id-card" onclick="downloadIdCard()" class="btn" style="width:100%; padding:12px; display:flex; justify-content:center; align-items:center; gap:8px; background:#10b981; border:none; color:#ffffff; font-weight:700; border-radius:8px; cursor:pointer; font-size:0.9rem; box-shadow: 0 4px 12px rgba(16,185,129,0.3);">
+                        <span>💾</span> Download ID Card (PNG)
                     </button>
                     <button class="btn btn-outline" style="width:100%; padding:12px; border:1px solid rgba(212,175,55,0.4); color:#D4AF37; background:transparent; border-radius:8px; cursor:pointer;" onclick="document.getElementById('id-card-modal').style.display='none'">Close</button>
                 </div>

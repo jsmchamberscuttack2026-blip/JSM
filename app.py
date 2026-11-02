@@ -1693,11 +1693,12 @@ def make_slim_public_bundle(full_bundle):
     raw_s = full_bundle.get("settings", {}) or {}
     for k, v in raw_s.items():
         if k in ("logoUrl", "hero_banner_image", "staff_banner_image", "expertise_banner_image", 
-                 "about_chamber_image1", "about_chamber_owner_image"):
+                 "about_chamber_image1", "about_chamber_owner_image", "authority_signature"):
             continue
         slim["settings"][k] = v
         
     slim["settings"]["logoUrl"] = "/chamber-logo.jpg"
+    slim["settings"]["authority_signature"] = "/chamber-authority-signature.png" if raw_s.get("authority_signature") else ""
     slim["settings"]["hero_banner_image"] = "/chamber-hero-banner.jpg" if raw_s.get("hero_banner_image") else ""
     slim["settings"]["staff_banner_image"] = "/chamber-staff-banner.jpg" if raw_s.get("staff_banner_image") else ""
     slim["settings"]["expertise_banner_image"] = "/chamber-expertise-banner.jpg" if raw_s.get("expertise_banner_image") else ""
@@ -2384,6 +2385,36 @@ def serve_news_image(news_id):
         logging.error(f"Error serving news image {news_id}: {e}")
     return send_from_directory(os.path.join(BASE_DIR, 'assets/images'), 'advocate_logo.jpg')
 
+@app.route('/chamber-authority-signature.png')
+def serve_chamber_authority_signature():
+    global _chamber_images_cache
+    if _chamber_images_cache.get("authority_signature") is not None:
+        return Response(_chamber_images_cache["authority_signature"], mimetype=_chamber_images_cache.get("authority_signature_mime", "image/png"), headers={
+            "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+            "Content-Disposition": "inline; filename=\"chamber-authority-signature.png\""
+        })
+    try:
+        raw_settings = settings_col.find_one({"_id": "office_info"}, {"authority_signature": 1}) or {}
+        img_data = raw_settings.get("authority_signature")
+        if img_data and 'base64,' in img_data:
+            header, encoded = img_data.split('base64,', 1)
+            mime = 'image/png'
+            if 'image/jpeg' in header or 'image/jpg' in header: mime = 'image/jpeg'
+            elif 'image/webp' in header: mime = 'image/webp'
+            elif 'image/svg+xml' in header: mime = 'image/svg+xml'
+            img_bytes = base64.b64decode(encoded)
+            _chamber_images_cache["authority_signature"] = img_bytes
+            _chamber_images_cache["authority_signature_mime"] = mime
+            return Response(img_bytes, mimetype=mime, headers={
+                "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+                "Content-Disposition": "inline; filename=\"chamber-authority-signature.png\""
+            })
+    except Exception as e:
+        logging.error(f"Error serving authority signature: {e}")
+    # Return 1x1 transparent PNG if no signature uploaded
+    transparent_png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAAElFTkSuQmCC")
+    return Response(transparent_png, mimetype="image/png")
+
 @app.route('/google<string:code>.html')
 def serve_google_verification_file(code):
     return f"google-site-verification: google{code}.html", 200, {'Content-Type': 'text/html; charset=utf-8'}
@@ -2395,6 +2426,7 @@ def serve_robots_txt():
 Allow: /
 Allow: /chamber-owner.jpg
 Allow: /chamber-logo.jpg
+Allow: /chamber-authority-signature.png
 Allow: /adv-*.jpg
 Allow: /tabasmiti-mishra.jpg
 Allow: /assets/
@@ -6815,6 +6847,72 @@ def save_settings():
         )
     invalidate_all_public_caches()
     return jsonify({"success": True}), 200
+
+@app.route('/api/admin/authority-signature', methods=['GET', 'POST', 'DELETE'])
+def admin_authority_signature():
+    global _chamber_images_cache
+    if request.method == 'GET':
+        try:
+            doc = settings_col.find_one({"_id": "office_info"}, {"authority_signature": 1}) or {}
+            sig = doc.get("authority_signature") or ""
+            return jsonify({
+                "has_signature": bool(sig),
+                "signature_data": sig if sig else "",
+                "signature_url": "/chamber-authority-signature.png" if sig else ""
+            }), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    elif request.method == 'POST':
+        try:
+            data = request.get_json(silent=True) or {}
+            sig_data = data.get('signature_data')
+            
+            # Also support multipart file upload
+            if not sig_data and 'file' in request.files:
+                file = request.files['file']
+                file_bytes = file.read()
+                mime = file.mimetype or 'image/png'
+                b64 = base64.b64encode(file_bytes).decode('utf-8')
+                sig_data = f"data:{mime};base64,{b64}"
+                
+            if not sig_data:
+                return jsonify({"error": "No signature data provided"}), 400
+                
+            if settings_col is not None:
+                settings_col.update_one(
+                    {"_id": "office_info"},
+                    {"$set": {
+                        "authority_signature": sig_data,
+                        "authority_signature_updated_at": get_now_ist().isoformat()
+                    }},
+                    upsert=True
+                )
+            _chamber_images_cache.pop("authority_signature", None)
+            _chamber_images_cache.pop("authority_signature_mime", None)
+            invalidate_all_public_caches()
+            return jsonify({
+                "success": True, 
+                "signature_url": "/chamber-authority-signature.png",
+                "signature_data": sig_data
+            }), 200
+        except Exception as e:
+            logging.error(f"Error saving authority signature: {e}")
+            return jsonify({"error": str(e)}), 500
+
+    elif request.method == 'DELETE':
+        try:
+            if settings_col is not None:
+                settings_col.update_one(
+                    {"_id": "office_info"},
+                    {"$unset": {"authority_signature": "", "authority_signature_updated_at": ""}}
+                )
+            _chamber_images_cache.pop("authority_signature", None)
+            _chamber_images_cache.pop("authority_signature_mime", None)
+            invalidate_all_public_caches()
+            return jsonify({"success": True}), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
 
 

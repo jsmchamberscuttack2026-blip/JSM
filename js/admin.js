@@ -930,6 +930,9 @@ document.addEventListener('DOMContentLoaded', () => {
 window.globalAdvocatesData = [];
 async function loadAdvocates() {
     try {
+        if (typeof window.loadAuthoritySignature === 'function') {
+            window.loadAuthoritySignature();
+        }
         const response = await fetch('/api/advocates');
         const advocates = await response.json();
         window.globalAdvocatesData = advocates;
@@ -2284,6 +2287,154 @@ if (officeInfoForm) {
 
 
 let currentIdCardAdvocate = null;
+window.globalAuthoritySignatureUrl = null;
+
+// Pure vector Code39 barcode generator for staff member name
+function generateBarcodeSVG(text, width = 135, height = 36) {
+    const CODE39 = {
+        '0': '000110100', '1': '100100001', '2': '001100001', '3': '101100000',
+        '4': '000110001', '5': '100110000', '6': '001110000', '7': '000100101',
+        '8': '100100100', '9': '001100100', 'A': '100001001', 'B': '001001001',
+        'C': '101001000', 'D': '000011001', 'E': '100011000', 'F': '001011000',
+        'G': '000001101', 'H': '100001100', 'I': '001001100', 'J': '000011100',
+        'K': '100000011', 'L': '001000011', 'M': '101000010', 'N': '000010011',
+        'O': '100010010', 'P': '001010010', 'Q': '000000111', 'R': '100000110',
+        'S': '001000110', 'T': '000010110', 'U': '110000001', 'V': '011000001',
+        'W': '111000000', 'X': '010010001', 'Y': '110010000', 'Z': '011010000',
+        '-': '010000101', '.': '110000100', ' ': '011000100', '*': '010010100',
+        '$': '010101000', '/': '010100010', '+': '010001010', '%': '000101010'
+    };
+
+    let raw = (text || 'STAFF').toUpperCase().replace(/[^A-Z0-9\-\. \$\/\+\%]/g, ' ').trim();
+    if (!raw) raw = 'STAFF';
+    if (raw.length > 18) raw = raw.substring(0, 18);
+    const cleanStr = '*' + raw + '*';
+    const modules = [];
+
+    for (let i = 0; i < cleanStr.length; i++) {
+        const char = cleanStr[i];
+        const pattern = CODE39[char] || CODE39[' '];
+        for (let j = 0; j < 9; j++) {
+            const isBar = (j % 2 === 0);
+            const isWide = (pattern[j] === '1');
+            modules.push({ isBar, width: isWide ? 2.2 : 1.0 });
+        }
+        if (i < cleanStr.length - 1) {
+            modules.push({ isBar: false, width: 1.0 });
+        }
+    }
+
+    const totalUnits = modules.reduce((sum, m) => sum + m.width, 0);
+    const scale = width / totalUnits;
+    let currentX = 0;
+    let rects = '';
+
+    for (const m of modules) {
+        const w = m.width * scale;
+        if (m.isBar) {
+            rects += `<rect x="${currentX.toFixed(2)}" y="0" width="${w.toFixed(2)}" height="${height}" fill="#000000"/>`;
+        }
+        currentX += w;
+    }
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" style="display:block;margin:auto;">${rects}</svg>`;
+}
+
+// Authority Signature Handlers in "Manage Legal Professionals"
+window.loadAuthoritySignature = async function() {
+    try {
+        const res = await fetch('/api/admin/authority-signature');
+        if (res.ok) {
+            const data = await res.json();
+            const previewImg = document.getElementById('authority-signature-preview-img');
+            const placeholder = document.getElementById('authority-signature-placeholder');
+            const removeBtn = document.getElementById('btn-remove-authority-signature');
+            
+            if (data.has_signature && (data.signature_data || data.signature_url)) {
+                window.globalAuthoritySignatureUrl = data.signature_data || data.signature_url;
+                if (previewImg) {
+                    previewImg.src = window.globalAuthoritySignatureUrl;
+                    previewImg.style.display = 'block';
+                }
+                if (placeholder) placeholder.style.display = 'none';
+                if (removeBtn) removeBtn.style.display = 'inline-block';
+            } else {
+                window.globalAuthoritySignatureUrl = null;
+                if (previewImg) previewImg.style.display = 'none';
+                if (placeholder) placeholder.style.display = 'block';
+                if (removeBtn) removeBtn.style.display = 'none';
+            }
+        }
+    } catch (e) {
+        console.warn('Could not load authority signature:', e);
+    }
+};
+
+window.handleAuthoritySignatureUpload = function(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        showToast('Please upload an image file (PNG, JPG, SVG).', 'error');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const base64Data = e.target.result;
+        try {
+            const res = await fetch('/api/admin/authority-signature', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ signature_data: base64Data })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                window.globalAuthoritySignatureUrl = base64Data;
+                const previewImg = document.getElementById('authority-signature-preview-img');
+                const placeholder = document.getElementById('authority-signature-placeholder');
+                const removeBtn = document.getElementById('btn-remove-authority-signature');
+                if (previewImg) {
+                    previewImg.src = base64Data;
+                    previewImg.style.display = 'block';
+                }
+                if (placeholder) placeholder.style.display = 'none';
+                if (removeBtn) removeBtn.style.display = 'inline-block';
+                showToast('Authority signature updated successfully!');
+            } else {
+                showToast(data.error || 'Failed to save signature.', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Error uploading authority signature: ' + err.message, 'error');
+        }
+    };
+    reader.readAsDataURL(file);
+};
+
+window.removeAuthoritySignature = async function() {
+    if (!confirm('Are you sure you want to remove the Chamber Authority Signature?')) return;
+    try {
+        const res = await fetch('/api/admin/authority-signature', { method: 'DELETE' });
+        if (res.ok) {
+            window.globalAuthoritySignatureUrl = null;
+            const previewImg = document.getElementById('authority-signature-preview-img');
+            const placeholder = document.getElementById('authority-signature-placeholder');
+            const removeBtn = document.getElementById('btn-remove-authority-signature');
+            const input = document.getElementById('authority-signature-input');
+            if (previewImg) previewImg.style.display = 'none';
+            if (placeholder) placeholder.style.display = 'block';
+            if (removeBtn) removeBtn.style.display = 'none';
+            if (input) input.value = '';
+            showToast('Authority signature removed.');
+        } else {
+            showToast('Failed to remove signature.', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        showToast('Error removing authority signature: ' + e.message, 'error');
+    }
+};
 
 window.showIdCard = function(id) {
     const adv = window.globalAdvocatesData.find(a => a._id === id);
@@ -2291,66 +2442,136 @@ window.showIdCard = function(id) {
 
     currentIdCardAdvocate = adv;
 
-    document.getElementById('id-card-name').innerText = adv.name || 'N/A';
-    document.getElementById('id-card-role').innerText = adv.specialty || 'Staff Member';
-    document.getElementById('id-card-phone').innerText = adv.phone || 'N/A';
-    document.getElementById('id-card-email').innerText = adv.email || 'N/A';
+    // Staff details: Name, Role, Phone, Email
+    const nameEl = document.getElementById('id-card-name');
+    if (nameEl) nameEl.innerText = adv.name || 'Staff Member';
 
-    // Generate employee ID
-    const idPrefix = (adv.specialty && adv.specialty.toLowerCase().includes('advocate')) ? 'ADV' : 'STF';
-    const idSuffix = adv._id.substring(adv._id.length - 4).toUpperCase();
-    document.getElementById('id-card-id').innerText = `${idPrefix}-${idSuffix}`;
+    const roleEl = document.getElementById('id-card-role');
+    if (roleEl) roleEl.innerText = adv.specialty || adv.role || 'Senior Advocate';
 
-    // Handle staff photo
+    const phoneEl = document.getElementById('id-card-phone');
+    if (phoneEl) phoneEl.innerText = adv.phone || 'N/A';
+
+    const emailEl = document.getElementById('id-card-email');
+    if (emailEl) emailEl.innerText = adv.email || 'N/A';
+
+    // Staff ID: LA-xxxxx format
+    const idSuffix = (adv._id ? adv._id.substring(adv._id.length - 5) : '98765').toUpperCase();
+    const idPrefix = (adv.specialty && adv.specialty.toLowerCase().includes('advocate')) ? 'LA' : 'STF';
+    const idEl = document.getElementById('id-card-id');
+    if (idEl) idEl.innerText = `${idPrefix}-${idSuffix}`;
+
+    // Barcode for Staff Name
+    const barcodeBox = document.getElementById('id-card-barcode-box');
+    if (barcodeBox) {
+        barcodeBox.innerHTML = generateBarcodeSVG(adv.name || 'STAFF', 132, 38);
+    }
+
+    // Photo
     const photo = document.getElementById('id-card-photo');
     const placeholder = document.getElementById('id-card-photo-placeholder');
     if (adv.imageUrl) {
         photo.onload = null;
         photo.src = adv.imageUrl;
         photo.style.display = 'block';
-        placeholder.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'none';
     } else {
         photo.src = '';
         photo.style.display = 'none';
-        placeholder.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'flex';
     }
 
-    // Fetch settings: address, chamber name, logo
+    // Fetch and apply Settings: Chamber/Office Name, Subtitle, Logo, Authority Signature
     fetch('/api/settings').then(r => r.json()).then(data => {
-        // Chamber name
-        if (data.chamber_name) {
-            document.getElementById('id-card-office-name').innerText = data.chamber_name;
+        // Chamber/Office Name
+        const officeNameEl = document.getElementById('id-card-office-name');
+        if (officeNameEl) {
+            officeNameEl.innerText = (data.chamber_name || 'JUSTICE & ASSOCIATES').toUpperCase();
         }
-        // Address
-        if (data.address) {
-            const addressEl = document.getElementById('id-card-address');
-            if (addressEl) addressEl.innerText = data.address;
+        // Subtitle
+        const subtitleEl = document.getElementById('id-card-office-subtitle');
+        if (subtitleEl) {
+            subtitleEl.innerText = (data.chamber_subtitle || 'LAWYERS CHAMBER').toUpperCase();
         }
         // Logo
         const logoEl = document.getElementById('id-card-logo');
         const logoFallback = document.getElementById('id-card-logo-fallback');
-        if (logoEl && data.logoUrl) {
+        const logoUrl = data.logoUrl || '/chamber-logo.jpg';
+        if (logoEl) {
             logoEl.onload = function() {
                 logoEl.style.display = 'block';
                 if (logoFallback) logoFallback.style.display = 'none';
             };
             logoEl.onerror = function() {
                 logoEl.style.display = 'none';
-                if (logoFallback) logoFallback.style.display = 'block';
+                if (logoFallback) logoFallback.style.display = 'flex';
             };
-            logoEl.src = data.logoUrl;
-        } else {
-            if (logoEl) logoEl.style.display = 'none';
-            if (logoFallback) logoFallback.style.display = 'block';
+            logoEl.src = logoUrl;
         }
-    }).catch(() => {});
+
+        // Authority Signature
+        const sigEl = document.getElementById('id-card-signature-img');
+        const sigFallback = document.getElementById('id-card-signature-fallback');
+        const sigUrl = window.globalAuthoritySignatureUrl || data.authority_signature || '/chamber-authority-signature.png';
+
+        if (sigUrl && sigEl) {
+            sigEl.onload = function() {
+                sigEl.style.display = 'block';
+                if (sigFallback) sigFallback.style.display = 'none';
+            };
+            sigEl.onerror = function() {
+                sigEl.style.display = 'none';
+                if (sigFallback) sigFallback.style.display = 'block';
+            };
+            sigEl.src = sigUrl;
+        } else {
+            if (sigEl) sigEl.style.display = 'none';
+            if (sigFallback) sigFallback.style.display = 'block';
+        }
+    }).catch(err => {
+        console.warn('Error fetching settings for ID card:', err);
+    });
 
     document.getElementById('id-card-modal').style.display = 'flex';
-}
+};
+
+window.downloadIdCard = async function() {
+    const cardEl = document.getElementById('id-card-canvas');
+    if (!cardEl) return;
+    
+    const btn = document.getElementById('btn-download-id-card');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.innerHTML = '<span>⏳</span> Generating High-Res PNG...';
+        btn.disabled = true;
+    }
+
+    try {
+        const canvas = await html2canvas(cardEl, {
+            scale: 3, // Ultra crisp resolution
+            useCORS: true,
+            backgroundColor: null
+        });
+        const name = (currentIdCardAdvocate && currentIdCardAdvocate.name) ? currentIdCardAdvocate.name.replace(/\s+/g, '_') : 'Staff';
+        const link = document.createElement('a');
+        link.download = `ID_Card_${name}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast("ID Card downloaded successfully!");
+    } catch (e) {
+        console.error(e);
+        showToast("Error generating download: " + e.message, 'error');
+    } finally {
+        if (btn) {
+            btn.innerHTML = origHtml;
+            btn.disabled = false;
+        }
+    }
+};
 
 window.sendIdCardEmail = async function() {
     if (!currentIdCardAdvocate || !currentIdCardAdvocate.email) {
-        showToast("This staff member does not have a registered email address.");
+        showToast("This staff member does not have a registered email address.", "error");
         return;
     }
     
@@ -2361,7 +2582,7 @@ window.sendIdCardEmail = async function() {
     
     try {
         const canvas = await html2canvas(document.getElementById('id-card-canvas'), {
-            scale: 2, // High resolution
+            scale: 2.5, // High resolution
             useCORS: true,
             backgroundColor: null
         });
@@ -2380,7 +2601,7 @@ window.sendIdCardEmail = async function() {
         
         const result = await res.json();
         if (res.ok) {
-            showToast("ID Card emailed successfully!");
+            showToast("Official ID Card emailed successfully!");
             document.getElementById('id-card-modal').style.display = 'none';
         } else {
             showToast(result.error || "Failed to send email", 'error');
