@@ -466,6 +466,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (window.__INITIAL_DATA__) {
       if (window.__INITIAL_DATA__.settings) window.applyChamberSettings(window.__INITIAL_DATA__.settings);
       if (window.__INITIAL_DATA__.advocates) window.renderAdvocates(window.__INITIAL_DATA__.advocates);
+  } else {
+      try {
+          const cSettings = localStorage.getItem('jsm_cached_settings');
+          if (cSettings) window.applyChamberSettings(JSON.parse(cSettings));
+          const cAdvs = localStorage.getItem('jsm_cached_advocates');
+          if (cAdvs) window.renderAdvocates(JSON.parse(cAdvs));
+      } catch(e) {}
   }
 
   // Background sync for settings (skip initial blocking fetch if already hydrated)
@@ -477,7 +484,10 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           return res.json();
       }).then(info => {
-          if (info) window.applyChamberSettings(info);
+          if (info) {
+              window.applyChamberSettings(info);
+              try { localStorage.setItem('jsm_cached_settings', JSON.stringify(info)); } catch(e) {}
+          }
       }).catch(err => console.error("Error background loading settings:", err));
   }
 
@@ -487,12 +497,13 @@ document.addEventListener('DOMContentLoaded', () => {
       let advocatesCache = window.__INITIAL_DATA__ && window.__INITIAL_DATA__.advocates ? JSON.stringify(window.__INITIAL_DATA__.advocates) : "";
       async function loadAdvocates() {
           try {
-              const response = await fetch('/api/advocates?t=' + Date.now(), { cache: 'no-store' });
+              const response = await fetch('/api/advocates');
               const advocates = await response.json();
               const newDataString = JSON.stringify(advocates);
               if (newDataString === advocatesCache) return;
               advocatesCache = newDataString;
               window.renderAdvocates(advocates);
+              try { localStorage.setItem('jsm_cached_advocates', newDataString); } catch(e) {}
           } catch (err) {
               console.error('Error background updating advocates:', err);
           }
@@ -1081,11 +1092,17 @@ window.renderServices = function(data) {
             </div>
         `;
     }).join('');
+    try { localStorage.setItem('jsm_cached_services', JSON.stringify(data)); } catch(e) {}
 };
 
-// Immediate hydration for services if initial data is present
+// Immediate hydration for services if initial data or cache is present
 if (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.services) {
     window.renderServices(window.__INITIAL_DATA__.services);
+} else {
+    try {
+        const cached = localStorage.getItem('jsm_cached_services');
+        if (cached) window.renderServices(JSON.parse(cached));
+    } catch(e) {}
 }
 
 // Load and render public services dynamically into #services-grid
@@ -1097,7 +1114,7 @@ async function loadPublicServices(force = false) {
         return;
     }
     try {
-        const res = await fetch('/api/services?t=' + Date.now(), { cache: 'no-store' });
+        const res = await fetch('/api/services');
         if (!res.ok) return;
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
@@ -1361,11 +1378,17 @@ window.renderNews = function(data) {
         fullConveyor += singleSet;
     }
     track.innerHTML = fullConveyor;
+    try { localStorage.setItem('jsm_cached_news', JSON.stringify(data)); } catch(e) {}
 };
 
-// Immediate hydration for news if initial data is present
+// Immediate hydration for news if initial data or cache is present
 if (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.news) {
     window.renderNews(window.__INITIAL_DATA__.news);
+} else {
+    try {
+        const cached = localStorage.getItem('jsm_cached_news');
+        if (cached) window.renderNews(JSON.parse(cached));
+    } catch(e) {}
 }
 
 window.loadPublicNews = async function(force = false) {
@@ -1376,7 +1399,7 @@ window.loadPublicNews = async function(force = false) {
         return;
     }
     try {
-        const res = await fetch('/api/news', { cache: 'no-store' });
+        const res = await fetch('/api/news');
         if (!res.ok) return;
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
@@ -1478,11 +1501,17 @@ window.renderOpinions = function(data) {
         fullConveyor += singleSet;
     }
     track.innerHTML = fullConveyor;
+    try { localStorage.setItem('jsm_cached_opinions', JSON.stringify(data)); } catch(e) {}
 };
 
-// Immediate hydration for opinions if initial data is present
+// Immediate hydration for opinions if initial data or cache is present
 if (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.opinions) {
     window.renderOpinions(window.__INITIAL_DATA__.opinions);
+} else {
+    try {
+        const cached = localStorage.getItem('jsm_cached_opinions');
+        if (cached) window.renderOpinions(JSON.parse(cached));
+    } catch(e) {}
 }
 
 window.loadPublicOpinions = async function(force = false) {
@@ -1493,7 +1522,7 @@ window.loadPublicOpinions = async function(force = false) {
         return;
     }
     try {
-        const res = await fetch('/api/opinions', { cache: 'no-store' });
+        const res = await fetch('/api/opinions');
         if (!res.ok) return;
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {

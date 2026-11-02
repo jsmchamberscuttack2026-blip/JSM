@@ -654,6 +654,35 @@
                             <span style="font-size: 0.82rem; color: #64748b;">Chamber Associates & Members →</span>
                         </div>
                     </div>
+                    <script>
+                        // Instant 0ms cache hydrate for dashboard stats
+                        (function() {
+                            try {
+                                const raw = localStorage.getItem('jsm_dashboard_stats');
+                                if (raw) {
+                                    const d = JSON.parse(raw);
+                                    if (d) {
+                                        if (d.active_cases !== undefined) {
+                                            const el = document.getElementById('stat-active-cases');
+                                            if (el) el.innerText = d.active_cases;
+                                        }
+                                        if (d.appointments !== undefined) {
+                                            const el = document.getElementById('stat-appointments');
+                                            if (el) el.innerText = d.appointments;
+                                        }
+                                        if (d.clients !== undefined) {
+                                            const el = document.getElementById('stat-clients');
+                                            if (el) el.innerText = d.clients;
+                                        }
+                                        if (d.advocates !== undefined) {
+                                            const el = document.getElementById('stat-advocates-count');
+                                            if (el) el.innerText = d.advocates;
+                                        }
+                                    }
+                                }
+                            } catch(e) {}
+                        })();
+                    </script>
 
                     <!-- Quick Navigation Cards Grid -->
                     <h3 style="margin-bottom: 1rem; color: var(--primary); font-size: 1.2rem;">Quick Section Navigation</h3>
@@ -1063,33 +1092,6 @@
                     <div style="background: var(--color-white); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow);">
                         <h3>Manage Legal Professionals</h3>
                         <p style="color: var(--color-text-light); margin-top: 1rem; margin-bottom: 2rem;">Add new advocates to display on the public website.</p>
-                        
-                        <!-- Authority Signature Upload for Staff ID Cards -->
-                        <div style="background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border-left: 5px solid #d4af37;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.2rem;">
-                                <div>
-                                    <h4 style="margin: 0; color: #0a1628; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
-                                        <span>✍️</span> Authority Signature (for Staff ID Cards)
-                                    </h4>
-                                    <p style="margin: 6px 0 0 0; color: #64748b; font-size: 0.85rem; max-width: 520px; line-height: 1.45;">
-                                        Upload the Chamber Authorised Signatory's signature image (PNG recommended with transparent background) to automatically print on all official Staff ID Cards.
-                                    </p>
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                                    <div id="authority-signature-preview-box" style="width: 140px; height: 50px; border: 1.5px dashed #cbd5e1; border-radius: 8px; background: #ffffff; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 4px; box-sizing: border-box;">
-                                        <img id="authority-signature-preview-img" src="" alt="Authority Signature" style="max-width: 100%; max-height: 100%; object-fit: contain; display: none;">
-                                        <span id="authority-signature-placeholder" style="font-size: 0.75rem; color: #94a3b8; font-style: italic; text-align: center;">No signature</span>
-                                    </div>
-                                    <label class="btn btn-primary" style="margin: 0; padding: 0.65rem 1.25rem; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px; background: #D4AF37; color: #0A1628; font-weight: 700; border: none; border-radius: 8px; box-shadow: 0 2px 8px rgba(212,175,55,0.3);">
-                                        <span>📤</span> Upload Signature
-                                        <input type="file" id="authority-signature-input" accept="image/*" style="display: none;" onchange="handleAuthoritySignatureUpload(event)">
-                                    </label>
-                                    <button type="button" id="btn-remove-authority-signature" class="btn" style="display: none; padding: 0.65rem 1rem; background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer;" onclick="removeAuthoritySignature()">
-                                        <span>🗑️</span> Remove
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
                         
                         <form id="add-advocate-form" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; background: rgba(255,255,255,0.5); padding: 2rem; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
                             <div class="form-group">
@@ -2112,20 +2114,11 @@
                         </table>
                     </div>
 
-                    <!-- Bottom Maroon Footer Bar with Barcode & Authorised Signatory -->
-                    <div style="height: 76px; background: linear-gradient(180deg, #420816 0%, #28030b 100%); border-top: 2.5px solid #d4af37; display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; box-sizing: border-box; position: relative; z-index: 5;">
-                        <!-- Barcode for Name (Left) -->
-                        <div id="id-card-barcode-box" style="background: #ffffff; border-radius: 4px; padding: 3px 5px; box-shadow: 0 2px 6px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; width: 145px; height: 50px; box-sizing: border-box; overflow: hidden;">
-                            <canvas id="id-card-barcode-canvas" width="280" height="72" style="width: 135px; height: 38px; display: block; border-radius: 2px;"></canvas>
-                        </div>
-
-                        <!-- Authorised Signatory (Right) -->
-                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 140px;">
-                            <div style="font-family: 'Poppins', Arial, sans-serif; font-size: 8.5px; font-weight: 800; letter-spacing: 1.2px; color: #ffffff; text-transform: uppercase; margin-bottom: 2px;">AUTHORISED SIGNATORY</div>
-                            <div style="height: 38px; display: flex; align-items: center; justify-content: center;">
-                                <img id="id-card-signature-img" src="" alt="Authorised Signature" style="max-height: 38px; max-width: 135px; object-fit: contain; display: none;" crossorigin="anonymous">
-                                <div id="id-card-signature-fallback" style="font-family: 'Brush Script MT', 'Dancing Script', cursive; font-size: 24px; color: #ffffff; font-style: italic; line-height: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.4);">Signature</div>
-                            </div>
+                    <!-- Bottom Maroon Footer Bar with Centered Barcode -->
+                    <div style="height: 66px; background: linear-gradient(180deg, #420816 0%, #28030b 100%); border-top: 2.5px solid #d4af37; display: flex; align-items: center; justify-content: center; padding: 6px 16px; box-sizing: border-box; position: relative; z-index: 5;">
+                        <!-- Barcode for Name (Centered) -->
+                        <div id="id-card-barcode-box" style="background: #ffffff; border-radius: 4px; padding: 3px 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; min-width: 170px; height: 48px; box-sizing: border-box; overflow: hidden;">
+                            <canvas id="id-card-barcode-canvas" width="340" height="72" style="width: 170px; height: 38px; display: block; border-radius: 2px;"></canvas>
                         </div>
                     </div>
 
@@ -2597,7 +2590,7 @@
         })();
     </script>
 
-    <script src="js/admin.js?v=50"></script>
+    <script src="js/admin.js?v=52"></script>
     <script>
     // Direct in-page handler for Staff ID Card - strictly shows Designation / Role, never Practice Areas / Specializations
     (function() {
@@ -2745,20 +2738,6 @@
                     watermarkEl.style.display = 'block';
                 }
 
-                const sigEl = document.getElementById('id-card-signature-img');
-                const sigFallback = document.getElementById('id-card-signature-fallback');
-                const sigUrl = window.globalAuthoritySignatureUrl || data.authority_signature || '/chamber-authority-signature.png';
-                if (sigUrl && sigEl) {
-                    sigEl.onload = function() {
-                        sigEl.style.display = 'block';
-                        if (sigFallback) sigFallback.style.display = 'none';
-                    };
-                    sigEl.onerror = function() {
-                        sigEl.style.display = 'none';
-                        if (sigFallback) sigFallback.style.display = 'block';
-                    };
-                    sigEl.src = sigUrl;
-                }
             }).catch(err => console.warn('Settings fetch error:', err));
 
             const modal = document.getElementById('id-card-modal');

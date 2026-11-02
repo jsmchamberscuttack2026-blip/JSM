@@ -444,7 +444,7 @@ def execute_turso2_query(sql, params=None):
         method='POST'
     )
     try:
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=2.5) as resp:
             data = json.loads(resp.read().decode('utf-8'))
             results = data.get('results', [])
             if not results:
@@ -1640,11 +1640,17 @@ _advocate_photos_cache = {}
 _news_images_cache = {}
 
 _opinions_cache = {"data": None, "ts": 0}
+_news_cache = {"data": None, "ts": 0}
+_services_cache = {"data": None, "ts": 0}
+_appt_settings_cache = {"data": None, "ts": 0}
 
 def invalidate_all_public_caches():
-    global _public_cache, _chamber_images_cache, _advocates_cache, _advocates_cache_time, _opinions_cache, _advocate_photos_cache, _news_images_cache, _public_website_cache
+    global _public_cache, _chamber_images_cache, _advocates_cache, _advocates_cache_time, _opinions_cache, _news_cache, _services_cache, _appt_settings_cache, _advocate_photos_cache, _news_images_cache, _public_website_cache
     _public_website_cache = {"enabled": True, "ts": 0}
     _opinions_cache = {"data": None, "ts": 0}
+    _news_cache = {"data": None, "ts": 0}
+    _services_cache = {"data": None, "ts": 0}
+    _appt_settings_cache = {"data": None, "ts": 0}
     _advocate_photos_cache = {}
     _news_images_cache = {}
     _public_cache = {
@@ -1753,6 +1759,7 @@ def make_slim_public_bundle(full_bundle):
             n_copy["image_url"] = ""
         slim["news"].append(n_copy)
 
+    slim["appointment_settings"] = full_bundle.get("appointment_settings", {})
     return slim
 
 def get_default_opinions():
@@ -1852,35 +1859,44 @@ def get_all_opinions():
             })
     except Exception as e:
         logging.error(f"Error fetching opinions from Turso 2: {e}")
-        # 2. Resilient fallback to MongoDB Atlas
-        if opinions_col is not None:
-            try:
-                for doc in opinions_col.find().sort([("date", -1), ("order", 1)]):
-                    doc_id = str(doc.get("id") or doc.get("_id"))
-                    op_list.append({
-                        "_id": doc_id,
-                        "id": doc_id,
-                        "title": doc.get('title', ''),
-                        "date": doc.get('date', ''),
-                        "author": doc.get('author', 'Chamber Counsel'),
-                        "category": doc.get('category', 'Legal Editorial'),
-                        "message": doc.get('message', ''),
-                        "order": int(doc.get('order', 1)),
-                        "created_at": doc.get('created_at', '')
-                    })
-            except Exception as me:
-                logging.error(f"MongoDB opinions fallback error: {me}")
 
-    if not op_list and not is_opinions_seeded():
+    # 2. Resilient fallback to MongoDB Atlas
+    if not op_list and opinions_col is not None:
         try:
-            seed_initial_opinions()
-            return get_all_opinions()
+            for doc in opinions_col.find().sort([("date", -1), ("order", 1)]):
+                doc_id = str(doc.get("id") or doc.get("_id"))
+                op_list.append({
+                    "_id": doc_id,
+                    "id": doc_id,
+                    "title": doc.get('title', ''),
+                    "date": doc.get('date', ''),
+                    "author": doc.get('author', 'Chamber Counsel'),
+                    "category": doc.get('category', 'Legal Editorial'),
+                    "message": doc.get('message', ''),
+                    "order": int(doc.get('order', 1)),
+                    "created_at": doc.get('created_at', '')
+                })
+        except Exception as me:
+            logging.error(f"MongoDB opinions fallback error: {me}")
+
+    # 3. Always guarantee default opinions if still empty (so error NEVER shows)
+    if not op_list:
+        try:
+            if not is_opinions_seeded():
+                try: seed_initial_opinions()
+                except Exception: pass
+            op_list = get_default_opinions()
         except Exception:
             pass
 
-    _opinions_cache["data"] = op_list
-    _opinions_cache["ts"] = now
-    return op_list
+    if op_list:
+        _opinions_cache["data"] = op_list
+        _opinions_cache["ts"] = now
+        return op_list
+    elif _opinions_cache.get("data"):
+        return _opinions_cache["data"]
+
+    return []
 
 def get_public_bundle():
     global _public_cache
@@ -1922,6 +1938,10 @@ def get_public_bundle():
             return _public_cache.get("advocates") or []
 
     def _fetch_services():
+        global _services_cache
+        now = time.time()
+        if _services_cache.get("data") is not None and (now - _services_cache.get("ts", 0) < 60):
+            return _services_cache["data"]
         srvs = []
         try:
             if services_col is not None:
@@ -1932,12 +1952,19 @@ def get_public_bundle():
                     sc['_id'] = str(sc['_id'])
                     sc['id'] = str(sc['_id'])
                     srvs.append(sc)
+            _services_cache["data"] = srvs
+            _services_cache["ts"] = now
             return srvs
         except Exception as e:
             logging.error(f"Error fetching services for bundle: {e}")
+            if _services_cache.get("data"): return _services_cache["data"]
             return _public_cache.get("services") or []
 
     def _fetch_news():
+        global _news_cache
+        now = time.time()
+        if _news_cache.get("data") is not None and (now - _news_cache.get("ts", 0) < 60):
+            return _news_cache["data"]
         n_list = []
         try:
             rows = execute_turso2_query('SELECT * FROM news ORDER BY date DESC, display_order ASC, created_at DESC')
@@ -1959,9 +1986,12 @@ def get_public_bundle():
                     "order": int(r.get('display_order') or r.get('order') or 99),
                     "created_at": r.get('created_at') or ''
                 })
+            _news_cache["data"] = n_list
+            _news_cache["ts"] = now
             return n_list
         except Exception as e:
             logging.error(f"Error fetching news for bundle: {e}")
+            if _news_cache.get("data"): return _news_cache["data"]
             return _public_cache.get("news") or []
 
     def _fetch_opinions():
@@ -1971,25 +2001,43 @@ def get_public_bundle():
             logging.error(f"Error fetching opinions for bundle: {e}")
             return _public_cache.get("opinions") or []
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    def _fetch_appointment_settings():
+        global _appt_settings_cache
+        now = time.time()
+        if _appt_settings_cache.get("data") is not None and (now - _appt_settings_cache.get("ts", 0) < 60):
+            return _appt_settings_cache["data"]
+        try:
+            config = config_col.find_one({"_id": "global_config"}) or {}
+            settings = config.get("appointment_settings", {})
+            _appt_settings_cache["data"] = settings
+            _appt_settings_cache["ts"] = now
+            return settings
+        except Exception as e:
+            logging.error(f"Error fetching appointment settings for bundle: {e}")
+            return _appt_settings_cache.get("data") or {}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
         f_settings = executor.submit(_fetch_settings)
         f_advs = executor.submit(_fetch_advocates)
         f_srvs = executor.submit(_fetch_services)
         f_news = executor.submit(_fetch_news)
         f_opinions = executor.submit(_fetch_opinions)
+        f_appts = executor.submit(_fetch_appointment_settings)
 
         settings_doc = f_settings.result()
         advs = f_advs.result()
         srvs = f_srvs.result()
         n_list = f_news.result()
         op_list = f_opinions.result()
+        appt_settings = f_appts.result()
 
     bundle = {
         "settings": settings_doc,
         "advocates": advs,
         "services": srvs,
         "news": n_list,
-        "opinions": op_list
+        "opinions": op_list,
+        "appointment_settings": appt_settings
     }
     _public_cache["bundle"] = bundle
     _public_cache["settings"] = settings_doc
@@ -1997,8 +2045,21 @@ def get_public_bundle():
     _public_cache["services"] = srvs
     _public_cache["news"] = n_list
     _public_cache["opinions"] = op_list
+    _public_cache["appointment_settings"] = appt_settings
     _public_cache["last_updated"] = now
     return bundle
+
+@app.route('/api/public/bundle', methods=['GET'])
+def get_public_bundle_endpoint():
+    try:
+        bundle = get_public_bundle()
+        slim = make_slim_public_bundle(bundle)
+        resp = jsonify(slim)
+        resp.headers["Cache-Control"] = "public, max-age=60, s-maxage=120, stale-while-revalidate=300"
+        return resp, 200
+    except Exception as e:
+        logging.error(f"Error in /api/public/bundle: {e}")
+        return jsonify({"settings": {}, "advocates": [], "services": [], "news": [], "opinions": [], "appointment_settings": {}}), 200
 
 @app.route('/')
 @app.route('/index.html')
@@ -4859,6 +4920,37 @@ def ensure_daily_passwords():
     
     return config
 
+@app.route('/api/admin/dashboard-stats', methods=['GET'])
+def get_admin_dashboard_stats():
+    try:
+        cases_cnt = len(_cases_cache["data"]) if _cases_cache.get("data") is not None else (cases_col.count_documents({"status": {"$ne": "Finished & Archived"}}) if cases_col is not None else 0)
+        appts_cnt = len(_appointments_cache["data"]) if _appointments_cache.get("data") is not None else (appointments_col.count_documents({}) if appointments_col is not None else 0)
+        advs_cnt = len(_advocates_cache["data"]) if _advocates_cache.get("data") is not None else (advocates_col.count_documents({}) if advocates_col is not None else 0)
+        
+        clients_cnt = len(_archived_cases_cache["data"]) if _archived_cases_cache.get("data") is not None else 0
+        if clients_cnt == 0:
+            try:
+                rows = execute_turso_query("SELECT count(*) as cnt FROM clients_history")
+                if rows:
+                    clients_cnt = int(rows[0].get('cnt') or 0)
+            except Exception:
+                clients_cnt = 0
+
+        return jsonify({
+            "active_cases": cases_cnt,
+            "appointments": appts_cnt,
+            "clients": clients_cnt,
+            "advocates": advs_cnt
+        }), 200
+    except Exception as e:
+        logging.error(f"Error fetching dashboard stats: {e}")
+        return jsonify({
+            "active_cases": 0,
+            "appointments": 0,
+            "clients": 0,
+            "advocates": 0
+        }), 200
+
 _cases_cache = {"data": None, "ts": 0}
 
 def invalidate_cases_cache():
@@ -7388,9 +7480,19 @@ def unlock_admin_device():
 
 @app.route('/api/appointments/settings', methods=['GET'])
 def get_appointment_settings_public():
-    config = config_col.find_one({"_id": "global_config"}) or {}
-    settings = config.get("appointment_settings", {})
-    return jsonify(settings), 200
+    global _appt_settings_cache
+    now = time.time()
+    if _appt_settings_cache.get("data") is not None and (now - _appt_settings_cache.get("ts", 0) < 60):
+        return jsonify(_appt_settings_cache["data"]), 200
+    try:
+        config = config_col.find_one({"_id": "global_config"}) or {}
+        settings = config.get("appointment_settings", {})
+        _appt_settings_cache["data"] = settings
+        _appt_settings_cache["ts"] = now
+        return jsonify(settings), 200
+    except Exception as e:
+        logging.error(f"Error in get_appointment_settings_public: {e}")
+        return jsonify({}), 200
 
 @app.route('/api/system-config/appointments', methods=['POST'])
 def save_appointment_settings():
@@ -8071,30 +8173,19 @@ def add_staff_news():
 
 @app.route('/api/opinions', methods=['GET'])
 def get_opinions():
-    date_filter = request.args.get('date')
-    if date_filter:
+    try:
+        date_filter = request.args.get('date')
+        all_ops = get_all_opinions() or []
+        if date_filter:
+            filtered = [o for o in all_ops if o.get('date') == date_filter]
+            return jsonify(filtered), 200
+        return jsonify(all_ops), 200
+    except Exception as e:
+        logging.error(f"Error in get_opinions: {e}")
         try:
-            rows = execute_turso2_query('SELECT * FROM opinions WHERE date = ? ORDER BY date DESC, display_order ASC', [date_filter])
-            opinions = []
-            for r in rows:
-                opinions.append({
-                    "_id": r.get('id'),
-                    "id": r.get('id'),
-                    "title": r.get('title') or '',
-                    "date": r.get('date') or '',
-                    "author": r.get('author') or 'Chamber Counsel',
-                    "category": r.get('category') or 'Legal Editorial',
-                    "message": r.get('message') or '',
-                    "order": int(r.get('display_order') or r.get('order') or 1),
-                    "created_at": r.get('created_at') or ''
-                })
-            return jsonify(opinions), 200
-        except Exception as e:
-            logging.error(f"Error fetching opinions from Turso 2: {e}")
-            all_ops = get_all_opinions()
-            return jsonify([o for o in all_ops if o.get('date') == date_filter]), 200
-
-    return jsonify(get_all_opinions()), 200
+            return jsonify(get_default_opinions()), 200
+        except Exception:
+            return jsonify([]), 200
 
 @app.route('/api/opinions', methods=['POST'])
 def add_opinion():

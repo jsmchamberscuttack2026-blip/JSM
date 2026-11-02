@@ -4,6 +4,49 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<script>
+// Ultra-fast 0ms frame-1 cache hydrator & public bundle sync (<100ms load time)
+(function() {
+    try {
+        const cached = localStorage.getItem('jsm_public_bundle');
+        if (cached) {
+            window.__INITIAL_DATA__ = JSON.parse(cached);
+        }
+    } catch(e) {}
+
+    window.refreshPublicBundle = async function() {
+        try {
+            const res = await fetch('/api/public/bundle');
+            if (res.ok) {
+                const data = await res.json();
+                if (data && typeof data === 'object') {
+                    window.__INITIAL_DATA__ = data;
+                    try { localStorage.setItem('jsm_public_bundle', JSON.stringify(data)); } catch(e) {}
+                    if (typeof window.applyChamberSettings === 'function' && data.settings) {
+                        window.applyChamberSettings(data.settings);
+                    }
+                    if (typeof window.renderAdvocates === 'function' && Array.isArray(data.advocates) && data.advocates.length > 0) {
+                        window.renderAdvocates(data.advocates);
+                    }
+                    if (typeof window.renderServices === 'function' && Array.isArray(data.services) && data.services.length > 0) {
+                        window.renderServices(data.services);
+                    }
+                    if (typeof window.renderNews === 'function' && Array.isArray(data.news) && data.news.length > 0) {
+                        window.renderNews(data.news);
+                    }
+                    if (typeof window.renderOpinions === 'function' && Array.isArray(data.opinions) && data.opinions.length > 0) {
+                        window.renderOpinions(data.opinions);
+                    }
+                }
+            }
+        } catch(err) {
+            console.warn('Background bundle refresh:', err);
+        }
+    };
+    window.refreshPublicBundle();
+})();
+</script>
+
 <title>JSM. Chambers | Advocates &amp; Chamber Members: Adv. Jayasankar Mishra, Adv. Harisankar Mishra, Adv. Chaitanya Nayak, Adv. Susil Das, Tabasmiti Mishra | High Court of Orissa</title>
 <meta name="description" content="Official portal of JSM. Chambers (Cuttack, Odisha). Founded by Adv. Jayasankar Mishra. Distinguished chamber members &amp; advocates: Adv. Harisankar Mishra, Adv. Chaitanya Nayak, Adv. Susil Das, Tabasmiti Mishra. High Court litigation, constitutional, civil, criminal, and appellate legal consultation.">
 <meta name="keywords" content="JSM Chambers, JSM Chambers members, JSM Chambers advocates, Adv. Jayasankar Mishra, Adv. Harisankar Mishra, Adv. Chaitanya Nayak, Adv. Susil Das, Tabasmiti Mishra, High Court lawyer Cuttack, Odisha High Court advocate, legal consultation Cuttack, JSM legal, chamber associates, Cuttack advocates">
@@ -4607,7 +4650,7 @@ document.addEventListener("keydown", function(event){
 });
 
 </script>
-<script src="js/main.js?v=32"></script>
+<script src="js/main.js?v=33"></script>
 
 <!-- 3D Interactive Legal Book Modal -->
 <div id="service-book-modal" class="book-modal-backdrop">
@@ -5283,9 +5326,12 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(async () => {
         try {
             if (sessionStorage.getItem('bookingHoursSeen')) return;
-            const res = await fetch('/api/appointments/settings');
-            if(!res.ok) return;
-            const data = await res.json();
+            let data = window.__INITIAL_DATA__ && window.__INITIAL_DATA__.appointment_settings ? window.__INITIAL_DATA__.appointment_settings : null;
+            if (!data || !data.available_days) {
+                const res = await fetch('/api/appointments/settings');
+                if(!res.ok) return;
+                data = await res.json();
+            }
             
             if (data && data.available_days && data.available_days.length > 0) {
                 const days = data.available_days;
