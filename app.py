@@ -1908,6 +1908,13 @@ def get_public_bundle():
             for adv in advocates_col.find().sort([("is_owner", -1), ("_id", 1)]):
                 adv_copy = dict(adv)
                 adv_copy['_id'] = str(adv_copy['_id'])
+                is_owner = bool(adv_copy.get('is_owner'))
+                r = str(adv_copy.get('role') or '').strip()
+                s = str(adv_copy.get('specialty') or '').strip()
+                # Strictly sanitize: if role is missing, matches specialty, or contains practice area phrases, set clean designation
+                if not r or r.lower() == s.lower() or len(r) > 35 or any(w in r.lower() for w in ['advocacy', 'specializ', 'constitutional', 'civil law', 'criminal law', 'banking law', '|', 'years']):
+                    r = "Chamber Owner & Lead Counsel" if is_owner else "Senior Advocate"
+                adv_copy['role'] = r
                 advs.append(adv_copy)
             return advs
         except Exception as e:
@@ -6507,7 +6514,7 @@ def ensure_chamber_owner_advocate():
 
         existing = advocates_col.find_one({"name": owner_name})
         if existing:
-            advocates_col.update_one({"_id": existing["_id"]}, {"$set": {"is_owner": True}})
+            advocates_col.update_one({"_id": existing["_id"]}, {"$set": {"is_owner": True, "role": owner_role}})
         else:
             advocates_col.insert_one({
                 "is_owner": True,
