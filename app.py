@@ -6398,6 +6398,10 @@ def verify_code():
 #  SPECIAL OTP EMERGENCY MANAGEMENT API (48H AUTO-CLEANUP)
 # =========================================================
 
+_last_special_otp_cleanup_ts = 0
+_special_otp_cache = {"data": None, "ts": 0}
+_special_otp_logs_cache = {"data": None, "ts": 0}
+
 def cleanup_expired_special_otp_data():
     """Removes emergency OTP logs and audit tracking older than 48 hours."""
     now_ist = get_now_ist()
@@ -6408,15 +6412,31 @@ def cleanup_expired_special_otp_data():
         except Exception as e:
             logging.warning(f"Error purging 48h emergency otp logs: {e}")
 
+def cleanup_expired_special_otp_data_throttled():
+    """Run cleanup periodically (every 30 min) without delaying client requests."""
+    global _last_special_otp_cleanup_ts
+    now = time.time()
+    if now - _last_special_otp_cleanup_ts > 1800:
+        _last_special_otp_cleanup_ts = now
+        try:
+            cleanup_expired_special_otp_data()
+        except Exception:
+            pass
+
 @app.route('/api/admin/special-otp/clients', methods=['GET'])
 def get_special_otp_clients():
+    global _special_otp_cache
+    now = time.time()
+    if _special_otp_cache["data"] is not None and (now - _special_otp_cache["ts"] < 4.0):
+        return jsonify(_special_otp_cache["data"]), 200
+
     try:
-        cleanup_expired_special_otp_data()
+        cleanup_expired_special_otp_data_throttled()
         now_ist = get_now_ist()
         today_str = now_ist.strftime("%Y-%m-%d")
         
-        # Query active registered clients
-        cases = list(cases_col.find({"status": {"$ne": "Finished & Archived"}}).sort("name", 1))
+        # Query active registered clients using indexed _id sort
+        cases = list(cases_col.find({"status": {"$ne": "Finished & Archived"}}).sort("_id", -1))
         
         clients_list = []
         total_registered = len(cases)
@@ -6465,13 +6485,19 @@ def get_special_otp_clients():
                 status_label = "Unused Today (3 left)"
                 badge_class = "badge-success"
                 
+            c_name = c.get("client_name") or c.get("name") or "Client"
+            c_num = c.get("chamber_case_number") or c.get("court_case_number") or c.get("case_number") or "N/A"
+            c_court_num = c.get("court_case_number") or ""
+            c_email = c.get("email") or c.get("client_email") or ""
+            c_phone = c.get("phone") or c.get("client_phone") or ""
+
             clients_list.append({
                 "case_id": str(c["_id"]),
-                "name": c.get("name") or "Unknown Client",
-                "email": c.get("email") or "",
-                "phone": c.get("phone") or "",
-                "case_number": c.get("case_number") or "N/A",
-                "court_case_number": c.get("court_case_number") or "",
+                "name": c_name,
+                "email": c_email,
+                "phone": c_phone,
+                "case_number": c_num,
+                "court_case_number": c_court_num,
                 "case_type": c.get("case_type") or "General",
                 "used_today": used_today,
                 "bonus_otps": bonus_otps,
@@ -6497,7 +6523,7 @@ def get_special_otp_clients():
             
         clients_list.sort(key=sort_priority)
         
-        return jsonify({
+        payload = {
             "success": True,
             "today": today_str,
             "stats": {
@@ -6508,13 +6534,17 @@ def get_special_otp_clients():
                 "total_bonus_otps": total_bonus_otps
             },
             "clients": clients_list
-        }), 200
+        }
+        _special_otp_cache["data"] = payload
+        _special_otp_cache["ts"] = time.time()
+        return jsonify(payload), 200
     except Exception as e:
         logging.error(f"Error fetching special OTP clients: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/admin/special-otp/grant', methods=['POST'])
 def grant_special_otp():
+    global _special_otp_cache, _special_otp_logs_cache
     try:
         data = request.get_json(force=True, silent=True) or {}
         case_id = data.get('case_id', '').strip()
@@ -6552,12 +6582,16 @@ def grant_special_otp():
             }}
         )
         
+        c_name = case.get("client_name") or case.get("name") or "Client"
+        c_num = case.get("chamber_case_number") or case.get("court_case_number") or case.get("case_number") or "N/A"
+        c_email = case.get("email") or case.get("client_email") or ""
+
         expires_at_dt = now_ist + timedelta(hours=48)
         log_entry = {
             "case_id": str(case["_id"]),
-            "name": case.get("name") or "Client",
-            "email": case.get("email") or "",
-            "case_number": case.get("case_number") or "N/A",
+            "name": c_name,
+            "email": c_email,
+            "case_number": c_num,
             "bonus_granted": bonus_count,
             "total_bonus_today": new_bonus,
             "total_allowed_today": new_total_allowed,
@@ -6573,11 +6607,15 @@ def grant_special_otp():
         if emergency_otp_logs_col is not None:
             emergency_otp_logs_col.insert_one(log_entry)
             
+        # Invalidate in-memory caches immediately
+        _special_otp_cache["data"] = None
+        _special_otp_logs_cache["data"] = None
+
         return jsonify({
             "success": True,
-            "message": f"Special emergency access granted! Added +{bonus_count} bonus OTP(s) to {case.get('name')}. Today's quota: {current_count}/{new_total_allowed} ({rem} attempts available). All tracking records will auto-clean in 48 hours.",
-            "client_name": case.get('name'),
-            "email": case.get('email'),
+            "message": f"Special emergency access granted! Added +{bonus_count} bonus OTP(s) to {c_name}. Today's quota: {current_count}/{new_total_allowed} ({rem} attempts available). All tracking records will auto-clean in 48 hours.",
+            "client_name": c_name,
+            "email": c_email,
             "bonus_added": bonus_count,
             "new_bonus_total": new_bonus,
             "total_allowed": new_total_allowed,
@@ -6589,8 +6627,13 @@ def grant_special_otp():
 
 @app.route('/api/admin/special-otp/logs', methods=['GET'])
 def get_special_otp_logs():
+    global _special_otp_logs_cache
+    now = time.time()
+    if _special_otp_logs_cache["data"] is not None and (now - _special_otp_logs_cache["ts"] < 4.0):
+        return jsonify(_special_otp_logs_cache["data"]), 200
+
     try:
-        cleanup_expired_special_otp_data()
+        cleanup_expired_special_otp_data_throttled()
         now_ist = get_now_ist()
         
         if emergency_otp_logs_col is None:
@@ -6629,7 +6672,10 @@ def get_special_otp_logs():
                 "expires_in_label": expires_in_label
             })
             
-        return jsonify({"success": True, "logs": logs}), 200
+        payload = {"success": True, "logs": logs}
+        _special_otp_logs_cache["data"] = payload
+        _special_otp_logs_cache["ts"] = time.time()
+        return jsonify(payload), 200
     except Exception as e:
         logging.error(f"Error fetching special OTP logs: {e}")
         return jsonify({"error": str(e)}), 500
@@ -8437,7 +8483,7 @@ def get_live_chamber_context():
             img_url = "/assets/images/advocate_logo.jpg"
             
         role = adv.get("role") or adv.get("designation") or ("Chamber Owner & Lead Counsel" if is_owner else "Advocate")
-        spec = adv.get("specialization") or "Civil, Criminal & Appellate Practice"
+        spec = adv.get("specialization") or adv.get("specialty") or adv.get("practice_areas") or ("Civil, Criminal & Constitutional Law" if is_owner else "Civil & Criminal Practice")
         exp = adv.get("experience") or ""
         
         member_obj = {
@@ -8505,12 +8551,19 @@ def chatbot_query():
 
     # Detect primary intents
     is_owner = any(w in query_lower for w in ["owner", "founder", "head", "jayasankar", "boss", "who owns", "who runs", "lead counsel"])
-    is_members = any(w in query_lower for w in ["member", "advocate", "lawyer", "team", "staff", "who works", "all members", "associates", "colleague"])
+    is_members = any(w in query_lower for w in ["member", "advocate", "lawyer", "team", "staff", "who works", "all members", "associates", "colleague", "specialization", "specialty", "practice area", "specialist"])
     is_timings = any(w in query_lower for w in ["time", "timing", "hours", "when open", "open", "close", "working days", "available days", "schedule hours"])
     is_booking = any(w in query_lower for w in ["book", "appointment", "consultation", "schedule", "meet", "how to book", "reservation", "booking"])
     is_about = any(w in query_lower for w in ["about", "chamber", "background", "history", "what is jsm", "overview", "heritage", "ethos"])
     is_contact = any(w in query_lower for w in ["contact", "phone", "email", "address", "location", "where is", "map"])
 
+    # Group advocates by Practice Areas / Specializations
+    practice_areas_map = {}
+    for m in ctx["members"]:
+        sp = m.get("specialization") or "Civil, Criminal & Appellate Practice"
+        practice_areas_map.setdefault(sp, []).append(f"{m['name']} ({m['role']})")
+    
+    pa_summary = "\n".join([f"- Practice Area / Specialization: {sp}\n  Designated Advocates: {', '.join(advs)}" for sp, advs in practice_areas_map.items()])
     members_summary = "\n".join([f"- {m['name']} ({m['role']}, Spec: {m['specialization']})" for m in ctx["members"]])
     available_days_str = ", ".join(ctx["timings"]["available_days"])
     
@@ -8524,14 +8577,23 @@ Current Live Chamber Information:
 - In-Chamber Consultation Hours: {ctx['timings']['consultation_start']} to {ctx['timings']['consultation_end']}
 - Available Working Days: {available_days_str}
 - Appointment Bookings Status: {'Open for bookings' if ctx['appointments_open'] else 'Currently Closed'}
-- Chamber Members & Advocates:
+
+CHAMBER PRACTICE AREAS & SPECIALIZATIONS BREAKDOWN:
+{pa_summary}
+
+ALL REGISTERED CHAMBER ADVOCATES:
 {members_summary}
 
-Rules:
-1. Always base answers strictly on the above real-time data.
-2. Be polite, clear, professional, and concise (maximum 2-3 short paragraphs).
-3. If asked about booking, explain that users can book directly through the on-screen appointment booking modal.
-4. If asked about the owner, mention {ctx['owner']['name']}.
+CRITICAL RULES:
+1. When answering any question regarding Advocates, Lawyers, Legal Team, Associates, or Chamber Members:
+   - You MUST FIRST analyze and explain the Practice Areas & Specializations of the Chamber.
+   - Categorize the practice domains (e.g. Constitutional Law & Writs, Civil & Real Estate, Commercial Arbitration, Criminal Trial & Defense, Statutory Compliance).
+   - Under each Practice Area / Specialization domain, introduce the specific advocate(s) who lead or handle that domain along with their role and focus.
+   - Explain how clients with legal matters in those specific practice areas can consult or book an appointment.
+2. Always base answers strictly on the above real-time data.
+3. Be polite, clear, professional, and concise.
+4. If asked about booking, explain that users can book directly through the on-screen appointment booking modal.
+5. If asked about the owner, mention {ctx['owner']['name']}.
 """
 
     reply_text = ""
@@ -8543,7 +8605,7 @@ Rules:
                     {'role': 'system', 'content': system_prompt},
                     {'role': 'user', 'content': user_query}
                 ],
-                max_tokens=300
+                max_tokens=450
             )
             reply_text = resp.choices[0].message.content.strip()
         except Exception as e:
@@ -8554,7 +8616,16 @@ Rules:
         if is_owner:
             reply_text = f"The Chamber Owner and Lead Counsel of {ctx['name']} is **{ctx['owner']['name']}**. Under his guidance, the chamber provides high-caliber strategic advocacy and legal consultation."
         elif is_members:
-            reply_text = f"Here are the distinguished advocates and legal members of {ctx['name']}:"
+            # First analyze Practice Areas & Specializations then answer
+            lines = [
+                f"### ⚖️ Practice Areas & Specializations Analysis — {ctx['name']}",
+                "Our chamber is organized into distinct practice specializations to provide focused, high-caliber legal advocacy:\n"
+            ]
+            for s, adv_list in practice_areas_map.items():
+                names = ", ".join([f"**{a}**" for a in adv_list])
+                lines.append(f"• **Practice Domain ({s})**:\n  Led by {names}\n")
+            lines.append("Below are the complete profiles and credentials of each advocate on our team. You can book an appointment directly with the specialist handling your domain.")
+            reply_text = "\n".join(lines)
         elif is_booking:
             reply_text = f"You can easily book an appointment with our legal team right on this website! Online booking is open from **{ctx['timings']['booking_start']} to {ctx['timings']['booking_end']}** on **{available_days_str}**. Click the **Book Appointment** button below to open the booking form directly."
         elif is_timings:
@@ -8576,7 +8647,7 @@ Rules:
     if is_owner or "owner" in query_lower or "jayasankar" in query_lower or is_about:
         response_payload["owner_card"] = ctx["owner"]
 
-    if is_members or "lawyer" in query_lower or "advocate" in query_lower:
+    if is_members or "lawyer" in query_lower or "advocate" in query_lower or "team" in query_lower or "specialization" in query_lower:
         response_payload["members_list"] = ctx["members"]
 
     if is_timings or "hour" in query_lower or "time" in query_lower:

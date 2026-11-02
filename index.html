@@ -6512,7 +6512,7 @@ window.showToast = function(message, type = 'success') {
                 <div class="jsm-quick-chips">
                     <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('About JSM Chambers')">🏛️ About Chambers</button>
                     <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('Chamber Owner & Senior Counsel')">⚖️ Chamber Owner</button>
-                    <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('All Advocates & Members')">👥 Advocates & Team</button>
+                    <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('Advocates & Team: Practice Areas & Specializations')">👥 Advocates & Team</button>
                     <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('Official Timings & Booking Hours')">⏰ Official Timings</button>
                     <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('How to book an appointment?')">📅 Book Appointment</button>
                     <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('Chamber Address & Contact Info')">📍 Office Location</button>
@@ -6525,17 +6525,9 @@ window.showToast = function(message, type = 'success') {
         </div>
     </div>
 
-    <!-- Voice Listening Active Banner -->
-    <div class="jsm-voice-listening-banner" id="jsm-voice-listening-banner">
-        <span style="animation: jsmBounce 1s infinite;">🎙️</span> Listening to your voice... Speak now!
-    </div>
-
-    <!-- Input Footer -->
+    <!-- Input Footer (Direct Text Editor) -->
     <div class="jsm-chat-footer">
-        <button class="jsm-mic-btn" id="jsm-mic-btn" onclick="toggleJsmSpeechRecognition()" title="Voice Input (Speech-to-Text)">
-            🎙️
-        </button>
-        <input type="text" id="jsm-chat-input" class="jsm-input-box" placeholder="Ask about advocates, timings, booking..." onkeydown="handleJsmInputKey(event)">
+        <input type="text" id="jsm-chat-input" class="jsm-input-box" placeholder="Ask about practice areas, advocates, timings, booking..." onkeydown="handleJsmInputKey(event)">
         <button class="jsm-send-btn" onclick="submitJsmChat()" title="Send Message">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -6570,68 +6562,10 @@ let isJsmListening = false;
 let jsmChatOpen = false;
 
 // Initialize Web Speech Synthesis & Recognition
-function initJsmVoice() {
-    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRec) {
-        jsmSpeechRecognition = new SpeechRec();
-        jsmSpeechRecognition.continuous = false;
-        jsmSpeechRecognition.interimResults = false;
-        jsmSpeechRecognition.lang = 'en-IN'; // Indian English default
-
-        jsmSpeechRecognition.onstart = function() {
-            isJsmListening = true;
-            const micBtn = document.getElementById('jsm-mic-btn');
-            const banner = document.getElementById('jsm-voice-listening-banner');
-            if (micBtn) micBtn.classList.add('recording');
-            if (banner) banner.style.display = 'flex';
-        };
-
-        jsmSpeechRecognition.onresult = function(event) {
-            const transcript = event.results[0][0].transcript;
-            const input = document.getElementById('jsm-chat-input');
-            if (input) {
-                input.value = transcript;
-                submitJsmChat();
-            }
-        };
-
-        jsmSpeechRecognition.onerror = function(event) {
-            console.warn("Speech recognition error:", event.error);
-            stopJsmListening();
-        };
-
-        jsmSpeechRecognition.onend = function() {
-            stopJsmListening();
-        };
-    }
-}
-
-function stopJsmListening() {
-    isJsmListening = false;
-    const micBtn = document.getElementById('jsm-mic-btn');
-    const banner = document.getElementById('jsm-voice-listening-banner');
-    if (micBtn) micBtn.classList.remove('recording');
-    if (banner) banner.style.display = 'none';
-}
-
-function toggleJsmSpeechRecognition() {
-    if (!jsmSpeechRecognition) {
-        alert("Voice recognition is not supported in this browser. Please use Google Chrome or Microsoft Edge.");
-        return;
-    }
-    if (isJsmListening) {
-        try { jsmSpeechRecognition.stop(); } catch(e){}
-        stopJsmListening();
-    } else {
-        // Stop any current speaking synthesis before listening
-        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-        try {
-            jsmSpeechRecognition.start();
-        } catch(e) {
-            console.error("Failed to start speech recognition:", e);
-        }
-    }
-}
+// User interacts exclusively via text editor (voice-to-text listener removed)
+function initJsmVoice() {}
+function stopJsmListening() {}
+function toggleJsmSpeechRecognition() {}
 
 let jsmVoicePersona = 'female'; // 'female' (warm clear studio) | 'male' (dignified counsel) | 'indian' (Indian English)
 let jsmCachedVoices = [];
@@ -6835,7 +6769,7 @@ function resetJsmChat(e) {
                 <div class="jsm-quick-chips">
                     <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('About JSM Chambers')">🏛️ About Chambers</button>
                     <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('Chamber Owner & Senior Counsel')">⚖️ Chamber Owner</button>
-                    <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('All Advocates & Members')">👥 Advocates & Team</button>
+                    <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('Advocates & Team: Practice Areas & Specializations')">👥 Advocates & Team</button>
                     <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('Official Timings & Booking Hours')">⏰ Official Timings</button>
                     <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('How to book an appointment?')">📅 Book Appointment</button>
                     <button class="jsm-chip-btn" onclick="sendJsmQuickPrompt('Chamber Address & Contact Info')">📍 Office Location</button>
@@ -6955,7 +6889,7 @@ function renderJsmBotReply(data) {
     if (data.members_list && data.members_list.length > 0) {
         htmlContent += `
             <div style="margin-top: 10px; font-weight: 700; color: #D4AF37; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
-                👥 Chamber Advocates & Members (${data.members_list.length}) <span style="font-size: 10px; color: #94a3b8; font-weight: normal;">(click photo to view on screen)</span>
+                👥 Chamber Advocates & Practice Specializations (${data.members_list.length}) <span style="font-size: 10px; color: #94a3b8; font-weight: normal;">(click photo to view on screen)</span>
             </div>
             <div class="jsm-members-container">
         `;
@@ -6963,17 +6897,19 @@ function renderJsmBotReply(data) {
             const mImg = m.image_url || '/assets/images/advocate_logo.jpg';
             const mName = escapeHtml(m.name);
             const mRole = escapeHtml(m.role || m.designation || 'Advocate');
-            const mExp = escapeHtml(m.experience || 'Legal Associate') + ' • ' + escapeHtml(m.specialization || m.practice_areas || 'High Court Practice');
+            const mSpec = escapeHtml(m.specialization || m.specialty || m.practice_areas || 'Civil & Criminal Practice');
+            const mExp = escapeHtml(m.experience || 'Appellate & Trial Practice');
             htmlContent += `
                 <div class="jsm-member-item">
-                    <div class="jsm-member-img-wrap" onclick="openJsmImageModal('${mImg}', '${mName}', '${mRole} — ${mExp}')" title="Click to view full photo on screen">
+                    <div class="jsm-member-img-wrap" onclick="openJsmImageModal('${mImg}', '${mName}', '${mRole} — Practice Area: ${mSpec}')" title="Click to view full photo on screen">
                         <img src="${mImg}" alt="${mName}" class="jsm-member-img" onerror="this.src='/assets/images/advocate_logo.jpg'">
                         <span class="jsm-img-zoom-hint" title="View full photo">🔍</span>
                     </div>
-                    <div class="jsm-member-details" onclick="openJsmImageModal('${mImg}', '${mName}', '${mRole} — ${mExp}')" style="cursor: pointer;" title="Click to view full photo on screen">
+                    <div class="jsm-member-details" onclick="openJsmImageModal('${mImg}', '${mName}', '${mRole} — Practice Area: ${mSpec}')" style="cursor: pointer;" title="Click to view full photo on screen">
                         <h6>${mName}</h6>
                         <div class="m-role">${mRole}</div>
-                        <div class="m-exp">${mExp}</div>
+                        <div class="m-spec" style="color: #D4AF37; font-weight: 700; font-size: 11px; margin-top: 2px;">🎯 Practice Area: ${mSpec}</div>
+                        <div class="m-exp" style="color: #94a3b8; font-size: 11px;">⚖️ ${mExp}</div>
                     </div>
                 </div>
             `;

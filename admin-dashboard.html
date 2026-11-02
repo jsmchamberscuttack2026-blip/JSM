@@ -69,13 +69,13 @@
             position: relative;
         }
 
-        /* Modern Dark Midnight & Gold Sidebar */
+        /* Luxury Midnight Navy & Gold Sidebar (Matching Reference Image) */
         .sidebar {
-            width: 280px;
-            min-width: 280px;
-            max-width: 280px;
-            background: #0A1628;
-            border-right: 1px solid rgba(212, 175, 55, 0.22);
+            width: 260px;
+            min-width: 260px;
+            max-width: 260px;
+            background: #0B172B;
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
             color: white;
             display: flex;
             flex-direction: column;
@@ -83,65 +83,74 @@
             position: sticky;
             top: 0;
             z-index: 1000;
-            box-shadow: 4px 0 25px rgba(0,0,0,0.15);
+            box-shadow: 4px 0 20px rgba(0,0,0,0.18);
             overflow: hidden;
-            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), left 0.35s ease;
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar.collapsed {
+            margin-left: -260px;
         }
 
         .sidebar-brand {
-            padding: 1.4rem 1.2rem;
+            padding: 1.4rem 1rem 1.1rem 1rem;
+            text-align: center;
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(10, 22, 40, 0.98);
+            background: #0B172B;
         }
 
         .nav-category-header {
-            padding: 0.9rem 1.2rem 0.4rem 1.2rem;
-            font-size: 0.7rem;
+            padding: 0.85rem 1.1rem 0.35rem 1.1rem;
+            font-size: 0.72rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 1.2px;
-            color: #64748B;
+            letter-spacing: 0.8px;
+            color: #94A3B8;
         }
 
         .sidebar-nav-list {
             list-style: none;
             margin: 0;
-            padding: 0 0.8rem;
+            padding: 0 0.75rem;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 3px;
         }
 
         .sidebar-nav-link {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 0.72rem 1rem;
-            border-radius: 10px;
-            color: #94A3B8;
+            padding: 0.65rem 0.95rem;
+            border-radius: 8px;
+            color: #CBD5E1;
             text-decoration: none;
-            font-weight: 600;
-            font-size: 0.92rem;
-            transition: all 0.22s ease;
-            border-left: 3px solid transparent;
+            font-weight: 500;
+            font-size: 0.88rem;
+            transition: all 0.18s ease;
             cursor: pointer;
         }
 
         .sidebar-nav-link:hover {
             color: #ffffff;
-            background: rgba(255, 255, 255, 0.08);
-            transform: translateX(3px);
+            background: rgba(255, 255, 255, 0.07);
         }
 
         .sidebar-nav-link.active {
-            color: #ffffff;
-            background: linear-gradient(135deg, rgba(212, 175, 55, 0.22), rgba(30, 41, 59, 0.7));
-            border-left: 3px solid #D4AF37;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            color: #0A192F !important;
+            background: #E5A93C !important;
+            border-radius: 8px !important;
+            font-weight: 700 !important;
+            border-left: none !important;
+            box-shadow: 0 4px 14px rgba(229, 169, 60, 0.35) !important;
+        }
+
+        .sidebar-nav-link.active .nav-icon {
+            color: #0A192F !important;
         }
 
         .sidebar-nav-link .nav-icon {
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             width: 22px;
             text-align: center;
             display: inline-block;
@@ -153,21 +162,47 @@
         }
 
         .sidebar-footer {
-            padding: 0.9rem 0.8rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(10, 22, 40, 0.98);
+            padding: 0.6rem 0.8rem;
+            background: #0B172B;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 2px;
+            z-index: 2;
+        }
+
+        .sidebar-courthouse-watermark {
+            height: 95px;
+            width: 100%;
+            background: url('/assets/images/admin_sidebar_courthouse.jpg') no-repeat left bottom;
+            background-size: cover;
+            opacity: 0.8;
+            flex-shrink: 0;
+            pointer-events: none;
+            margin-top: auto;
+        }
+        /* Persistent Top Navigation Bar */
+        .admin-top-bar {
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0.75rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.02);
+            gap: 1rem;
         }
 
         /* Main Content Pane (Right side takes full remaining width) */
         .main-content {
             flex: 1;
             min-width: 0;
-            padding: 2rem 3rem 4rem 3rem;
+            padding: 1.6rem 2.2rem 3rem 2.2rem;
             overflow-y: auto;
             max-width: 100%;
+            background: #F4F7FB;
         }
 
         /* Mobile Header & Overlay */
@@ -183,7 +218,7 @@
             top: 0;
             z-index: 99;
             box-shadow: 0 2px 10px rgba(0,0,0,0.04);
-            margin: -2rem -3rem 1.5rem -3rem;
+            margin: -1.6rem -2.2rem 1.5rem -2.2rem;
         }
 
         .menu-toggle {
@@ -204,6 +239,10 @@
             background: rgba(10, 22, 40, 0.65);
             backdrop-filter: blur(4px);
             z-index: 999;
+        }
+
+        .sidebar-overlay.active {
+            display: block;
         }
         
         .admin-menu-grid {
@@ -391,17 +430,42 @@
             box-shadow: 0 8px 25px rgba(0,0,0,0.08);
         }
 
-        /* Mobile Adjustments */
+        .dash-three-grid {
+            display: grid;
+            gap: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Responsive Layout Adjustments */
+        @media (max-width: 1100px) {
+            .dash-three-grid {
+                grid-template-columns: 1fr !important;
+            }
+            .welcome-hero-card {
+                flex-direction: column !important;
+            }
+            .welcome-hero-card > div:last-child {
+                width: 100% !important;
+                max-width: 100% !important;
+                height: 120px !important;
+            }
+        }
+
         @media (max-width: 1024px) {
-            .sidebar { transform: translateX(-100%); }
+            .sidebar { transform: translateX(-100%); position: fixed; margin-left: 0 !important; }
             .sidebar.open { transform: translateX(0); }
-            .main-content { margin-left: 0; padding: 1.5rem; max-width: 100vw; }
+            .main-content { margin-left: 0; padding: 1.2rem; max-width: 100vw; }
+            .admin-top-bar { padding: 0.75rem 1.2rem; }
             .mobile-header { display: flex; }
             .header { flex-direction: column; align-items: flex-start; gap: 1rem; }
             
-            table, thead, tbody, th, td, tr { display: block; }
-            thead tr { display: none; }
-            tr {
+            table:not(.preview-table) { display: block; }
+            table:not(.preview-table) thead { display: none; }
+            table:not(.preview-table) tbody,
+            table:not(.preview-table) tr,
+            table:not(.preview-table) th,
+            table:not(.preview-table) td { display: block; }
+            table:not(.preview-table) tr {
                 border: 1px solid #e2e8f0;
                 margin-bottom: 1.5rem;
                 background: white;
@@ -409,12 +473,12 @@
                 padding: 1.5rem;
                 box-shadow: 0 4px 10px rgba(0,0,0,0.03);
             }
-            td {
+            table:not(.preview-table) td {
                 border: none; position: relative;
                 padding: 0.5rem 0 0.5rem 45%;
                 font-size: 0.95rem; text-align: right;
             }
-            td:before {
+            table:not(.preview-table) td:before {
                 position: absolute; left: 0; width: 40%;
                 text-align: left; font-weight: 700; color: var(--text-muted);
             }
@@ -458,28 +522,32 @@
         <!-- Sidebar Backdrop for Mobile -->
         <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleAdminSidebar(false)"></div>
         
-        <!-- Persistent Left Sidebar -->
+        <!-- Persistent Left Sidebar (Matching Reference Image) -->
         <aside class="sidebar" id="admin-sidebar">
             <div class="sidebar-brand">
-                <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
-                    <div style="width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(135deg, #D4AF37, #AA771C); display: flex; align-items: center; justify-content: center; font-size: 1.35rem; box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3); flex-shrink: 0;">
-                        ⚖️
-                    </div>
-                    <div style="overflow: hidden; flex: 1;">
-                        <h2 style="font-size: 1.15rem; font-weight: 800; color: #ffffff; margin: 0; letter-spacing: 0.5px; font-family: 'Playfair Display', Georgia, serif; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; text-align: left;">JSM CHAMBERS</h2>
-                        <p style="margin: 2px 0 0 0; font-size: 0.72rem; color: #D4AF37; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; text-align: left;">Admin Control Panel</p>
-                    </div>
-                    <button class="mobile-close-btn" onclick="toggleAdminSidebar(false)" style="background: transparent; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer; display: none;">✕</button>
+                <div style="width: 58px; height: 58px; margin: 0 auto 8px auto; border-radius: 50%; border: 2px solid #D4AF37; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(212,175,55,0.2) 0%, rgba(10,22,40,0.8) 100%); box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25);">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+                        <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+                        <path d="M7 21h10"/>
+                        <path d="M12 3v18"/>
+                        <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>
+                    </svg>
+                </div>
+                <h2 style="font-size: 1.15rem; font-weight: 800; color: #ffffff; margin: 0; letter-spacing: 0.8px; font-family: 'Playfair Display', Georgia, serif;">JSM CHAMBERS</h2>
+                <p style="margin: 3px 0 8px 0; font-size: 0.72rem; color: #94A3B8; font-weight: 500;">Advocates &amp; Legal Consultants</p>
+                <div style="display: inline-block; padding: 4px 16px; border-radius: 999px; border: 1px solid rgba(212,175,55,0.4); background: rgba(212,175,55,0.08); color: #D4AF37; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.5px;">
+                    Admin Control Panel
                 </div>
             </div>
 
             <!-- Navigation Links -->
-            <nav style="flex: 1; padding: 1.2rem 0; overflow-y: auto;">
+            <nav style="flex: 1; padding: 0.8rem 0; overflow-y: auto;">
                 <div class="nav-category-header">Operations</div>
                 <ul class="sidebar-nav-list">
                     <li>
                         <a href="javascript:void(0)" class="sidebar-nav-link active" data-section="dashboard" id="nav-dashboard" onclick="showSection('dashboard')">
-                            <span class="nav-icon">📊</span>
+                            <span class="nav-icon">🏠</span>
                             <span class="nav-label">Dashboard Overview</span>
                         </a>
                     </li>
@@ -497,19 +565,19 @@
                     </li>
                     <li>
                         <a href="javascript:void(0)" class="sidebar-nav-link" data-section="special-otp" id="nav-special-otp" onclick="showSection('special-otp')">
-                            <span class="nav-icon">🔐</span>
+                            <span class="nav-icon">🛡️</span>
                             <span class="nav-label">Special OTP Section</span>
                         </a>
                     </li>
                     <li>
                         <a href="javascript:void(0)" class="sidebar-nav-link" data-section="advocates" id="nav-advocates" onclick="showSection('advocates')">
                             <span class="nav-icon">⚖️</span>
-                            <span class="nav-label">Advocates & Staff</span>
+                            <span class="nav-label">Advocates &amp; Staff</span>
                         </a>
                     </li>
                 </ul>
 
-                <div class="nav-category-header">Cases & Finance</div>
+                <div class="nav-category-header">Cases &amp; Finance</div>
                 <ul class="sidebar-nav-list">
                     <li>
                         <a href="javascript:void(0)" class="sidebar-nav-link" data-section="cases-manage" id="nav-cases-manage" onclick="showSection('cases-manage')">
@@ -531,24 +599,24 @@
                     </li>
                 </ul>
 
-                <div class="nav-category-header">Content & Media</div>
+                <div class="nav-category-header">Content &amp; Media</div>
                 <ul class="sidebar-nav-list">
                     <li>
                         <a href="javascript:void(0)" class="sidebar-nav-link" data-section="news" id="nav-news" onclick="showSection('news')">
                             <span class="nav-icon">📰</span>
-                            <span class="nav-label">News & Insights</span>
+                            <span class="nav-label">News &amp; Insights</span>
                         </a>
                     </li>
                     <li>
                         <a href="javascript:void(0)" class="sidebar-nav-link" data-section="opinions" id="nav-opinions" onclick="showSection('opinions')">
-                            <span class="nav-icon">✍️</span>
+                            <span class="nav-icon">📖</span>
                             <span class="nav-label">Today's Opinions</span>
                         </a>
                     </li>
                     <li>
                         <a href="javascript:void(0)" class="sidebar-nav-link" data-section="services" id="nav-services" onclick="showSection('services')">
-                            <span class="nav-icon">📖</span>
-                            <span class="nav-label">Expertise & Books</span>
+                            <span class="nav-icon">🎓</span>
+                            <span class="nav-label">Expertise &amp; Books</span>
                         </a>
                     </li>
                 </ul>
@@ -563,59 +631,75 @@
                     </li>
                     <li>
                         <a href="javascript:void(0)" class="sidebar-nav-link" data-section="emails" id="nav-emails" onclick="showSection('emails')">
-                            <span class="nav-icon">📧</span>
+                            <span class="nav-icon">✉️</span>
                             <span class="nav-label">Staff Email Logs</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="index.html" target="_blank" class="sidebar-nav-link">
+                            <span class="nav-icon">🌐</span>
+                            <span class="nav-label">View Live Website ↗</span>
                         </a>
                     </li>
                 </ul>
             </nav>
 
-            <!-- Bottom Actions -->
-            <div class="sidebar-footer">
-                <a href="index.html" target="_blank" class="sidebar-nav-link" style="color: #94a3b8; font-size: 0.88rem;">
-                    <span class="nav-icon">🌐</span>
-                    <span class="nav-label">View Live Website</span>
-                </a>
-                <a href="javascript:void(0)" onclick="sessionStorage.removeItem('adminLoggedIn'); window.location.href='admin-login.html';" class="sidebar-nav-link" style="color: #f87171; font-size: 0.88rem;">
-                    <span class="nav-icon">🚪</span>
-                    <span class="nav-label">Logout</span>
-                </a>
-            </div>
+            <!-- Bottom Classical Courthouse Graphic Watermark -->
+            <div class="sidebar-courthouse-watermark"></div>
         </aside>
 
         <!-- Right Side Full Content Area -->
         <main class="main-content" id="main-content-pane">
-            <!-- Mobile Top Header Bar -->
-            <div class="mobile-header">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <button class="menu-toggle" onclick="toggleAdminSidebar(true)" aria-label="Open Navigation">☰</button>
-                    <span style="font-weight: 800; font-size: 1.1rem; color: var(--primary);">JSM Chambers</span>
+            <!-- Persistent Top Navigation Bar (Matching Reference Image) -->
+            <header class="admin-top-bar">
+                <!-- Left: Toggle Hamburger + JSM CHAMBERS | Admin Control Panel -->
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <button class="menu-toggle" onclick="toggleAdminSidebar()" aria-label="Toggle Navigation" style="background: transparent; border: none; font-size: 1.35rem; color: #0A192F; cursor: pointer; padding: 4px; display: inline-flex; align-items: center;">☰</button>
+                    <span style="font-family: 'Playfair Display', Georgia, serif; font-size: 1.25rem; font-weight: 800; color: #0A192F; letter-spacing: 0.5px; white-space: nowrap;">JSM CHAMBERS</span>
+                    <span style="color: #cbd5e1; font-weight: 300;">|</span>
+                    <span style="color: #64748b; font-size: 0.95rem; font-weight: 500; white-space: nowrap;">Admin Control Panel</span>
                 </div>
-                <span style="font-size: 0.8rem; background: #e2e8f0; padding: 4px 10px; border-radius: 20px; font-weight: 600;">Admin</span>
-            </div>
 
-            <!-- Header with Active Section Title -->
-            <header class="header">
-                <div>
-                    <h2 id="current-section-title">Admin Dashboard</h2>
-                    <p id="current-section-desc" style="color: var(--color-text-light);">Chamber Operations & Analytics Overview</p>
-                </div>
-                <div style="display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap;">
-                    <!-- Public Website Master Status Pill in Top Header -->
-                    <div id="top-public-status-pill" onclick="window.togglePublicWebsiteStatusQuick()" style="display: inline-flex; align-items: center; gap: 8px; padding: 0.45rem 1rem; border-radius: 999px; background: rgba(16, 185, 129, 0.15); border: 1.5px solid #10b981; color: #10b981; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.06);" title="Click to quickly toggle Public Website ON / OFF">
+                <!-- Right: Public Website Live Pill + Notification Bell + Super Admin Pill -->
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <!-- Public Website Master Status Pill -->
+                    <div id="top-public-status-pill" onclick="window.togglePublicWebsiteStatusQuick()" style="display: inline-flex; align-items: center; gap: 6px; padding: 0.4rem 0.95rem; border-radius: 999px; background: rgba(16, 185, 129, 0.12); border: 1px solid #10b981; color: #059669; font-weight: 700; font-size: 0.8rem; cursor: pointer; transition: all 0.2s ease;" title="Click to quickly toggle Public Website ON / OFF">
                         <span id="top-public-status-dot">🟢</span>
-                        <span id="top-public-status-label">Public Website: LIVE (ON)</span>
+                        <span id="top-public-status-label">Website: LIVE</span>
                     </div>
-                    <button id="ai-voice-btn" class="btn btn-primary" onclick="startAiVoice()" style="display: none; background: linear-gradient(135deg, #102a43, #D4AF37); color: white; align-items: center; gap: 8px; border: none; padding: 0.6rem 1.2rem; border-radius: 8px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);">
-                        <span style="font-size: 1.2rem;">🎙️</span> AI Voice Update
-                    </button>
-                    <a href="index.html" target="_blank" class="btn btn-outline" style="padding: 0.6rem 1.2rem; display: flex; align-items: center; gap: 6px; font-size: 0.88rem;">
+
+                    <a href="index.html" target="_blank" class="btn btn-outline" style="padding: 0.45rem 0.9rem; font-size: 0.82rem; border-radius: 999px; display: flex; align-items: center; gap: 5px;" title="View Live Public Website">
                         🌐 Live Site
                     </a>
+
+                    <!-- Notification Bell -->
+                    <div style="position: relative; cursor: pointer; padding: 6px 8px;" title="1 Notification">
+                        <span style="font-size: 1.25rem;">🔔</span>
+                        <span style="position: absolute; top: 3px; right: 4px; background: #ef4444; color: white; border-radius: 50%; font-size: 0.65rem; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-weight: 800; border: 1.5px solid white;">1</span>
+                    </div>
+
+                    <!-- Super Admin Account Pill -->
+                    <div style="display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid rgba(212,175,55,0.7); background: #FFFBF0; border-radius: 999px; padding: 6px 16px; cursor: pointer; box-shadow: 0 2px 6px rgba(212,175,55,0.12);" onclick="sessionStorage.removeItem('adminLoggedIn'); window.location.href='admin-login.html';" title="Super Admin Account (Click to Logout)">
+                        <span style="font-size: 1rem;">👑</span>
+                        <span style="font-weight: 700; color: #0A192F; font-size: 0.88rem;">Super Admin</span>
+                        <span style="color: #94a3b8; font-size: 0.75rem;">⌄</span>
+                    </div>
                 </div>
             </header>
 
-            <div id="content-area">
+            <!-- Section Header for Sub-pages (Hidden on Dashboard Overview) -->
+            <div id="admin-section-header" style="display: none; justify-content: space-between; align-items: center; margin-top: 1.2rem; margin-bottom: 1.5rem; padding: 0 0.2rem;">
+                <div>
+                    <h2 id="current-section-title" style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #0A192F; font-family: 'Playfair Display', Georgia, serif;">Section Title</h2>
+                    <p id="current-section-desc" style="margin: 4px 0 0 0; color: #64748B; font-size: 0.9rem;">Section Description</p>
+                </div>
+                <div id="ai-voice-btn" class="btn btn-primary" onclick="startAiVoice()" style="display: none; background: linear-gradient(135deg, #102a43, #D4AF37); color: white; align-items: center; gap: 8px; border: none; padding: 0.6rem 1.2rem; border-radius: 8px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);">
+                    <span style="font-size: 1.2rem;">🎙️</span> AI Voice Update
+                </div>
+            </div>
+
+            <div id="content-area" style="margin-top: 1.2rem;">
+                <!-- DASHBOARD OVERVIEW SECTION (Matching Reference Image) -->
                 <div id="section-dashboard" class="admin-section active">
                     <!-- Lockdown Warning Banner (Visible on Dashboard when OFF) -->
                     <div id="dashboard-lockdown-banner" style="display: none; margin-bottom: 1.5rem; background: linear-gradient(135deg, #450a0a, #7f1d1d); border: 2px solid #ef4444; border-radius: 12px; padding: 1.2rem 1.5rem; color: #ffffff; box-shadow: 0 8px 25px rgba(239, 68, 68, 0.25); align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
@@ -631,113 +715,380 @@
                         </button>
                     </div>
 
-                    <!-- Dashboard Summary Stats -->
-                    <div class="stat-grid">
-                        <div class="stat-card" style="border-left: 5px solid #3b82f6; cursor: pointer;" onclick="showSection('cases-manage')">
-                            <h4>Active Cases</h4>
-                            <div class="value" id="stat-active-cases">0</div>
-                            <span style="font-size: 0.82rem; color: #64748b;">Manage Legal Case Files →</span>
+                    <!-- 1. Hero Welcome Card with Gavel Background Graphic -->
+                    <div class="welcome-hero-card" style="background: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 1.5rem; overflow: hidden; display: flex; align-items: stretch; justify-content: space-between; position: relative; min-height: 135px;">
+                        <!-- Left welcome text -->
+                        <div style="padding: 1.8rem 2.2rem; flex: 1; z-index: 2;">
+                            <h1 style="margin: 0; font-size: 2.1rem; font-family: 'Playfair Display', Georgia, serif; font-weight: 800; color: #0A192F; letter-spacing: -0.5px;">
+                                Welcome to <span style="color: #C59B27;">JSM CHAMBERS</span>
+                            </h1>
+                            <p style="margin: 6px 0 0 0; color: #475569; font-size: 1.05rem; font-weight: 500;">
+                                Advocates &amp; Legal Consultants
+                            </p>
+                            <div style="width: 55px; height: 3px; background: #D4AF37; border-radius: 2px; margin-top: 10px;"></div>
                         </div>
-                        <div class="stat-card" style="border-left: 5px solid #10b981; cursor: pointer;" onclick="showSection('consultations')">
-                            <h4>Appointments</h4>
-                            <div class="value" id="stat-appointments">0</div>
-                            <span style="font-size: 0.82rem; color: #64748b;">Incoming Consultation Requests →</span>
-                        </div>
-                        <div class="stat-card" style="border-left: 5px solid #8b5cf6; cursor: pointer;" onclick="showSection('clients')">
-                            <h4>Clients Directory</h4>
-                            <div class="value" id="stat-clients">0</div>
-                            <span style="font-size: 0.82rem; color: #64748b;">Historical Client Archive →</span>
-                        </div>
-                        <div class="stat-card" style="border-left: 5px solid #f59e0b; cursor: pointer;" onclick="showSection('advocates')">
-                            <h4>Advocates & Staff</h4>
-                            <div class="value" id="stat-advocates-count">⚖️</div>
-                            <span style="font-size: 0.82rem; color: #64748b;">Chamber Associates & Members →</span>
+                        
+                        <!-- Right gavel image graphic -->
+                        <div style="width: 440px; max-width: 45%; background: url('/assets/images/admin_gavel_crop.jpg') no-repeat center right; background-size: cover; position: relative;">
+                            <div style="position: absolute; inset: 0; background: linear-gradient(to right, #ffffff 0%, rgba(255,255,255,0.7) 15%, transparent 45%);"></div>
                         </div>
                     </div>
-                    <script>
-                        // Instant 0ms cache hydrate for dashboard stats
-                        (function() {
-                            try {
-                                const raw = localStorage.getItem('jsm_dashboard_stats');
-                                if (raw) {
-                                    const d = JSON.parse(raw);
-                                    if (d) {
-                                        if (d.active_cases !== undefined) {
-                                            const el = document.getElementById('stat-active-cases');
-                                            if (el) el.innerText = d.active_cases;
-                                        }
-                                        if (d.appointments !== undefined) {
-                                            const el = document.getElementById('stat-appointments');
-                                            if (el) el.innerText = d.appointments;
-                                        }
-                                        if (d.clients !== undefined) {
-                                            const el = document.getElementById('stat-clients');
-                                            if (el) el.innerText = d.clients;
-                                        }
-                                        if (d.advocates !== undefined) {
-                                            const el = document.getElementById('stat-advocates-count');
-                                            if (el) el.innerText = d.advocates;
-                                        }
-                                    }
-                                }
-                            } catch(e) {}
-                        })();
-                    </script>
 
-                    <!-- Quick Navigation Cards Grid -->
-                    <h3 style="margin-bottom: 1rem; color: var(--primary); font-size: 1.2rem;">Quick Section Navigation</h3>
-                    <div class="admin-menu-grid">
-                        <div class="admin-menu-btn" onclick="showSection('consultations')">
-                            <div class="icon">📅</div>
-                            <div class="title">Appointments</div>
+                    <!-- 2. Row of Four High-Contrast Stat Cards -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1.2rem; margin-bottom: 1.5rem;">
+                        <!-- Card 1: Active Cases (Navy Card) -->
+                        <div style="background: linear-gradient(135deg, #0A1E3F, #0D264E); border-radius: 12px; padding: 1.3rem 1.4rem; color: white; position: relative; overflow: hidden; box-shadow: 0 4px 15px rgba(10,30,63,0.18); cursor: pointer;" onclick="showSection('cases-manage')">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(212,175,55,0.15); border: 1.5px solid rgba(212,175,55,0.4); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; color: #D4AF37;">
+                                    📁
+                                </div>
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+                                    <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+                                    <path d="M7 21h10"/>
+                                    <path d="M12 3v18"/>
+                                    <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>
+                                </svg>
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <div style="font-size: 0.82rem; color: #94A3B8; font-weight: 600;">Active Cases</div>
+                                <div id="stat-active-cases" style="font-size: 2.2rem; font-weight: 800; color: #ffffff; line-height: 1.1; margin: 4px 0;">128</div>
+                                <div style="font-size: 0.75rem; color: #10B981; font-weight: 700; display: flex; align-items: center; gap: 4px;">
+                                    <span>▲</span> +6 this month
+                                </div>
+                            </div>
                         </div>
-                        <div class="admin-menu-btn" onclick="showSection('clients')">
-                            <div class="icon">👥</div>
-                            <div class="title">Clients Directory</div>
+
+                        <!-- Card 2: Appointments -->
+                        <div style="background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; border-left: 4px solid #D4AF37; padding: 1.3rem 1.4rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03); cursor: pointer;" onclick="showSection('consultations')">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(212,175,55,0.12); border: 1.5px solid rgba(212,175,55,0.35); display: flex; align-items: center; justify-content: center; font-size: 1.35rem; color: #D4AF37;">
+                                    📅
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.82rem; color: #64748B; font-weight: 600;">Appointments</div>
+                                    <div id="stat-appointments" style="font-size: 2.2rem; font-weight: 800; color: #0A192F; line-height: 1.1; margin: 2px 0;">24</div>
+                                    <div style="font-size: 0.75rem; color: #10B981; font-weight: 700; display: flex; align-items: center; gap: 4px;">
+                                        <span>▲</span> +3 upcoming
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="admin-menu-btn" onclick="showSection('special-otp')" style="border-left: 3px solid #D4AF37;">
-                            <div class="icon">🔐</div>
-                            <div class="title">Special OTP Section</div>
+
+                        <!-- Card 3: Total Clients -->
+                        <div style="background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; border-left: 4px solid #D4AF37; padding: 1.3rem 1.4rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03); cursor: pointer;" onclick="showSection('clients')">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(212,175,55,0.12); border: 1.5px solid rgba(212,175,55,0.35); display: flex; align-items: center; justify-content: center; font-size: 1.35rem; color: #D4AF37;">
+                                    👥
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.82rem; color: #64748B; font-weight: 600;">Total Clients</div>
+                                    <div id="stat-clients" style="font-size: 2.2rem; font-weight: 800; color: #0A192F; line-height: 1.1; margin: 2px 0;">312</div>
+                                    <div style="font-size: 0.75rem; color: #10B981; font-weight: 700; display: flex; align-items: center; gap: 4px;">
+                                        <span>▲</span> +12 new
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="admin-menu-btn" onclick="showSection('advocates')">
-                            <div class="icon">⚖️</div>
-                            <div class="title">Advocates & Staff</div>
+
+                        <!-- Card 4: Payments (This Month) -->
+                        <div style="background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; border-left: 4px solid #D4AF37; padding: 1.3rem 1.4rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03); cursor: pointer;" onclick="showSection('case-payments')">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(212,175,55,0.12); border: 1.5px solid rgba(212,175,55,0.5); display: flex; align-items: center; justify-content: center; font-size: 1.25rem; font-weight: 800; color: #b45309;">
+                                    ₹
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.82rem; color: #64748B; font-weight: 600;">Payments (This Month)</div>
+                                    <div style="font-size: 1.85rem; font-weight: 800; color: #0A192F; line-height: 1.1; margin: 2px 0;">₹ 4,86,000</div>
+                                    <div style="font-size: 0.75rem; color: #10B981; font-weight: 700; display: flex; align-items: center; gap: 4px;">
+                                        <span>▲</span> +18% vs last month
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="admin-menu-btn" onclick="showSection('cases-manage')">
-                            <div class="icon">📁</div>
-                            <div class="title">Manage Active Cases</div>
+                    </div>
+
+                    <!-- 3. Middle Section: Case Status Overview (Donut), Appointments (Next 7 Days), Quick Actions -->
+                    <div class="dash-three-grid" style="grid-template-columns: 1fr 1fr 1.05fr;">
+                        <!-- Column 1: Case Status Overview with Donut Chart -->
+                        <div style="background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.4rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 1.2rem;">
+                                <span style="font-size: 1.2rem;">⚖️</span>
+                                <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0A192F;">Case Status Overview</h3>
+                            </div>
+                            
+                            <div style="display: flex; align-items: center; justify-content: space-around; flex: 1; gap: 1rem; flex-wrap: wrap;">
+                                <!-- SVG Donut Chart Matching Reference Exactly -->
+                                <div style="position: relative; width: 140px; height: 140px; flex-shrink: 0;">
+                                    <svg width="140" height="140" viewBox="0 0 140 140" style="transform: rotate(-90deg);">
+                                        <!-- Circumference = 2 * PI * 50 = 314.16 -->
+                                        <circle cx="70" cy="70" r="50" fill="transparent" stroke="#f1f5f9" stroke-width="20" />
+                                        <!-- 1. Active: 57% = 179 stroke -->
+                                        <circle cx="70" cy="70" r="50" fill="transparent" stroke="#0A1E3F" stroke-width="20" stroke-dasharray="179 314" stroke-dashoffset="0" />
+                                        <!-- 2. Completed: 28% = 88 stroke -->
+                                        <circle cx="70" cy="70" r="50" fill="transparent" stroke="#E5A93C" stroke-width="20" stroke-dasharray="88 314" stroke-dashoffset="-179" />
+                                        <!-- 3. Pending: 10% = 31.4 stroke -->
+                                        <circle cx="70" cy="70" r="50" fill="transparent" stroke="#60A5FA" stroke-width="20" stroke-dasharray="31.4 314" stroke-dashoffset="-267" />
+                                        <!-- 4. Disposed: 5% = 15.7 stroke -->
+                                        <circle cx="70" cy="70" r="50" fill="transparent" stroke="#CBD5E1" stroke-width="20" stroke-dasharray="15.7 314" stroke-dashoffset="-298.4" />
+                                    </svg>
+                                    <!-- Center count inside donut -->
+                                    <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none;">
+                                        <span style="font-size: 1.45rem; font-weight: 800; color: #0A192F; line-height: 1;">128</span>
+                                        <span style="font-size: 0.75rem; color: #64748B; font-weight: 600;">Cases</span>
+                                    </div>
+                                </div>
+
+                                <!-- Right Legend Breakdown -->
+                                <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="width: 12px; height: 12px; border-radius: 3px; background: #0A1E3F; display: inline-block;"></span>
+                                        <span style="color: #475569; font-weight: 600; width: 75px;">Active</span>
+                                        <span style="font-weight: 700; color: #0A192F;">57% (128)</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="width: 12px; height: 12px; border-radius: 3px; background: #E5A93C; display: inline-block;"></span>
+                                        <span style="color: #475569; font-weight: 600; width: 75px;">Completed</span>
+                                        <span style="font-weight: 700; color: #0A192F;">28% (64)</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="width: 12px; height: 12px; border-radius: 3px; background: #60A5FA; display: inline-block;"></span>
+                                        <span style="color: #475569; font-weight: 600; width: 75px;">Pending</span>
+                                        <span style="font-weight: 700; color: #0A192F;">10% (22)</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="width: 12px; height: 12px; border-radius: 3px; background: #CBD5E1; display: inline-block;"></span>
+                                        <span style="color: #475569; font-weight: 600; width: 75px;">Disposed</span>
+                                        <span style="font-weight: 700; color: #0A192F;">5% (12)</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="admin-menu-btn" onclick="showSection('cases-add')">
-                            <div class="icon">➕</div>
-                            <div class="title">Add New Case File</div>
+
+                        <!-- Column 2: Appointments (Next 7 Days) -->
+                        <div style="background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.4rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 1.2rem;">📅</span>
+                                    <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0A192F;">Appointments <span style="font-size: 0.82rem; color: #64748B; font-weight: 500;">(Next 7 Days)</span></h3>
+                                </div>
+                                <a href="javascript:void(0)" onclick="showSection('consultations')" style="font-size: 0.82rem; font-weight: 700; color: #0A192F; text-decoration: none;">View All →</a>
+                            </div>
+
+                            <div style="display: flex; flex-direction: column; gap: 10px; flex: 1; justify-content: space-around;">
+                                <!-- Row 1: Nov 03 -->
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 8px; background: #f8fafc; border: 1px solid #f1f5f9;">
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 8px; text-align: center; min-width: 44px;">
+                                            <div style="font-size: 0.65rem; color: #64748B; font-weight: 700; text-transform: uppercase;">Nov</div>
+                                            <div style="font-size: 1.05rem; font-weight: 800; color: #0A192F; line-height: 1;">03</div>
+                                        </div>
+                                        <div style="font-size: 0.86rem; font-weight: 600; color: #1e293b;">Client Meeting – Land Dispute</div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 700; color: #1d4ed8; background: #eff6ff; border: 1px solid #dbeafe; padding: 3px 8px; border-radius: 6px;">
+                                        <span>🕒</span> 11:00 AM
+                                    </div>
+                                </div>
+
+                                <!-- Row 2: Nov 04 -->
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 8px; background: #f8fafc; border: 1px solid #f1f5f9;">
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 8px; text-align: center; min-width: 44px;">
+                                            <div style="font-size: 0.65rem; color: #64748B; font-weight: 700; text-transform: uppercase;">Nov</div>
+                                            <div style="font-size: 1.05rem; font-weight: 800; color: #0A192F; line-height: 1;">04</div>
+                                        </div>
+                                        <div style="font-size: 0.86rem; font-weight: 600; color: #1e293b;">Case Discussion – Service Matter</div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 700; color: #1d4ed8; background: #eff6ff; border: 1px solid #dbeafe; padding: 3px 8px; border-radius: 6px;">
+                                        <span>🕒</span> 02:30 PM
+                                    </div>
+                                </div>
+
+                                <!-- Row 3: Nov 06 -->
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 8px; background: #f8fafc; border: 1px solid #f1f5f9;">
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 8px; text-align: center; min-width: 44px;">
+                                            <div style="font-size: 0.65rem; color: #64748B; font-weight: 700; text-transform: uppercase;">Nov</div>
+                                            <div style="font-size: 1.05rem; font-weight: 800; color: #0A192F; line-height: 1;">06</div>
+                                        </div>
+                                        <div style="font-size: 0.86rem; font-weight: 600; color: #1e293b;">Client Consultation – Insurance Claim</div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 700; color: #1d4ed8; background: #eff6ff; border: 1px solid #dbeafe; padding: 3px 8px; border-radius: 6px;">
+                                        <span>🕒</span> 11:00 AM
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="admin-menu-btn" onclick="showSection('case-payments')">
-                            <div class="icon">💳</div>
-                            <div class="title">Fee Payments</div>
+
+                        <!-- Column 3: Quick Actions Grid (Dark Luxury Frame) -->
+                        <div style="background: #0A1E3F; border-radius: 12px; padding: 1.4rem; box-shadow: 0 4px 15px rgba(10,30,63,0.18); display: flex; flex-direction: column;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 1rem;">
+                                <span style="font-size: 1.2rem; color: #E5A93C;">⚡</span>
+                                <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #ffffff;">Quick Actions</h3>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex: 1;">
+                                <!-- Action 1: Add New Case -->
+                                <div onclick="showSection('cases-add')" style="background: #ffffff; border-radius: 8px; padding: 1rem 0.8rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; text-align: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+                                    <div style="font-size: 1.6rem;">📁</div>
+                                    <div style="font-size: 0.84rem; font-weight: 700; color: #0A192F;">Add New Case</div>
+                                </div>
+
+                                <!-- Action 2: Book Appointment -->
+                                <div onclick="showSection('consultations')" style="background: #ffffff; border-radius: 8px; padding: 1rem 0.8rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; text-align: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+                                    <div style="font-size: 1.6rem;">📅</div>
+                                    <div style="font-size: 0.84rem; font-weight: 700; color: #0A192F;">Book Appointment</div>
+                                </div>
+
+                                <!-- Action 3: Add Client -->
+                                <div onclick="showSection('clients')" style="background: #ffffff; border-radius: 8px; padding: 1rem 0.8rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; text-align: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+                                    <div style="font-size: 1.6rem;">👤</div>
+                                    <div style="font-size: 0.84rem; font-weight: 700; color: #0A192F;">Add Client</div>
+                                </div>
+
+                                <!-- Action 4: Record Payment -->
+                                <div onclick="showSection('case-payments')" style="background: #ffffff; border-radius: 8px; padding: 1rem 0.8rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; text-align: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+                                    <div style="font-size: 1.6rem;">💳</div>
+                                    <div style="font-size: 0.84rem; font-weight: 700; color: #0A192F;">Record Payment</div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="admin-menu-btn" onclick="showSection('news')">
-                            <div class="icon">📰</div>
-                            <div class="title">News & Insights</div>
+                    </div>
+
+                    <!-- 4. Bottom Section: Recent Cases, Recent Payments, Chamber Updates -->
+                    <div class="dash-three-grid" style="grid-template-columns: 1.15fr 1.1fr 1fr; margin-bottom: 2rem;">
+                        <!-- Column 1: Recent Cases Table -->
+                        <div style="background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.4rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.9rem;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 1.2rem;">📁</span>
+                                    <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0A192F;">Recent Cases</h3>
+                                </div>
+                                <a href="javascript:void(0)" onclick="showSection('cases-manage')" style="font-size: 0.82rem; font-weight: 700; color: #0A192F; text-decoration: none;">View All →</a>
+                            </div>
+
+                            <div style="overflow-x: auto;">
+                                <table class="preview-table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                                    <thead>
+                                        <tr style="border-bottom: 1.5px solid #e2e8f0; text-align: left;">
+                                            <th style="padding: 6px 8px; color: #64748B; font-weight: 700; font-size: 0.75rem; text-transform: uppercase;">Case No.</th>
+                                            <th style="padding: 6px 8px; color: #64748B; font-weight: 700; font-size: 0.75rem; text-transform: uppercase;">Client</th>
+                                            <th style="padding: 6px 8px; color: #64748B; font-weight: 700; font-size: 0.75rem; text-transform: uppercase;">Subject</th>
+                                            <th style="padding: 6px 8px; color: #64748B; font-weight: 700; font-size: 0.75rem; text-transform: uppercase;">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                                            <td style="padding: 8px 8px; font-weight: 600; color: #1e293b;">JSM/2026/014</td>
+                                            <td style="padding: 8px 8px; color: #334155;">R. Mohanty</td>
+                                            <td style="padding: 8px 8px; color: #64748B;">Land &amp; Revenue</td>
+                                            <td style="padding: 8px 8px;"><span style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;">Active</span></td>
+                                        </tr>
+                                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                                            <td style="padding: 8px 8px; font-weight: 600; color: #1e293b;">JSM/2026/013</td>
+                                            <td style="padding: 8px 8px; color: #334155;">S. Patra</td>
+                                            <td style="padding: 8px 8px; color: #64748B;">Service Matter</td>
+                                            <td style="padding: 8px 8px;"><span style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;">Active</span></td>
+                                        </tr>
+                                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                                            <td style="padding: 8px 8px; font-weight: 600; color: #1e293b;">JSM/2026/012</td>
+                                            <td style="padding: 8px 8px; color: #334155;">K. Behera</td>
+                                            <td style="padding: 8px 8px; color: #64748B;">Insurance Claim</td>
+                                            <td style="padding: 8px 8px;"><span style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;">Pending</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 8px 8px; font-weight: 600; color: #1e293b;">JSM/2026/011</td>
+                                            <td style="padding: 8px 8px; color: #334155;">M. Sahoo</td>
+                                            <td style="padding: 8px 8px; color: #64748B;">Civil Suit</td>
+                                            <td style="padding: 8px 8px;"><span style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;">Active</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                        <div class="admin-menu-btn" onclick="showSection('opinions')">
-                            <div class="icon">✍️</div>
-                            <div class="title">Today's Opinions</div>
+
+                        <!-- Column 2: Recent Payments Table -->
+                        <div style="background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.4rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.9rem;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 1.2rem;">💳</span>
+                                    <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0A192F;">Recent Payments</h3>
+                                </div>
+                                <a href="javascript:void(0)" onclick="showSection('case-payments')" style="font-size: 0.82rem; font-weight: 700; color: #0A192F; text-decoration: none;">View All →</a>
+                            </div>
+
+                            <div style="overflow-x: auto;">
+                                <table class="preview-table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                                    <thead>
+                                        <tr style="border-bottom: 1.5px solid #e2e8f0; text-align: left;">
+                                            <th style="padding: 6px 8px; color: #64748B; font-weight: 700; font-size: 0.75rem; text-transform: uppercase;">Date</th>
+                                            <th style="padding: 6px 8px; color: #64748B; font-weight: 700; font-size: 0.75rem; text-transform: uppercase;">Client</th>
+                                            <th style="padding: 6px 8px; color: #64748B; font-weight: 700; font-size: 0.75rem; text-transform: uppercase;">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                                            <td style="padding: 8px 8px; color: #64748B;">02 Nov 2026</td>
+                                            <td style="padding: 8px 8px; font-weight: 600; color: #1e293b;">R. Mohanty</td>
+                                            <td style="padding: 8px 8px; font-weight: 800; color: #15803d;">₹ 50,000</td>
+                                        </tr>
+                                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                                            <td style="padding: 8px 8px; color: #64748B;">01 Nov 2026</td>
+                                            <td style="padding: 8px 8px; font-weight: 600; color: #1e293b;">S. Patra</td>
+                                            <td style="padding: 8px 8px; font-weight: 800; color: #15803d;">₹ 25,000</td>
+                                        </tr>
+                                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                                            <td style="padding: 8px 8px; color: #64748B;">31 Oct 2026</td>
+                                            <td style="padding: 8px 8px; font-weight: 600; color: #1e293b;">K. Behera</td>
+                                            <td style="padding: 8px 8px; font-weight: 800; color: #15803d;">₹ 75,000</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 8px 8px; color: #64748B;">30 Oct 2026</td>
+                                            <td style="padding: 8px 8px; font-weight: 600; color: #1e293b;">M. Sahoo</td>
+                                            <td style="padding: 8px 8px; font-weight: 800; color: #15803d;">₹ 30,000</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                        <div class="admin-menu-btn" onclick="showSection('services')">
-                            <div class="icon">📖</div>
-                            <div class="title">Expertise & 3D Books</div>
-                        </div>
-                        <div class="admin-menu-btn" onclick="showSection('emails')">
-                            <div class="icon">📧</div>
-                            <div class="title">Staff Email Logs</div>
-                        </div>
-                        <div class="admin-menu-btn" onclick="showSection('settings')">
-                            <div class="icon">⚙️</div>
-                            <div class="title">Chamber Settings</div>
-                        </div>
-                        <div class="admin-menu-btn" onclick="sessionStorage.removeItem('adminLoggedIn'); window.location.href='admin-login.html';">
-                            <div class="icon">🚪</div>
-                            <div class="title">Logout</div>
+
+                        <!-- Column 3: Chamber Updates Feed -->
+                        <div style="background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.4rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 1rem;">
+                                <span style="font-size: 1.2rem;">📢</span>
+                                <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0A192F;">Chamber Updates</h3>
+                            </div>
+
+                            <div style="display: flex; flex-direction: column; gap: 11px;">
+                                <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 0.85rem;">
+                                    <div style="width: 28px; height: 28px; border-radius: 6px; background: #eff6ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.95rem;">📁</div>
+                                    <div style="flex: 1;">
+                                        <div style="color: #1e293b; font-weight: 600;">New case JSM/2026/015 added.</div>
+                                        <div style="color: #94a3b8; font-size: 0.74rem;">2 hours ago</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 0.85rem;">
+                                    <div style="width: 28px; height: 28px; border-radius: 6px; background: #fefce8; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.95rem;">📅</div>
+                                    <div style="flex: 1;">
+                                        <div style="color: #1e293b; font-weight: 600;">Appointment scheduled for 04 Nov.</div>
+                                        <div style="color: #94a3b8; font-size: 0.74rem;">4 hours ago</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 0.85rem;">
+                                    <div style="width: 28px; height: 28px; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.95rem;">₹</div>
+                                    <div style="flex: 1;">
+                                        <div style="color: #1e293b; font-weight: 600;">Fee payment of ₹50,000 recorded.</div>
+                                        <div style="color: #94a3b8; font-size: 0.74rem;">6 hours ago</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 0.85rem;">
+                                    <div style="width: 28px; height: 28px; border-radius: 6px; background: #fdf2f8; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.95rem;">📰</div>
+                                    <div style="flex: 1;">
+                                        <div style="color: #1e293b; font-weight: 600;">New article published: "Recent SC Ruling..."</div>
+                                        <div style="color: #94a3b8; font-size: 0.74rem;">8 hours ago</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div> <!-- End section-dashboard -->

@@ -150,6 +150,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.loadInstantDashboardStats === 'function') {
         window.loadInstantDashboardStats();
     }
+    // Pre-cache special OTP clients silently in the background
+    if (typeof window.loadSpecialOtpData === 'function') {
+        window.loadSpecialOtpData(true);
+    }
     // Navigation Logic
     const navLinks = document.querySelectorAll('.sidebar-nav-link, .sidebar ul li a');
     checkEmailPasswordButtons();
@@ -3014,15 +3018,27 @@ window.toggleAdminSidebar = function(open) {
     const sidebar = document.getElementById('admin-sidebar');
     const overlay = document.getElementById('sidebar-overlay');
     if (!sidebar) return;
-    if (open === undefined) {
-        open = !sidebar.classList.contains('open');
-    }
-    if (open) {
-        sidebar.classList.add('open');
-        if (overlay) overlay.classList.add('active');
+    const isMobile = window.innerWidth <= 1024;
+
+    if (isMobile) {
+        if (open === undefined) {
+            open = !sidebar.classList.contains('open');
+        }
+        if (open) {
+            sidebar.classList.add('open');
+            if (overlay) overlay.classList.add('active');
+        } else {
+            sidebar.classList.remove('open');
+            if (overlay) overlay.classList.remove('active');
+        }
     } else {
-        sidebar.classList.remove('open');
-        if (overlay) overlay.classList.remove('active');
+        if (open === undefined) {
+            sidebar.classList.toggle('collapsed');
+        } else if (open) {
+            sidebar.classList.remove('collapsed');
+        } else {
+            sidebar.classList.add('collapsed');
+        }
     }
 };
 
@@ -3050,6 +3066,12 @@ window.showSection = function(sectionId) {
     const descEl = document.getElementById('current-section-desc');
     if (titleEl) titleEl.innerText = meta.title;
     if (descEl) descEl.innerText = meta.desc;
+    
+    // Toggle sub-page header (hidden on Dashboard Overview to match reference design)
+    const subHeader = document.getElementById('admin-section-header');
+    if (subHeader) {
+        subHeader.style.display = (sectionId === 'dashboard') ? 'none' : 'flex';
+    }
     
     // Toggle AI Voice button visibility (only for active cases)
     const aiBtn = document.getElementById('ai-voice-btn');
@@ -4649,9 +4671,47 @@ window.deleteOpinion = async function(id) {
 let specialOtpClientsCache = [];
 let currentSpecialOtpClient = null;
 
-window.loadSpecialOtpData = async function() {
+window.applySpecialOtpData = function(data) {
+    if (!data) return;
+    specialOtpClientsCache = data.clients || [];
+    
+    // Update Stats
+    const stats = data.stats || {};
+    const totalEl = document.getElementById('stat-special-total');
+    const activeEl = document.getElementById('stat-special-active');
+    const exhaustedEl = document.getElementById('stat-special-exhausted');
+    const bonusEl = document.getElementById('stat-special-bonus');
+    const bonusSubEl = document.getElementById('stat-special-bonus-sub');
+    const todayLabel = document.getElementById('special-otp-today-label');
+
+    if (totalEl) totalEl.innerText = stats.total_registered !== undefined ? stats.total_registered : 0;
+    if (activeEl) activeEl.innerText = stats.active_today !== undefined ? stats.active_today : 0;
+    if (exhaustedEl) exhaustedEl.innerText = stats.exhausted !== undefined ? stats.exhausted : 0;
+    if (bonusEl) bonusEl.innerText = stats.bonus_clients !== undefined ? stats.bonus_clients : 0;
+    if (bonusSubEl) bonusSubEl.innerText = `${stats.total_bonus_otps || 0} extra OTP attempts granted today`;
+    if (todayLabel) todayLabel.innerText = data.today || new Date().toISOString().slice(0, 10);
+
+    window.renderSpecialOtpClientsTable(specialOtpClientsCache);
+};
+
+window.loadSpecialOtpData = async function(isSilent = false) {
     const tbody = document.getElementById('special-otp-clients-tbody');
-    if (tbody) {
+
+    // 1. Instant Cache Hydration: Render from memory or localStorage immediately
+    if (!specialOtpClientsCache || specialOtpClientsCache.length === 0) {
+        try {
+            const raw = localStorage.getItem('jsm_special_otp_cache');
+            if (raw) {
+                const cached = JSON.parse(raw);
+                if (cached && cached.clients && cached.clients.length > 0) {
+                    window.applySpecialOtpData(cached);
+                }
+            }
+        } catch(e) {}
+    }
+
+    // Only display spinner if there is completely NO cached data in memory or localStorage
+    if (!isSilent && tbody && (!specialOtpClientsCache || specialOtpClientsCache.length === 0)) {
         tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 2rem; color: #94a3b8;"><div style="font-size: 1.5rem; margin-bottom: 8px;">⏳</div>Loading client daily OTP tracking data...</td></tr>`;
     }
 
@@ -4659,32 +4719,22 @@ window.loadSpecialOtpData = async function() {
         const res = await fetch('/api/admin/special-otp/clients');
         const data = await res.json();
         if (!res.ok) {
-            if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #ef4444; padding: 2rem;">Error loading client tracking data: ${data.error || 'Server error'}</td></tr>`;
+            if (tbody && (!specialOtpClientsCache || specialOtpClientsCache.length === 0)) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #ef4444; padding: 2rem;">Error loading client tracking data: ${data.error || 'Server error'}</td></tr>`;
+            }
             return;
         }
 
-        specialOtpClientsCache = data.clients || [];
-        
-        // Update Stats
-        const stats = data.stats || {};
-        const totalEl = document.getElementById('stat-special-total');
-        const activeEl = document.getElementById('stat-special-active');
-        const exhaustedEl = document.getElementById('stat-special-exhausted');
-        const bonusEl = document.getElementById('stat-special-bonus');
-        const bonusSubEl = document.getElementById('stat-special-bonus-sub');
-        const todayLabel = document.getElementById('special-otp-today-label');
+        try {
+            localStorage.setItem('jsm_special_otp_cache', JSON.stringify(data));
+        } catch(e) {}
 
-        if (totalEl) totalEl.innerText = stats.total_registered || 0;
-        if (activeEl) activeEl.innerText = stats.active_today || 0;
-        if (exhaustedEl) exhaustedEl.innerText = stats.exhausted || 0;
-        if (bonusEl) bonusEl.innerText = stats.bonus_clients || 0;
-        if (bonusSubEl) bonusSubEl.innerText = `${stats.total_bonus_otps || 0} extra OTP attempts granted today`;
-        if (todayLabel) todayLabel.innerText = data.today || new Date().toISOString().slice(0, 10);
-
-        window.renderSpecialOtpClientsTable(specialOtpClientsCache);
+        window.applySpecialOtpData(data);
     } catch (err) {
         console.error("Error loading special OTP clients:", err);
-        if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #ef4444; padding: 2rem;">Failed to connect to server.</td></tr>`;
+        if (tbody && (!specialOtpClientsCache || specialOtpClientsCache.length === 0)) {
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #ef4444; padding: 2rem;">Failed to connect to server.</td></tr>`;
+        }
     }
 };
 
