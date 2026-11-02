@@ -6532,13 +6532,42 @@ def ensure_chamber_owner_advocate():
                 "access_voice": True,
                 "welcome_mail_sent": True
             })
+        # Clean up any advocates in DB where role is missing or contaminated with practice areas/experience text
+        try:
+            for bad_adv in advocates_col.find():
+                bad_r = str(bad_adv.get("role") or "").strip()
+                bad_s = str(bad_adv.get("specialty") or "").strip()
+                if not bad_r or bad_r.lower() == bad_s.lower() or len(bad_r) > 32 or any(w in bad_r.lower() for w in ['advocacy', 'specializ', 'constitutional', 'civil law', 'criminal law', 'banking law', '|', 'years']):
+                    clean_r = "Chamber Owner & Lead Counsel" if bad_adv.get("is_owner") else "Senior Advocate"
+                    advocates_col.update_one({"_id": bad_adv["_id"]}, {"$set": {"role": clean_r}})
+        except Exception as e:
+            logging.error(f"Error cleaning advocate roles in DB: {e}")
     except Exception as e:
         logging.error(f"Error ensuring chamber owner advocate: {e}")
 
 @app.route('/api/advocates', methods=['GET'])
 def get_advocates():
-    bundle = get_public_bundle()
-    return jsonify(bundle.get("advocates", [])), 200
+    try:
+        try:
+            ensure_chamber_owner_advocate()
+        except Exception:
+            pass
+        advs = []
+        for adv in advocates_col.find().sort([("is_owner", -1), ("_id", 1)]):
+            adv_copy = dict(adv)
+            adv_copy['_id'] = str(adv_copy['_id'])
+            is_owner = bool(adv_copy.get('is_owner'))
+            r = str(adv_copy.get('role') or '').strip()
+            s = str(adv_copy.get('specialty') or '').strip()
+            if not r or r.lower() == s.lower() or len(r) > 32 or any(w in r.lower() for w in ['advocacy', 'specializ', 'constitutional', 'civil law', 'criminal law', 'banking law', '|', 'years']):
+                r = "Chamber Owner & Lead Counsel" if is_owner else "Senior Advocate"
+            adv_copy['role'] = r
+            advs.append(adv_copy)
+        return jsonify(advs), 200
+    except Exception as e:
+        logging.error(f"Error in direct get_advocates: {e}")
+        bundle = get_public_bundle()
+        return jsonify(bundle.get("advocates", [])), 200
 
 def save_advocate_image_file(adv_id, img_data):
     try:
