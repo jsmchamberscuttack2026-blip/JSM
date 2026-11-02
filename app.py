@@ -1389,7 +1389,7 @@ def get_client_device_id():
         dev_id = request.args.get('device_id') or request.args.get('device_token')
     # 4. From cookie
     if not dev_id:
-        dev_id = request.cookies.get('jsm_admin_device_id')
+        dev_id = request.cookies.get('jsm_client_device_id') or request.cookies.get('jsm_admin_device_id')
     # 5. Fallback: IP address
     if not dev_id:
         dev_id = f"ip_{get_client_ip()}"
@@ -5652,171 +5652,318 @@ def get_turso_client_profiles():
         return jsonify({"success": False, "error": str(e)}), 500
 
 # =========================================================
-#  CLIENT PORTAL IP LOCKOUT (5 WRONG VERIFICATIONS = 5 MIN LOCKOUT)
-#  Strictly IP-based, no alert sent to anyone, no display on SOC dashboard
+#  CLIENT PORTAL SECURITY LOCKOUT (4 INVALID EMAILS OR 5 WRONG VERIFICATIONS = 5 MIN LOCKOUT)
+#  Tracks both client device ID and client IP address.
+#  Strictly IP/Device-based, no alert sent to anyone, no display on SOC dashboard
 # =========================================================
 
-_client_ip_lockouts = {}  # In-memory fast cache: {ip: {"failed_attempts": int, "locked_until_ts": float}}
+_client_portal_lockouts = {}  # {key: {"failed_attempts": int, "locked_until_ts": float, "reason": str, "message": str}}
+_client_ip_lockouts = _client_portal_lockouts  # Alias for backward compatibility
+_client_email_failures = {}   # {key: count} (failed invalid email lookup attempts)
+_client_verify_failures = {}  # {key: count} (failed verification code attempts)
 
-def is_client_ip_locked(ip=None):
+def is_client_locked(dev_id=None, ip=None):
     """
-    Checks if a client IP address is locked out from the client portal.
-    Lock duration: 5 minutes (300 seconds) after 5 wrong verification codes.
+    Checks if a client device ID or client IP address is locked out from the client portal.
+    Lock duration: 5 minutes (300 seconds).
+    Causes:
+      - 4 failed email lookups ("No active case found for this email address")
+      - 5 wrong verification codes
     Returns: (is_locked: bool, remaining_seconds: int, lock_info: dict)
     """
-    client_ip = (ip or get_client_ip()).strip()
+    client_dev = str(dev_id or get_client_device_id()).strip()
+    client_ip = str(ip or get_client_ip()).strip()
     now_ts = get_now_ist().timestamp()
     
+    keys_to_check = []
+    if client_dev:
+        keys_to_check.extend([f"dev_{client_dev}", client_dev])
+    if client_ip:
+        keys_to_check.extend([f"ip_{client_ip}", client_ip])
+
     # 1. Fast in-memory check
-    if client_ip in _client_ip_lockouts:
-        info = _client_ip_lockouts[client_ip]
-        locked_until_ts = float(info.get("locked_until_ts") or 0)
-        if locked_until_ts > now_ts:
-            rem_secs = max(1, int(locked_until_ts - now_ts))
-            return True, rem_secs, info
-        elif locked_until_ts > 0:
-            # 5-minute lockout period has expired
-            _client_ip_lockouts.pop(client_ip, None)
-            if config_col is not None:
-                try:
-                    config_col.delete_one({"_id": f"client_portal_lock_{client_ip}"})
-                except Exception:
-                    pass
-            return False, 0, {}
-            
+    for k in keys_to_check:
+        if k in _client_portal_lockouts:
+            info = _client_portal_lockouts[k]
+            locked_until_ts = float(info.get("locked_until_ts") or 0)
+            if locked_until_ts > now_ts:
+                rem_secs = max(1, int(locked_until_ts - now_ts))
+                return True, rem_secs, info
+            elif locked_until_ts > 0:
+                _client_portal_lockouts.pop(k, None)
+                if config_col is not None:
+                    try:
+                        config_col.delete_one({"_id": f"client_portal_lock_{k}"})
+                    except Exception:
+                        pass
+
     # 2. Database check for multi-worker / process persistence
     if config_col is not None:
-        try:
-            doc = config_col.find_one({"_id": f"client_portal_lock_{client_ip}"})
-            if doc:
-                locked_until_ts = float(doc.get("locked_until_timestamp") or 0)
-                if locked_until_ts > now_ts:
-                    rem_secs = max(1, int(locked_until_ts - now_ts))
-                    _client_ip_lockouts[client_ip] = {
-                        "failed_attempts": doc.get("failed_attempts", 5),
-                        "locked_until_ts": locked_until_ts
-                    }
-                    return True, rem_secs, doc
-                else:
-                    # Expired in DB
-                    config_col.delete_one({"_id": f"client_portal_lock_{client_ip}"})
-                    _client_ip_lockouts.pop(client_ip, None)
-        except Exception as e:
-            logging.error(f"Error checking client IP lockout doc: {e}")
-            
+        for k in keys_to_check:
+            try:
+                doc = config_col.find_one({"_id": f"client_portal_lock_{k}"})
+                if doc:
+                    locked_until_ts = float(doc.get("locked_until_timestamp") or 0)
+                    if locked_until_ts > now_ts:
+                        rem_secs = max(1, int(locked_until_ts - now_ts))
+                        _client_portal_lockouts[k] = {
+                            "failed_attempts": doc.get("failed_attempts", 4),
+                            "locked_until_ts": locked_until_ts,
+                            "reason": doc.get("reason", ""),
+                            "message": doc.get("message", "")
+                        }
+                        return True, rem_secs, doc
+                    else:
+                        config_col.delete_one({"_id": f"client_portal_lock_{k}"})
+                        _client_portal_lockouts.pop(k, None)
+            except Exception as e:
+                logging.error(f"Error checking client lockout doc: {e}")
+
     return False, 0, {}
 
-def record_client_wrong_verification(ip=None):
+def is_client_ip_locked(ip=None):
+    """Backwards compatibility wrapper checking client IP and device."""
+    return is_client_locked(ip=ip)
+
+def record_client_invalid_email(dev_id=None, ip=None):
     """
-    Increments failed verification attempts for this client IP.
-    When failed_attempts reaches 5: locks this IP for 5 minutes.
-    IMPORTANT: No email alert is sent to anyone, and no event is logged
-    to the security officer dashboard as per instructions.
+    Increments failed email lookup attempts for this client device and IP.
+    When user tries a mail id 3 times and then attends the 4th time:
+    Locks the client portal for this user device & IP for 5 minutes (300 seconds).
     Returns: (is_locked: bool, attempts_left: int, failed_attempts: int, remaining_seconds: int)
     """
-    client_ip = (ip or get_client_ip()).strip()
+    client_dev = str(dev_id or get_client_device_id()).strip()
+    client_ip = str(ip or get_client_ip()).strip()
     now_ist = get_now_ist()
     now_ts = now_ist.timestamp()
-    
+
     # Check if already locked
-    is_locked, rem_secs, info = is_client_ip_locked(client_ip)
+    is_locked, rem_secs, info = is_client_locked(dev_id=client_dev, ip=client_ip)
     if is_locked:
-        return True, 0, info.get("failed_attempts", 5), rem_secs
-        
-    current_fails = _client_ip_lockouts.get(client_ip, {}).get("failed_attempts", 0)
+        return True, 0, info.get("failed_attempts", 4), rem_secs
+
+    primary_key = f"dev_{client_dev}" if client_dev else f"ip_{client_ip}"
+    current_fails = _client_email_failures.get(primary_key, 0)
     if current_fails == 0 and config_col is not None:
         try:
-            doc = config_col.find_one({"_id": f"client_portal_lock_{client_ip}"})
+            doc = config_col.find_one({"_id": f"client_portal_email_fails_{primary_key}"})
             if doc:
                 current_fails = int(doc.get("failed_attempts") or 0)
         except Exception:
             pass
-            
+
     current_fails += 1
-    
-    if current_fails >= 5:
-        # 5 wrong verification codes -> Lock this IP address for 5 minutes (300 seconds)
+    _client_email_failures[primary_key] = current_fails
+    if client_ip:
+        _client_email_failures[f"ip_{client_ip}"] = current_fails
+
+    if current_fails >= 4:
+        # 4 invalid email attempts -> Lock this device and IP for 5 minutes (300 seconds)
         locked_until = now_ist + timedelta(minutes=5)
         locked_until_ts = locked_until.timestamp()
         locked_until_iso = locked_until.isoformat()
-        
-        _client_ip_lockouts[client_ip] = {
+        lock_entry = {
             "failed_attempts": current_fails,
-            "locked_until_ts": locked_until_ts
+            "locked_until_ts": locked_until_ts,
+            "reason": "invalid_email_4_attempts",
+            "message": "No active case found for this email address. 4 attempts exceeded. Client Portal is locked for 5 minutes for this device."
         }
-        
+        _client_portal_lockouts[primary_key] = lock_entry
+        if client_ip:
+            _client_portal_lockouts[f"ip_{client_ip}"] = lock_entry
+
         if config_col is not None:
-            try:
-                config_col.update_one(
-                    {"_id": f"client_portal_lock_{client_ip}"},
-                    {"$set": {
-                        "ip": client_ip,
-                        "failed_attempts": current_fails,
-                        "locked_until_timestamp": locked_until_ts,
-                        "locked_until_iso": locked_until_iso,
-                        "locked_at": now_ist.isoformat()
-                    }},
-                    upsert=True
-                )
-            except Exception as e:
-                logging.error(f"Error persisting client IP lockout: {e}")
-                
-        # NOTE: NO ALERT EMAIL SENT TO ANYONE (no client, no admin, no security officer).
-        # NOTE: NO SECURITY INCIDENT LOGGED (does not show on security officer dashboard).
+            for k in set([primary_key, f"ip_{client_ip}"]):
+                try:
+                    config_col.update_one(
+                        {"_id": f"client_portal_lock_{k}"},
+                        {"$set": {
+                            "key": k,
+                            "device_id": client_dev,
+                            "ip": client_ip,
+                            "failed_attempts": current_fails,
+                            "reason": "invalid_email_4_attempts",
+                            "message": "No active case found for this email address. 4 attempts exceeded. Client Portal is locked for 5 minutes for this device.",
+                            "locked_until_timestamp": locked_until_ts,
+                            "locked_until_iso": locked_until_iso,
+                            "locked_at": now_ist.isoformat()
+                        }},
+                        upsert=True
+                    )
+                except Exception as e:
+                    logging.error(f"Error persisting client invalid email lockout: {e}")
+
         return True, 0, current_fails, 300
     else:
-        attempts_left = 5 - current_fails
-        _client_ip_lockouts[client_ip] = {
-            "failed_attempts": current_fails,
-            "locked_until_ts": 0
-        }
+        attempts_left = 4 - current_fails
         if config_col is not None:
             try:
                 config_col.update_one(
-                    {"_id": f"client_portal_lock_{client_ip}"},
+                    {"_id": f"client_portal_email_fails_{primary_key}"},
                     {"$set": {
+                        "key": primary_key,
+                        "device_id": client_dev,
                         "ip": client_ip,
                         "failed_attempts": current_fails,
-                        "locked_until_timestamp": 0,
                         "last_attempt": now_ist.isoformat()
                     }},
                     upsert=True
                 )
             except Exception:
                 pass
-                
+
         return False, attempts_left, current_fails, 0
 
-def reset_client_ip_lockout(ip=None):
-    """Resets failed verification attempts and clears lockout for this client IP."""
-    client_ip = (ip or get_client_ip()).strip()
-    _client_ip_lockouts.pop(client_ip, None)
-    if config_col is not None:
+def reset_client_invalid_email(dev_id=None, ip=None):
+    """Resets failed email lookup attempts for this client device and IP."""
+    client_dev = str(dev_id or get_client_device_id()).strip()
+    client_ip = str(ip or get_client_ip()).strip()
+    keys_to_clear = []
+    if client_dev:
+        keys_to_clear.extend([f"dev_{client_dev}", client_dev])
+    if client_ip:
+        keys_to_clear.extend([f"ip_{client_ip}", client_ip])
+
+    for k in keys_to_clear:
+        _client_email_failures.pop(k, None)
+        if config_col is not None:
+            try:
+                config_col.delete_one({"_id": f"client_portal_email_fails_{k}"})
+            except Exception:
+                pass
+
+def record_client_wrong_verification(dev_id=None, ip=None):
+    """
+    Increments failed verification attempts for this client device and IP.
+    When failed_attempts reaches 5: locks this device/IP for 5 minutes (300 seconds).
+    Returns: (is_locked: bool, attempts_left: int, failed_attempts: int, remaining_seconds: int)
+    """
+    client_dev = str(dev_id or get_client_device_id()).strip()
+    client_ip = str(ip or get_client_ip()).strip()
+    now_ist = get_now_ist()
+    now_ts = now_ist.timestamp()
+
+    is_locked, rem_secs, info = is_client_locked(dev_id=client_dev, ip=client_ip)
+    if is_locked:
+        return True, 0, info.get("failed_attempts", 5), rem_secs
+
+    primary_key = f"dev_{client_dev}" if client_dev else f"ip_{client_ip}"
+    current_fails = _client_verify_failures.get(primary_key, 0)
+    if current_fails == 0 and config_col is not None:
         try:
-            config_col.delete_one({"_id": f"client_portal_lock_{client_ip}"})
-        except Exception as e:
-            logging.error(f"Error resetting client IP lockout: {e}")
+            doc = config_col.find_one({"_id": f"client_portal_verify_fails_{primary_key}"})
+            if doc:
+                current_fails = int(doc.get("failed_attempts") or 0)
+        except Exception:
+            pass
+
+    current_fails += 1
+    _client_verify_failures[primary_key] = current_fails
+    if client_ip:
+        _client_verify_failures[f"ip_{client_ip}"] = current_fails
+
+    if current_fails >= 5:
+        locked_until = now_ist + timedelta(minutes=5)
+        locked_until_ts = locked_until.timestamp()
+        locked_until_iso = locked_until.isoformat()
+        lock_entry = {
+            "failed_attempts": current_fails,
+            "locked_until_ts": locked_until_ts,
+            "reason": "wrong_verification_5_attempts",
+            "message": "Client Portal is locked for 5 minutes due to 5 incorrect verification code attempts."
+        }
+        _client_portal_lockouts[primary_key] = lock_entry
+        if client_ip:
+            _client_portal_lockouts[f"ip_{client_ip}"] = lock_entry
+
+        if config_col is not None:
+            for k in set([primary_key, f"ip_{client_ip}"]):
+                try:
+                    config_col.update_one(
+                        {"_id": f"client_portal_lock_{k}"},
+                        {"$set": {
+                            "key": k,
+                            "device_id": client_dev,
+                            "ip": client_ip,
+                            "failed_attempts": current_fails,
+                            "reason": "wrong_verification_5_attempts",
+                            "message": "Client Portal is locked for 5 minutes due to 5 incorrect verification code attempts.",
+                            "locked_until_timestamp": locked_until_ts,
+                            "locked_until_iso": locked_until_iso,
+                            "locked_at": now_ist.isoformat()
+                        }},
+                        upsert=True
+                    )
+                except Exception as e:
+                    logging.error(f"Error persisting client verify lockout: {e}")
+
+        return True, 0, current_fails, 300
+    else:
+        attempts_left = 5 - current_fails
+        if config_col is not None:
+            try:
+                config_col.update_one(
+                    {"_id": f"client_portal_verify_fails_{primary_key}"},
+                    {"$set": {
+                        "key": primary_key,
+                        "device_id": client_dev,
+                        "ip": client_ip,
+                        "failed_attempts": current_fails,
+                        "last_attempt": now_ist.isoformat()
+                    }},
+                    upsert=True
+                )
+            except Exception:
+                pass
+        return False, attempts_left, current_fails, 0
+
+def reset_client_ip_lockout(dev_id=None, ip=None):
+    """Resets failed verification attempts and clears lockout for this client device and IP."""
+    client_dev = str(dev_id or get_client_device_id()).strip()
+    client_ip = str(ip or get_client_ip()).strip()
+    keys_to_clear = []
+    if client_dev:
+        keys_to_clear.extend([f"dev_{client_dev}", client_dev])
+    if client_ip:
+        keys_to_clear.extend([f"ip_{client_ip}", client_ip])
+
+    for k in keys_to_clear:
+        _client_portal_lockouts.pop(k, None)
+        _client_verify_failures.pop(k, None)
+        if config_col is not None:
+            try:
+                config_col.delete_one({"_id": f"client_portal_lock_{k}"})
+                config_col.delete_one({"_id": f"client_portal_verify_fails_{k}"})
+            except Exception:
+                pass
 
 @app.route('/api/client-lock-status', methods=['GET'])
 def client_lock_status():
     client_ip = get_client_ip()
-    is_locked, rem_secs, info = is_client_ip_locked(client_ip)
+    dev_id = get_client_device_id()
+    is_locked, rem_secs, info = is_client_locked(dev_id=dev_id, ip=client_ip)
     return jsonify({
         "locked": is_locked,
         "remaining_seconds": rem_secs,
-        "ip": client_ip
+        "lockout_remaining_seconds": rem_secs,
+        "ip": client_ip,
+        "device_id": dev_id,
+        "message": info.get("message", ""),
+        "reason": info.get("reason", "")
     }), 200
 
 @app.route('/api/client-login', methods=['POST'])
 def client_login():
+    dev_id = get_client_device_id()
     client_ip = get_client_ip()
-    is_locked, rem_secs, lock_info = is_client_ip_locked(client_ip)
+    is_locked, rem_secs, lock_info = is_client_locked(dev_id=dev_id, ip=client_ip)
     if is_locked:
         mins = rem_secs // 60
         secs = rem_secs % 60
         time_str = f"{mins}m {secs}s" if mins > 0 else f"{secs}s"
+        lock_msg = lock_info.get("message") or f"Client Portal is temporarily locked for your device due to repeated failed attempts. Please wait {time_str} before trying again."
         return jsonify({
-            "error": f"Client Portal is temporarily locked for your IP address due to 5 incorrect verification code attempts. Please wait {time_str} before trying again.",
+            "error": lock_msg,
             "locked": True,
             "lockout_remaining_seconds": rem_secs,
             "attempts_left": 0
@@ -5831,7 +5978,7 @@ def client_login():
         "status": {"$ne": "Finished & Archived"}
     })
     if not case:
-        is_now_locked, attempts_left, failed_count, lock_rem = record_client_wrong_verification(client_ip)
+        is_now_locked, attempts_left, failed_count, lock_rem = record_client_wrong_verification(dev_id=dev_id, ip=client_ip)
         if is_now_locked:
             return jsonify({
                 "error": "Client Portal is locked for 5 minutes due to 5 incorrect verification code attempts.",
@@ -5848,7 +5995,8 @@ def client_login():
                 "locked": False
             }), 401
         
-    reset_client_ip_lockout(client_ip)
+    reset_client_ip_lockout(dev_id=dev_id, ip=client_ip)
+    reset_client_invalid_email(dev_id=dev_id, ip=client_ip)
     today_str = get_now_ist().strftime("%Y-%m-%d")
     daily = case.get("daily_logins") or {}
     count = int(daily.get("count", 0)) if daily.get("date") == today_str else 0
@@ -5876,14 +6024,16 @@ def client_login():
 @app.route('/api/forgot-password', methods=['POST'])
 def forgot_password():
     try:
+        dev_id = get_client_device_id()
         client_ip = get_client_ip()
-        is_locked, rem_secs, lock_info = is_client_ip_locked(client_ip)
+        is_locked, rem_secs, lock_info = is_client_locked(dev_id=dev_id, ip=client_ip)
         if is_locked:
             mins = rem_secs // 60
             secs = rem_secs % 60
             time_str = f"{mins}m {secs}s" if mins > 0 else f"{secs}s"
+            lock_msg = lock_info.get("message") or f"Client Portal is temporarily locked for your device due to repeated failed attempts. Please wait {time_str} before requesting a new code."
             return jsonify({
-                "error": f"Client Portal is temporarily locked for your IP address due to 5 incorrect verification code attempts. Please wait {time_str} before requesting a new code.",
+                "error": lock_msg,
                 "locked": True,
                 "lockout_remaining_seconds": rem_secs,
                 "attempts_left": 0
@@ -5899,7 +6049,29 @@ def forgot_password():
             "status": {"$ne": "Finished & Archived"}
         })
         if not case:
-            return jsonify({"error": "No active case found for this email address."}), 404
+            is_now_locked, attempts_left, fail_count, lock_rem = record_client_invalid_email(dev_id=dev_id, ip=client_ip)
+            if is_now_locked:
+                return jsonify({
+                    "error": "No active case found for this email address. 4 attempts exceeded. Client Portal is locked for 5 minutes for this device.",
+                    "locked": True,
+                    "lockout_remaining_seconds": lock_rem or 300,
+                    "failed_attempts": fail_count,
+                    "attempts_left": 0
+                }), 423
+            else:
+                if fail_count == 3:
+                    suffix = " (Attempt 3 of 3. Warning: 4th attempt will lock Client Portal for 5 minutes)."
+                else:
+                    suffix = f" (Attempt {fail_count} of 3)."
+                return jsonify({
+                    "error": f"No active case found for this email address.{suffix}",
+                    "locked": False,
+                    "failed_attempts": fail_count,
+                    "attempts_left": attempts_left
+                }), 404
+
+        # Active case found: reset any prior invalid email attempts
+        reset_client_invalid_email(dev_id=dev_id, ip=client_ip)
             
         today_str = get_now_ist().strftime("%Y-%m-%d")
         daily = case.get("daily_logins") or {}
@@ -5955,14 +6127,16 @@ def forgot_password():
 
 @app.route('/api/verify-code', methods=['POST'])
 def verify_code():
+    dev_id = get_client_device_id()
     client_ip = get_client_ip()
-    is_locked, rem_secs, lock_info = is_client_ip_locked(client_ip)
+    is_locked, rem_secs, lock_info = is_client_locked(dev_id=dev_id, ip=client_ip)
     if is_locked:
         mins = rem_secs // 60
         secs = rem_secs % 60
         time_str = f"{mins}m {secs}s" if mins > 0 else f"{secs}s"
+        lock_msg = lock_info.get("message") or f"Client Portal is temporarily locked for your device due to repeated failed attempts. Please wait {time_str} before trying again."
         return jsonify({
-            "error": f"Client Portal is temporarily locked for your IP address due to 5 incorrect verification code attempts. Please wait {time_str} before trying again.",
+            "error": lock_msg,
             "locked": True,
             "lockout_remaining_seconds": rem_secs,
             "attempts_left": 0
@@ -5981,7 +6155,7 @@ def verify_code():
         "status": {"$ne": "Finished & Archived"}
     })
     if not case:
-        is_now_locked, attempts_left, failed_count, lock_rem = record_client_wrong_verification(client_ip)
+        is_now_locked, attempts_left, failed_count, lock_rem = record_client_wrong_verification(dev_id=dev_id, ip=client_ip)
         if is_now_locked:
             return jsonify({
                 "error": "Client Portal is locked for 5 minutes due to 5 incorrect verification code attempts.",
@@ -5998,8 +6172,9 @@ def verify_code():
                 "locked": False
             }), 400
         
-    # Valid code: reset client IP lockout
-    reset_client_ip_lockout(client_ip)
+    # Valid code: reset client IP lockout & email failures
+    reset_client_ip_lockout(dev_id=dev_id, ip=client_ip)
+    reset_client_invalid_email(dev_id=dev_id, ip=client_ip)
     
     today_str = get_now_ist().strftime("%Y-%m-%d")
     daily = case.get("daily_logins") or {}
