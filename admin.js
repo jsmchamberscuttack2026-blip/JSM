@@ -1207,6 +1207,7 @@ if (officeInfoForm) {
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     globalLogoUrl = event.target.result;
+                    window.globalLogoUrl = globalLogoUrl;
                     logoPreview.src = globalLogoUrl;
                     logoPreview.style.display = 'block';
                 };
@@ -1408,6 +1409,7 @@ if (officeInfoForm) {
             if (data.terms_conditions) document.getElementById('admin-terms').value = data.terms_conditions;
             if (data.logoUrl) {
                 globalLogoUrl = data.logoUrl;
+                window.globalLogoUrl = globalLogoUrl;
                 logoPreview.src = globalLogoUrl;
                 logoPreview.style.display = 'block';
             }
@@ -2289,8 +2291,13 @@ if (officeInfoForm) {
 let currentIdCardAdvocate = null;
 window.globalAuthoritySignatureUrl = null;
 
-// Pure vector Code39 barcode generator for staff member name
-function generateBarcodeSVG(text, width = 135, height = 36) {
+// High-precision Code39 barcode renderer for staff member name on canvas
+function drawBarcode(text) {
+    const canvas = document.getElementById('id-card-barcode-canvas');
+    if (!canvas || !canvas.getContext) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
     const CODE39 = {
         '0': '000110100', '1': '100100001', '2': '001100001', '3': '101100000',
         '4': '000110001', '5': '100110000', '6': '001110000', '7': '000100101',
@@ -2307,7 +2314,7 @@ function generateBarcodeSVG(text, width = 135, height = 36) {
 
     let raw = (text || 'STAFF').toUpperCase().replace(/[^A-Z0-9\-\. \$\/\+\%]/g, ' ').trim();
     if (!raw) raw = 'STAFF';
-    if (raw.length > 18) raw = raw.substring(0, 18);
+    if (raw.length > 14) raw = raw.substring(0, 14);
     const cleanStr = '*' + raw + '*';
     const modules = [];
 
@@ -2317,27 +2324,32 @@ function generateBarcodeSVG(text, width = 135, height = 36) {
         for (let j = 0; j < 9; j++) {
             const isBar = (j % 2 === 0);
             const isWide = (pattern[j] === '1');
-            modules.push({ isBar, width: isWide ? 2.2 : 1.0 });
+            modules.push({ isBar, width: isWide ? 2.5 : 1.0 });
         }
         if (i < cleanStr.length - 1) {
             modules.push({ isBar: false, width: 1.0 });
         }
     }
 
-    const totalUnits = modules.reduce((sum, m) => sum + m.width, 0);
-    const scale = width / totalUnits;
-    let currentX = 0;
-    let rects = '';
+    canvas.width = 280;
+    canvas.height = 76;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    const totalUnits = modules.reduce((sum, m) => sum + m.width, 0);
+    const padX = 8;
+    const usableWidth = canvas.width - (padX * 2);
+    const scale = usableWidth / totalUnits;
+    let currentX = padX;
+
+    ctx.fillStyle = '#000000';
     for (const m of modules) {
         const w = m.width * scale;
         if (m.isBar) {
-            rects += `<rect x="${currentX.toFixed(2)}" y="0" width="${w.toFixed(2)}" height="${height}" fill="#000000"/>`;
+            ctx.fillRect(Math.round(currentX), 4, Math.max(1, Math.round(w)), canvas.height - 8);
         }
         currentX += w;
     }
-
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" style="display:block;margin:auto;">${rects}</svg>`;
 }
 
 // Authority Signature Handlers in "Manage Legal Professionals"
@@ -2437,35 +2449,75 @@ window.removeAuthoritySignature = async function() {
 };
 
 window.showIdCard = function(id) {
-    const adv = window.globalAdvocatesData.find(a => a._id === id);
+    const adv = (window.globalAdvocatesData || []).find(a => a._id === id || a.id === id || String(a._id) === String(id) || String(a.id) === String(id));
     if (!adv) return;
 
     currentIdCardAdvocate = adv;
 
-    // Staff details: Name, Role, Phone, Email
+    // Staff details: Name, Role (strictly designation, NEVER practice areas/specialties), Phone, Email
     const nameEl = document.getElementById('id-card-name');
     if (nameEl) nameEl.innerText = adv.name || 'Staff Member';
 
+    // Role: strictly display Designation / Role (NEVER practice areas, specializations, or experience descriptions)
     const roleEl = document.getElementById('id-card-role');
-    if (roleEl) roleEl.innerText = adv.specialty || adv.role || 'Senior Advocate';
+    if (roleEl) {
+        let cleanRole = (adv.role || adv.designation || '').trim();
+        const specialty = (adv.specialty || adv.specialization || '').trim();
+        
+        // Comprehensive check: if role contains practice areas, experience text, pipes, commas, or specialty keywords, or is too long, sanitize
+        const isSpecialtyString = !cleanRole ||
+            cleanRole.length > 30 ||
+            cleanRole.includes('|') || 
+            (cleanRole.includes(',') && cleanRole.length > 18) ||
+            (specialty && cleanRole.toLowerCase() === specialty.toLowerCase()) ||
+            /year|experience|advocacy|specializ|litigation|arbitration|constitutional|civil law|criminal law|corporate law|banking law|education law|service law|industrial law|land law|revenue|writs|practice/i.test(cleanRole);
+
+        if (isSpecialtyString) {
+            cleanRole = adv.is_owner ? 'Chamber Owner & Lead Counsel' : 'Senior Advocate';
+        }
+        roleEl.innerText = cleanRole;
+    }
 
     const phoneEl = document.getElementById('id-card-phone');
     if (phoneEl) phoneEl.innerText = adv.phone || 'N/A';
 
+    // Email: single line with dynamic font scaling - NO ellipsis, NEVER cut off the last part of long email
     const emailEl = document.getElementById('id-card-email');
-    if (emailEl) emailEl.innerText = adv.email || 'N/A';
+    if (emailEl) {
+        const emailVal = (adv.email || 'N/A').trim();
+        emailEl.innerText = emailVal;
+        emailEl.title = emailVal;
+        emailEl.style.whiteSpace = 'nowrap';
+        emailEl.style.overflow = 'visible';
+        emailEl.style.textOverflow = 'clip';
+        
+        // Scale font size down proportionally so even a 35-45 char email fits on one line completely without cutting off
+        if (emailVal.length > 34) {
+            emailEl.style.fontSize = '8px';
+            emailEl.style.letterSpacing = '-0.35px';
+        } else if (emailVal.length > 28) {
+            emailEl.style.fontSize = '9px';
+            emailEl.style.letterSpacing = '-0.2px';
+        } else if (emailVal.length > 22) {
+            emailEl.style.fontSize = '10px';
+            emailEl.style.letterSpacing = '-0.1px';
+        } else if (emailVal.length > 17) {
+            emailEl.style.fontSize = '11px';
+            emailEl.style.letterSpacing = 'normal';
+        } else {
+            emailEl.style.fontSize = '12px';
+            emailEl.style.letterSpacing = 'normal';
+        }
+    }
 
     // Staff ID: LA-xxxxx format
     const idSuffix = (adv._id ? adv._id.substring(adv._id.length - 5) : '98765').toUpperCase();
-    const idPrefix = (adv.specialty && adv.specialty.toLowerCase().includes('advocate')) ? 'LA' : 'STF';
+    const idPrefix = (adv.role && adv.role.toLowerCase().includes('advocate')) ? 'LA' : 'STF';
     const idEl = document.getElementById('id-card-id');
     if (idEl) idEl.innerText = `${idPrefix}-${idSuffix}`;
 
-    // Barcode for Staff Name
-    const barcodeBox = document.getElementById('id-card-barcode-box');
-    if (barcodeBox) {
-        barcodeBox.innerHTML = generateBarcodeSVG(adv.name || 'STAFF', 132, 38);
-    }
+    // Barcode for Staff Name rendered directly to HTML5 Canvas
+    drawBarcode(adv.name || 'STAFF');
 
     // Photo
     const photo = document.getElementById('id-card-photo');
@@ -2481,12 +2533,17 @@ window.showIdCard = function(id) {
         if (placeholder) placeholder.style.display = 'flex';
     }
 
-    // Fetch and apply Settings: Chamber/Office Name, Subtitle, Logo, Authority Signature
+    // Fetch and apply Settings: Chamber/Office Name, Subtitle, Logo, Watermark, Authority Signature
     fetch('/api/settings').then(r => r.json()).then(data => {
-        // Chamber/Office Name
+        // Chamber/Office Name - single line with dynamic font adjustment
         const officeNameEl = document.getElementById('id-card-office-name');
         if (officeNameEl) {
-            officeNameEl.innerText = (data.chamber_name || 'JUSTICE & ASSOCIATES').toUpperCase();
+            const chamberTitle = (data.chamber_name || 'ADV. JAYASANKAR MISHRA OFFICE').toUpperCase().trim();
+            officeNameEl.innerText = chamberTitle;
+            officeNameEl.title = chamberTitle;
+            if (chamberTitle.length > 28) officeNameEl.style.fontSize = '12px';
+            else if (chamberTitle.length > 22) officeNameEl.style.fontSize = '13px';
+            else officeNameEl.style.fontSize = '13.5px';
         }
         // Subtitle
         const subtitleEl = document.getElementById('id-card-office-subtitle');
@@ -2503,10 +2560,38 @@ window.showIdCard = function(id) {
                 if (logoFallback) logoFallback.style.display = 'none';
             };
             logoEl.onerror = function() {
-                logoEl.style.display = 'none';
-                if (logoFallback) logoFallback.style.display = 'flex';
+                if (!this.src.includes('advocate_logo.jpg')) {
+                    this.src = '/assets/images/advocate_logo.jpg';
+                    this.style.display = 'block';
+                    if (logoFallback) logoFallback.style.display = 'none';
+                } else {
+                    logoEl.style.display = 'none';
+                    if (logoFallback) logoFallback.style.display = 'flex';
+                }
             };
             logoEl.src = logoUrl;
+        }
+
+        // Chamber Logo Watermark in ID Card Background
+        const watermarkEl = document.getElementById('id-card-watermark-logo');
+        const watermarkFallback = document.getElementById('id-card-watermark-fallback');
+        if (watermarkEl) {
+            watermarkEl.onload = function() {
+                watermarkEl.style.display = 'block';
+                if (watermarkFallback) watermarkFallback.style.display = 'none';
+            };
+            watermarkEl.onerror = function() {
+                if (!this.src.includes('advocate_logo.jpg')) {
+                    this.src = '/assets/images/advocate_logo.jpg';
+                    this.style.display = 'block';
+                    if (watermarkFallback) watermarkFallback.style.display = 'none';
+                } else {
+                    watermarkEl.style.display = 'none';
+                    if (watermarkFallback) watermarkFallback.style.display = 'block';
+                }
+            };
+            watermarkEl.src = logoUrl;
+            watermarkEl.style.display = 'block';
         }
 
         // Authority Signature
@@ -2533,6 +2618,10 @@ window.showIdCard = function(id) {
     });
 
     document.getElementById('id-card-modal').style.display = 'flex';
+    // Re-draw barcode after modal becomes visible so dimensions are active
+    setTimeout(() => {
+        drawBarcode(adv.name || 'STAFF');
+    }, 50);
 };
 
 window.downloadIdCard = async function() {

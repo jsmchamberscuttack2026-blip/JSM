@@ -2258,11 +2258,13 @@ def serve_chamber_owner_image():
 @app.route('/chamber-logo.jpg')
 def serve_chamber_logo_image():
     global _chamber_images_cache
+    cors_headers = {
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+        "Content-Disposition": "inline; filename=\"jsm-chambers-logo.jpg\"",
+        "Access-Control-Allow-Origin": "*"
+    }
     if _chamber_images_cache.get("logo") is not None:
-        return Response(_chamber_images_cache["logo"], mimetype=_chamber_images_cache.get("logo_mime", "image/jpeg"), headers={
-            "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
-            "Content-Disposition": "inline; filename=\"jsm-chambers-logo.jpg\""
-        })
+        return Response(_chamber_images_cache["logo"], mimetype=_chamber_images_cache.get("logo_mime", "image/jpeg"), headers=cors_headers)
     try:
         raw_settings = settings_col.find_one({"_id": "office_info"}, {"logoUrl": 1}) or {}
         img_data = raw_settings.get("logoUrl")
@@ -2274,13 +2276,12 @@ def serve_chamber_logo_image():
             img_bytes = base64.b64decode(encoded)
             _chamber_images_cache["logo"] = img_bytes
             _chamber_images_cache["logo_mime"] = mime
-            return Response(img_bytes, mimetype=mime, headers={
-                "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
-                "Content-Disposition": "inline; filename=\"jsm-chambers-logo.jpg\""
-            })
+            return Response(img_bytes, mimetype=mime, headers=cors_headers)
     except Exception as e:
         logging.error(f"Error serving chamber logo: {e}")
-    return send_from_directory(os.path.join(BASE_DIR, 'assets/images'), 'advocate_logo.jpg')
+    res = send_from_directory(os.path.join(BASE_DIR, 'assets/images'), 'advocate_logo.jpg')
+    res.headers["Access-Control-Allow-Origin"] = "*"
+    return res
 
 @app.route('/chamber-hero-banner.jpg')
 def serve_chamber_hero_banner():
@@ -6860,8 +6861,16 @@ def delete_advocate(id):
 
 @app.route('/api/settings', methods=['GET'])
 def get_settings():
-    bundle = get_public_bundle()
-    return jsonify(bundle.get("settings", {})), 200
+    try:
+        raw_s = settings_col.find_one({"_id": "office_info"}) or {}
+        s_doc = dict(raw_s)
+        if "_id" in s_doc: s_doc["_id"] = str(s_doc["_id"])
+        if not s_doc.get("logoUrl"):
+            s_doc["logoUrl"] = "/chamber-logo.jpg"
+        return jsonify(s_doc), 200
+    except Exception as e:
+        bundle = get_public_bundle()
+        return jsonify(bundle.get("settings", {})), 200
 
 @app.route('/api/settings/alert', methods=['GET'])
 def get_settings_alert():

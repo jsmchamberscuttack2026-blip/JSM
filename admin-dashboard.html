@@ -2062,8 +2062,8 @@
                         </svg>
 
                         <!-- Chamber Logo Emblem (Left) -->
-                        <div style="position: absolute; left: 16px; top: 16px; width: 62px; height: 62px; border-radius: 50%; border: 2.5px solid #d4af37; box-shadow: 0 0 12px rgba(212,175,55,0.45); background: #28030b; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 2px; box-sizing: border-box; z-index: 10;">
-                            <img id="id-card-logo" src="/chamber-logo.jpg" alt="Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%;" onerror="this.onerror=null; this.src='/assets/images/advocate_logo.jpg';" crossorigin="anonymous">
+                        <div style="position: absolute; left: 16px; top: 16px; width: 62px; height: 62px; border-radius: 50%; border: 2.5px solid #d4af37; box-shadow: 0 0 12px rgba(212,175,55,0.45); background: #ffffff; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 3px; box-sizing: border-box; z-index: 10;">
+                            <img id="id-card-logo" src="/chamber-logo.jpg" alt="Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; display: block;" onerror="this.onerror=null; this.src='/assets/images/advocate_logo.jpg';">
                             <div id="id-card-logo-fallback" style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; font-size: 26px; color: #d4af37;">⚖️</div>
                         </div>
 
@@ -2076,7 +2076,7 @@
 
                     <!-- Chamber Logo Watermark (Middle Body) -->
                     <div style="position: absolute; top: 140px; bottom: 76px; left: 0; right: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 1; overflow: hidden;">
-                        <img id="id-card-watermark-logo" src="/chamber-logo.jpg" alt="Logo Watermark" style="width: 230px; height: 230px; object-fit: contain; opacity: 0.16; pointer-events: none; display: block;" onerror="this.onerror=null; this.src='/assets/images/advocate_logo.jpg';" crossorigin="anonymous">
+                        <img id="id-card-watermark-logo" src="/chamber-logo.jpg" alt="Logo Watermark" style="width: 230px; height: 230px; object-fit: contain; opacity: 0.16; pointer-events: none; display: block;" onerror="this.onerror=null; this.src='/assets/images/advocate_logo.jpg';">
                         <div id="id-card-watermark-fallback" style="display: none; font-size: 140px; opacity: 0.12; color: #0a1628;">⚖️</div>
                     </div>
 
@@ -2687,6 +2687,13 @@
                 if (placeholder) placeholder.style.display = 'flex';
             }
 
+            // Immediate Logo Apply if already uploaded/cached in memory
+            const initialLogo = window.globalLogoUrl || '/chamber-logo.jpg';
+            const preLogo = document.getElementById('id-card-logo');
+            if (preLogo) preLogo.src = initialLogo;
+            const preWatermark = document.getElementById('id-card-watermark-logo');
+            if (preWatermark) preWatermark.src = initialLogo;
+
             // Chamber Settings
             fetch('/api/settings').then(r => r.json()).then(data => {
                 const officeNameEl = document.getElementById('id-card-office-name');
@@ -2704,7 +2711,7 @@
                 }
                 const logoEl = document.getElementById('id-card-logo');
                 const logoFallback = document.getElementById('id-card-logo-fallback');
-                const logoUrl = data.logoUrl || '/chamber-logo.jpg';
+                const logoUrl = window.globalLogoUrl || data.logoUrl || '/chamber-logo.jpg';
                 if (logoEl) {
                     logoEl.onload = function() {
                         logoEl.style.display = 'block';
