@@ -144,11 +144,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     async function loadAppointments() {
+        window.loadAppointments = loadAppointments;
         const container = document.getElementById('appointments-accordion-container');
         if (!container) return;
         try {
             const response = await fetch('/api/appointments', { cache: 'no-store' });
+            if (!response.ok) return;
             const data = await response.json();
+            if (!Array.isArray(data)) return;
             
             const newDataString = JSON.stringify(data);
             if (newDataString === apptCache) return;
@@ -298,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (document.getElementById("appointments-accordion-container")) {
         loadAppointments();
-        setInterval(loadAppointments, 1000);
+        setInterval(loadAppointments, 2500);
     }
 
     window.deleteAppointment = async function(id) {
@@ -347,7 +350,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!casesGrid) return;
         try {
             const response = await fetch('/api/cases', { cache: 'no-store' });
+            if (!response.ok) return;
             const cases = await response.json();
+            if (!Array.isArray(cases)) return;
             const newDataString = JSON.stringify(cases);
             if (typeof window.casesCache !== 'undefined' && newDataString === window.casesCache) return;
             window.casesCache = newDataString;
@@ -444,7 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (addCaseForm) {
         loadCases();
-        setInterval(loadCases, 1000);
+        setInterval(loadCases, 2500);
 
         addCaseForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -929,13 +934,26 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 window.globalAdvocatesData = [];
 async function loadAdvocates() {
+    window.loadAdvocates = loadAdvocates;
     try {
         if (typeof window.loadAuthoritySignature === 'function') {
             window.loadAuthoritySignature();
         }
         const response = await fetch('/api/advocates');
+        if (!response.ok) return;
         const advocates = await response.json();
+        if (!Array.isArray(advocates)) {
+            console.warn('loadAdvocates: Expected array response, got:', advocates);
+            return;
+        }
         window.globalAdvocatesData = advocates;
+
+        // Update Dashboard Stat Card
+        const statAdvCount = document.getElementById('stat-advocates-count');
+        if (statAdvCount) {
+            statAdvCount.innerText = advocates.length;
+        }
+
         const tbody = document.getElementById('admin-advocates-list');
         if (!tbody) return;
         tbody.innerHTML = '';
@@ -2192,7 +2210,7 @@ if (officeInfoForm) {
     let editAdvocateImageUrl = "";
     
     window.openEditAdvocateModal = function(id) {
-        const adv = window.globalAdvocatesData.find(a => a._id === id || a.id === id);
+        const adv = (window.globalAdvocatesData || []).find(a => a._id === id || a.id === id || String(a._id) === String(id) || String(a.id) === String(id));
         if(!adv) return;
         
         document.getElementById('edit-adv-id').value = adv._id;

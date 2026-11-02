@@ -3036,11 +3036,15 @@ def shift_appointments():
 
 @app.route('/api/appointments', methods=['GET'])
 def get_appointments():
-    appointments = []
-    for appt in appointments_col.find():
-        appt['_id'] = str(appt['_id'])
-        appointments.append(appt)
-    return jsonify(appointments), 200
+    try:
+        appointments = []
+        for appt in appointments_col.find():
+            appt['_id'] = str(appt['_id'])
+            appointments.append(appt)
+        return jsonify(appointments), 200
+    except Exception as e:
+        logging.error(f"Error in get_appointments: {e}")
+        return jsonify([]), 200
 
 @app.route('/api/appointments/approve', methods=['POST'])
 def approve_appointment():
@@ -4839,9 +4843,13 @@ def ensure_daily_passwords():
 
 @app.route('/api/cases', methods=['GET'])
 def get_cases():
-    cases = list(cases_col.find({"status": {"$ne": "Finished & Archived"}}).sort('_id', -1))
-    for c in cases: c['_id'] = str(c['_id'])
-    return jsonify(cases), 200
+    try:
+        cases = list(cases_col.find({"status": {"$ne": "Finished & Archived"}}).sort('_id', -1))
+        for c in cases: c['_id'] = str(c['_id'])
+        return jsonify(cases), 200
+    except Exception as e:
+        logging.error(f"Error in get_cases: {e}")
+        return jsonify([]), 200
 
 @app.route('/api/archived-cases', methods=['GET'])
 def get_archived_cases():
@@ -6484,6 +6492,7 @@ def get_special_otp_logs():
 
 _advocates_cache = None
 _advocates_cache_time = 0
+_advocates_db_cleaned = False
 
 def invalidate_advocates_cache():
     global _advocates_cache, _advocates_cache_time
@@ -6495,54 +6504,56 @@ def invalidate_advocates_cache():
         pass
 
 def ensure_chamber_owner_advocate():
+    global _advocates_db_cleaned
     try:
         # Fast check: if owner already exists, return immediately without loading large settings doc
         owner_adv = advocates_col.find_one({"is_owner": True}, {"_id": 1})
-        if owner_adv:
-            return
+        if not owner_adv:
+            setting_doc = settings_col.find_one(
+                {"_id": "office_info"},
+                {"about_chamber_owner_name": 1, "email": 1, "phone": 1, "address": 1}
+            ) or {}
+            owner_name = str(setting_doc.get("about_chamber_owner_name", "") or "").strip() or "Adv. Jayasankar Mishra"
+            owner_email = str(setting_doc.get("email", "") or "").strip() or "jsmchamberscuttack2026@gmail.com"
+            owner_phone = str(setting_doc.get("phone", "") or "").strip() or "+91 736353763"
+            owner_img = "assets/images/advocate_logo.jpg"
+            owner_specialty = "35 years of advocacy; specialized in Constitutional Law, Civil Law, Insurance and Banking Law, Education and Technical Education Law, Service and Industrial Law, Land."
+            owner_role = "Chamber Owner & Lead Counsel"
+            owner_location = str(setting_doc.get("address", "") or "").strip() or "High Court of Orissa, Cuttack"
 
-        setting_doc = settings_col.find_one(
-            {"_id": "office_info"},
-            {"about_chamber_owner_name": 1, "email": 1, "phone": 1, "address": 1}
-        ) or {}
-        owner_name = str(setting_doc.get("about_chamber_owner_name", "") or "").strip() or "Adv. Jayasankar Mishra"
-        owner_email = str(setting_doc.get("email", "") or "").strip() or "jsmchamberscuttack2026@gmail.com"
-        owner_phone = str(setting_doc.get("phone", "") or "").strip() or "+91 736353763"
-        owner_img = "assets/images/advocate_logo.jpg"
-        owner_specialty = "35 years of advocacy; specialized in Constitutional Law, Civil Law, Insurance and Banking Law, Education and Technical Education Law, Service and Industrial Law, Land."
-        owner_role = "Chamber Owner & Lead Counsel"
-        owner_location = str(setting_doc.get("address", "") or "").strip() or "High Court of Orissa, Cuttack"
+            existing = advocates_col.find_one({"name": owner_name})
+            if existing:
+                advocates_col.update_one({"_id": existing["_id"]}, {"$set": {"is_owner": True, "role": owner_role}})
+            else:
+                advocates_col.insert_one({
+                    "is_owner": True,
+                    "name": owner_name,
+                    "email": owner_email,
+                    "phone": owner_phone,
+                    "specialty": owner_specialty,
+                    "role": owner_role,
+                    "location": owner_location,
+                    "linkedin": "",
+                    "imageUrl": owner_img,
+                    "access_appointments": True,
+                    "access_clients": True,
+                    "access_add_case": True,
+                    "access_voice": True,
+                    "welcome_mail_sent": True
+                })
 
-        existing = advocates_col.find_one({"name": owner_name})
-        if existing:
-            advocates_col.update_one({"_id": existing["_id"]}, {"$set": {"is_owner": True, "role": owner_role}})
-        else:
-            advocates_col.insert_one({
-                "is_owner": True,
-                "name": owner_name,
-                "email": owner_email,
-                "phone": owner_phone,
-                "specialty": owner_specialty,
-                "role": owner_role,
-                "location": owner_location,
-                "linkedin": "",
-                "imageUrl": owner_img,
-                "access_appointments": True,
-                "access_clients": True,
-                "access_add_case": True,
-                "access_voice": True,
-                "welcome_mail_sent": True
-            })
-        # Clean up any advocates in DB where role is missing or contaminated with practice areas/experience text
-        try:
-            for bad_adv in advocates_col.find():
-                bad_r = str(bad_adv.get("role") or "").strip()
-                bad_s = str(bad_adv.get("specialty") or "").strip()
-                if not bad_r or bad_r.lower() == bad_s.lower() or len(bad_r) > 32 or any(w in bad_r.lower() for w in ['advocacy', 'specializ', 'constitutional', 'civil law', 'criminal law', 'banking law', '|', 'years']):
-                    clean_r = "Chamber Owner & Lead Counsel" if bad_adv.get("is_owner") else "Senior Advocate"
-                    advocates_col.update_one({"_id": bad_adv["_id"]}, {"$set": {"role": clean_r}})
-        except Exception as e:
-            logging.error(f"Error cleaning advocate roles in DB: {e}")
+        # Run DB role cleanup at most once per process start
+        if not _advocates_db_cleaned:
+            _advocates_db_cleaned = True
+            try:
+                for bad_adv in advocates_col.find():
+                    bad_r = str(bad_adv.get("role") or "").strip()
+                    bad_s = str(bad_adv.get("specialty") or "").strip()
+                    if not bad_r or bad_r.lower() == bad_s.lower() or len(bad_r) > 35 or any(w in bad_r.lower() for w in ['advocacy', 'specializ', 'constitutional', 'civil law', 'criminal law', 'banking law', '|', 'years']):
+                        clean_r = "Chamber Owner & Lead Counsel" if bad_adv.get("is_owner") else "Senior Advocate"
+                        advocates_col.update_one({"_id": bad_adv["_id"]}, {"$set": {"role": clean_r}})
+            except Exception as e:
+                logging.error(f"Error cleaning advocate roles in DB: {e}")
     except Exception as e:
         logging.error(f"Error ensuring chamber owner advocate: {e}")
 
@@ -6556,19 +6567,35 @@ def get_advocates():
         advs = []
         for adv in advocates_col.find().sort([("is_owner", -1), ("_id", 1)]):
             adv_copy = dict(adv)
-            adv_copy['_id'] = str(adv_copy['_id'])
+            adv_id = str(adv_copy['_id'])
+            adv_copy['_id'] = adv_id
             is_owner = bool(adv_copy.get('is_owner'))
             r = str(adv_copy.get('role') or '').strip()
             s = str(adv_copy.get('specialty') or '').strip()
-            if not r or r.lower() == s.lower() or len(r) > 32 or any(w in r.lower() for w in ['advocacy', 'specializ', 'constitutional', 'civil law', 'criminal law', 'banking law', '|', 'years']):
+            if not r or r.lower() == s.lower() or len(r) > 35 or any(w in r.lower() for w in ['advocacy', 'specializ', 'constitutional', 'civil law', 'criminal law', 'banking law', '|', 'years']):
                 r = "Chamber Owner & Lead Counsel" if is_owner else "Senior Advocate"
             adv_copy['role'] = r
+
+            # Return lightweight CDN/asset photo URLs instead of massive base64 blobs
+            has_custom_img = bool(adv_copy.get("imageUrl") or adv_copy.get("image"))
+            if is_owner or "jayasankar" in str(adv_copy.get("name", "")).lower():
+                adv_copy["imageUrl"] = "/chamber-owner.jpg"
+            elif has_custom_img:
+                adv_copy["imageUrl"] = f"/api/advocates/{adv_id}/photo.jpg"
+            elif os.path.exists(os.path.join(os.path.abspath(os.path.dirname(__file__)), f"assets/images/members/{adv_id}.jpg")):
+                adv_copy["imageUrl"] = f"/assets/images/members/{adv_id}.jpg"
+            else:
+                adv_copy["imageUrl"] = "/assets/images/advocate_logo.jpg"
+            adv_copy.pop("image", None)
             advs.append(adv_copy)
         return jsonify(advs), 200
     except Exception as e:
         logging.error(f"Error in direct get_advocates: {e}")
-        bundle = get_public_bundle()
-        return jsonify(bundle.get("advocates", [])), 200
+        try:
+            bundle = get_public_bundle()
+            return jsonify(bundle.get("advocates", [])), 200
+        except Exception:
+            return jsonify([]), 200
 
 def save_advocate_image_file(adv_id, img_data):
     try:
@@ -6862,15 +6889,25 @@ def delete_advocate(id):
 @app.route('/api/settings', methods=['GET'])
 def get_settings():
     try:
-        raw_s = settings_col.find_one({"_id": "office_info"}) or {}
-        s_doc = dict(raw_s)
-        if "_id" in s_doc: s_doc["_id"] = str(s_doc["_id"])
-        if not s_doc.get("logoUrl"):
-            s_doc["logoUrl"] = "/chamber-logo.jpg"
-        return jsonify(s_doc), 200
-    except Exception as e:
         bundle = get_public_bundle()
-        return jsonify(bundle.get("settings", {})), 200
+        settings = dict(bundle.get("settings", {}) or {})
+        if settings:
+            return jsonify(settings), 200
+        raw_s = settings_col.find_one({"_id": "office_info"}, {
+            "hero_banner_image": 0, "staff_banner_image": 0, "expertise_banner_image": 0,
+            "about_chamber_owner_image": 0, "about_chamber_image1": 0
+        }) or {}
+        raw_s["_id"] = str(raw_s.get("_id", "office_info"))
+        if not raw_s.get("logoUrl"):
+            raw_s["logoUrl"] = "/chamber-logo.jpg"
+        return jsonify(raw_s), 200
+    except Exception as e:
+        logging.error(f"Error in get_settings: {e}")
+        try:
+            bundle = get_public_bundle()
+            return jsonify(bundle.get("settings", {})), 200
+        except Exception:
+            return jsonify({"chamber_name": "ADV. JAYASANKAR MISHRA OFFICE", "logoUrl": "/chamber-logo.jpg"}), 200
 
 @app.route('/api/settings/alert', methods=['GET'])
 def get_settings_alert():
